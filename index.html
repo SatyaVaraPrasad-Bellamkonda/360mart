@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>360mart.in &bull; Inception & Foundation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --gold-primary: #f59e0b;
+      --gold-glow: #fbbf24;
+      --gold-deep: #b45309;
+      --bg-dark: #0a0b10;
+      --surface: rgba(18, 22, 34, 0.75);
+      --surface-border: rgba(245, 158, 11, 0.22);
+      --text-white: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    /* Ambient Background Glow */
+    .bg-light-orb {
+      position: absolute;
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.14) 0%, rgba(180, 83, 9, 0.05) 50%, transparent 70%);
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      animation: pulseGlow 7s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
+      100% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+    }
+
+    /* Top Navigation */
+    header {
+      width: 100%;
+      max-width: 1200px;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand-logo {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-white);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-logo span {
+      color: var(--gold-primary);
+      text-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+    }
+
+    .badge-dev {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--surface-border);
+      color: var(--gold-glow);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      animation: blinkDot 1.8s infinite;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Hero Section */
+    .hero-container {
+      max-width: 900px;
+      margin: 20px auto 40px;
+      padding: 0 20px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Spiritual Shloka Banner */
+    .shloka {
+      font-family: 'Cinzel', serif;
+      font-size: 17px;
+      letter-spacing: 2px;
+      color: var(--gold-glow);
+      margin-bottom: 24px;
+      opacity: 0.95;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Animated Divine Ganesh Aura & Mascot Frame */
+    .ganesh-frame {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .aura-ring {
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      border: 2px dashed rgba(245, 158, 11, 0.4);
+      animation: rotateRing 24s linear infinite;
+    }
+
+    .aura-ring-inner {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%);
+      box-shadow: 0 0 35px rgba(245, 158, 11, 0.3);
+    }
+
+    @keyframes rotateRing {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .ganesh-img {
+      width: 170px;
+      height: 170px;
+      object-fit: contain;
+      border-radius: 50%;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 10px 25px rgba(245, 158, 11, 0.45));
+      animation: gentleFloat 4s ease-in-out infinite;
+    }
+
+    @keyframes gentleFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-10px) scale(1.02); }
+    }
+
+    h1 {
+      font-size: clamp(34px, 5vw, 54px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff 40%, var(--gold-glow) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subheading {
+      color: var(--text-muted);
+      font-size: 17px;
+      max-width: 620px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    /* Architecture Grid */
+    .route-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      max-width: 1000px;
+      width: 100%;
+      padding: 0 24px;
+      margin-bottom: 50px;
+      z-index: 10;
+    }
+
+    .route-card {
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 20px;
+      border-radius: 14px;
+      text-align: left;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .route-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .route-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--surface-border);
+      box-shadow: 0 12px 30px -10px rgba(245, 158, 11, 0.15);
+    }
+
+    .route-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-icon {
+      font-size: 26px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    .card-path {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--gold-glow);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Live Terminal Console / Dev Status */
+    .terminal-box {
+      max-width: 800px;
+      width: calc(100% - 48px);
+      background: #06070a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 60px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      color: #cbd5e1;
+      text-align: left;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+
+    .terminal-header {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #eab308; }
+    .dot-green { background: #22c55e; }
+
+    .term-row {
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+    .term-gold { color: var(--gold-glow); }
+    .term-green { color: #4ade80; }
+    .term-cyan { color: #38bdf8; }
+
+    footer {
+      width: 100%;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      z-index: 10;
+      background: rgba(10, 11, 16, 0.8);
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 18px 20px; }
+      .ganesh-frame { width: 160px; height: 160px; }
+      .ganesh-img { width: 135px; height: 135px; }
+      .shloka { font-size: 14px; letter-spacing: 1px; }
+      h1 { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Ambience Orb -->
+  <div class="bg-light-orb"></div>
+
+  <!-- Header -->
+  <header>
+    <a href="#" class="brand-logo">
+      360<span>mart</span>.in
+    </a>
+    <div class="badge-dev">
+      <div class="pulse-dot"></div>
+      Day 1: Genesis Phase
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="hero-container">
+    <div class="shloka">
+      || वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ | निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा ||
+    </div>
+
+    <!-- Animated Divine Icon Container -->
+    <div class="ganesh-frame">
+      <div class="aura-ring"></div>
+      <div class="aura-ring-inner"></div>
+      <!-- Clean, modern transparent gold Ganesh vector illustration -->
+      <img 
+        src="https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcRfPxLExg96N4RkOHZdB-YW-9qEaWE3xGp_c3I9UxH1WMrU4J-OOaZwuRd56U-qtybLyae7SAuaA8x8MKU" 
+        alt="Lord Ganesha - The Remover of Obstacles" 
+        class="ganesh-img"
+      />
+    </div>
+
+    <h1>
+      <span class="gradient-text">Shree Ganeshay Namah</span><br>
+      The Everything Platform Is Live.
+    </h1>
+
+    <p class="subheading">
+      Development officially initiated for <strong>360mart.in</strong>. Engineering the hyper-scale multi-vendor marketplace, localized supply channels, and multi-tenant storefront infrastructure.
+    </p>
+  </main>
+
+  <!-- Planned Architectural Subpaths / Route Nodes -->
+  <section class="route-grid">
+    <div class="route-card">
+      <div class="card-icon">🍎</div>
+      <div class="card-path">/fruits</div>
+      <div class="card-desc">Hyperlocal farm-to-table cold supply and fresh produce inventory routing.</div>
+    </div>
+
+    <div class="route-card">
+      <div class="card-icon">🥩</div>
+      <div class="card-path">/meat</div>
+      <div class="card-desc">FSSAI-certified fresh cuts with local cold-chain express dispatch.</div>
+    </div>
+
+    <div class="route-card">
+      <div class="card-icon">🛍️</div>
+      <div class="card-path">/groceries</div>
+      <div class="card-desc">Essential daily FMCG staples and neighborhood supermarket networks.</div>
+    </div>
+
+    <div class="route-card">
+      <div class="card-icon">🧵</div>
+      <div class="card-path">/fabrics</div>
+      <div class="card-desc">Wholesale and retail textile merchants with dynamic cut-length variants.</div>
+    </div>
+
+    <div class="route-card">
+      <div class="card-icon">⚡</div>
+      <div class="card-path">/electricals</div>
+      <div class="card-desc">Domestic appliances, wiring components, and local hardware supplies.</div>
+    </div>
+
+    <div class="route-card">
+      <div class="card-icon">🏪</div>
+      <div class="card-path">/:storeSlug</div>
+      <div class="card-desc">Independent merchant storefronts (e.g. /store1) with multi-tenant isolation.</div>
+    </div>
+  </section>
+
+  <!-- Dev Terminal Console -->
+  <div class="terminal-box">
+    <div class="terminal-header">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span style="margin-left: 10px; color: #64748b; font-size: 11px;">system@360mart-cluster:~$ init</span>
+    </div>
+    <div class="term-row"><span class="term-green">[SUCCESS]</span> Environment bootstrapped: Spring Boot 3 + MySQL 8 + Redis Cache</div>
+    <div class="term-row"><span class="term-cyan">[INFO]</span> Edge routing middleware active on host: 360mart.in</div>
+    <div class="term-row"><span class="term-gold">[STATUS]</span> Auspicious Muhurat established. Ready for Sprint 1 schema migration.</div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    &copy; 2026 360mart.in &bull; Built with resilience, enterprise security, and devotion.
+  </footer>
+
+</body>
+</html>
