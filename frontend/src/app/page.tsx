@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CategoryCard } from "@/components/CategoryCard";
+import { HeroVisual } from "@/components/HeroVisual";
 import { JsonLd } from "@/components/JsonLd";
 import { LIVE_CATEGORIES } from "@/lib/categories";
 import { SITE } from "@/lib/site";
@@ -40,7 +41,7 @@ export default function HomePage() {
     <>
       <JsonLd data={homeJsonLd} />
 
-      <section className="bg-gradient-to-b from-brand-soft/60 to-white">
+      <section className="overflow-hidden bg-gradient-to-b from-[#fdf1dc] via-[#fdf8f0] to-white">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
           <div>
             <p className="mb-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-deep ring-1 ring-brand/30">
@@ -54,20 +55,13 @@ export default function HomePage() {
             </p>
             <a
               href="#categories"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-white hover:bg-ink/85"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-white shadow-lg shadow-ink/25 hover:bg-ink/85"
             >
               Start shopping →
             </a>
           </div>
 
-          <div aria-hidden className="relative mx-auto aspect-square w-full max-w-60 md:max-w-sm">
-            <div className="absolute inset-6 rounded-full bg-fresh-soft" />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-7xl md:text-[7rem]">🧺</span>
-            <span className="absolute left-4 top-10 text-4xl md:text-6xl">🥭</span>
-            <span className="absolute right-6 top-6 text-4xl md:text-6xl">🐟</span>
-            <span className="absolute bottom-10 left-8 text-4xl md:text-6xl">👗</span>
-            <span className="absolute bottom-6 right-10 text-4xl md:text-6xl">🛒</span>
-          </div>
+          <HeroVisual />
         </div>
       </section>
 

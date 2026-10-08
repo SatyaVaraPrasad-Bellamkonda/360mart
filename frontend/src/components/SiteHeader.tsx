@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { LIVE_CATEGORIES } from "@/lib/categories";
+import { AccountLink, AccountLinkFallback } from "./auth/AccountLink";
 import { Logo } from "./Logo";
 
 export function SiteHeader() {
@@ -7,7 +9,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4">
         <Logo />
-        <nav aria-label="Categories" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Categories" className="ml-auto hidden items-center gap-1 md:flex">
           {LIVE_CATEGORIES.map((category) => (
             <Link
               key={category.slug}
@@ -18,6 +20,9 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
+        <Suspense fallback={<AccountLinkFallback />}>
+          <AccountLink />
+        </Suspense>
       </div>
     </header>
   );

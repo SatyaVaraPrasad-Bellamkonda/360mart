@@ -11,6 +11,17 @@
   --color-line: #e2e8f0;
   --color-surface: #f8fafc;
   --font-sans: var(--font-jakarta);
+  --animate-float: float 5s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 body {
