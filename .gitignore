@@ -1,0 +1,50 @@
+# ---------------------------------------------
+# 360mart.in – files git should never track
+# ---------------------------------------------
+
+# Dependencies (re-created by `npm install`)
+node_modules/
+
+# Next.js build output
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+*.pem
+
+# Vercel local settings
+.vercel/
+
+# Java / Spring Boot backend (for later)
+target/
+build/
+.gradle/
+*.class
+*.jar
+!**/gradle/wrapper/gradle-wrapper.jar
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# Operating system files
+.DS_Store
+Thumbs.db

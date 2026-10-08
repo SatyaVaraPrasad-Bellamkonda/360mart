@@ -1,0 +1,103 @@
+import type { Metadata } from "next";
+import { CategoryCard } from "@/components/CategoryCard";
+import { JsonLd } from "@/components/JsonLd";
+import { LIVE_CATEGORIES } from "@/lib/categories";
+import { SITE } from "@/lib/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+const HIGHLIGHTS = [
+  { emoji: "🏪", title: "Local stores", text: "Buy from trusted shops in your own neighbourhood." },
+  { emoji: "🌿", title: "Fresh and genuine", text: "Products come from nearby sellers, not distant warehouses." },
+  { emoji: "🛵", title: "Quick delivery", text: "Short distances mean your order reaches you faster." },
+];
+
+const homeJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE.url}/#organization`,
+      name: SITE.name,
+      url: SITE.url,
+      logo: `${SITE.url}/logo-512.png`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE.url}/#website`,
+      name: SITE.name,
+      url: SITE.url,
+      inLanguage: "en-IN",
+      publisher: { "@id": `${SITE.url}/#organization` },
+    },
+  ],
+};
+
+export default function HomePage() {
+  return (
+    <>
+      <JsonLd data={homeJsonLd} />
+
+      <section className="bg-gradient-to-b from-brand-soft/60 to-white">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
+          <div>
+            <p className="mb-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-deep ring-1 ring-brand/30">
+              Your neighbourhood, online
+            </p>
+            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-ink sm:text-5xl">
+              Your local stores, <span className="text-brand-deep">delivered to your door</span>
+            </h1>
+            <p className="mt-4 max-w-md text-lg text-muted">
+              360mart brings the shops around you online. Fresh fruits, meat and fish, groceries and fashion from sellers you can trust.
+            </p>
+            <a
+              href="#categories"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-white hover:bg-ink/85"
+            >
+              Start shopping →
+            </a>
+          </div>
+
+          <div aria-hidden className="relative mx-auto aspect-square w-full max-w-60 md:max-w-sm">
+            <div className="absolute inset-6 rounded-full bg-fresh-soft" />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-7xl md:text-[7rem]">🧺</span>
+            <span className="absolute left-4 top-10 text-4xl md:text-6xl">🥭</span>
+            <span className="absolute right-6 top-6 text-4xl md:text-6xl">🐟</span>
+            <span className="absolute bottom-10 left-8 text-4xl md:text-6xl">👗</span>
+            <span className="absolute bottom-6 right-10 text-4xl md:text-6xl">🛒</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="categories" aria-labelledby="categories-heading" className="scroll-mt-20 mx-auto max-w-6xl px-4 py-12">
+        <h2 id="categories-heading" className="text-2xl font-bold text-ink">
+          Shop by category
+        </h2>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+          {LIVE_CATEGORIES.map((category) => (
+            <CategoryCard key={category.slug} category={category} />
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="why-heading" className="bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <h2 id="why-heading" className="text-2xl font-bold text-ink">
+            Why shop on 360mart?
+          </h2>
+          <ul className="mt-6 grid gap-5 sm:grid-cols-3">
+            {HIGHLIGHTS.map((item) => (
+              <li key={item.title} className="rounded-2xl bg-white p-6 ring-1 ring-line">
+                <span aria-hidden className="text-3xl">{item.emoji}</span>
+                <h3 className="mt-3 font-bold text-ink">{item.title}</h3>
+                <p className="mt-1 text-sm text-muted">{item.text}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </>
+  );
+}
