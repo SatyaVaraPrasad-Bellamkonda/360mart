@@ -18,7 +18,7 @@ export default function SellerLoginPage() {
       footer={
         <>
           Shopping on 360mart?{" "}
-          <Link href="/login" className="font-semibold text-brand-deep hover:underline">
+          <Link href="/login" className="inline-block py-2 font-semibold text-brand-deep hover:underline">
             Customer login
           </Link>
         </>

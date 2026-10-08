@@ -20,7 +20,7 @@ export function OfferPicker({ variants }: { variants: ProductDetail["variants"] 
             {variants.map((v) => (
               <label
                 key={v.id}
-                className="cursor-pointer rounded-full border border-line px-4 py-1.5 text-sm font-medium text-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white"
+                className="flex min-h-10 cursor-pointer items-center rounded-full border border-line px-4 py-2 text-sm font-medium text-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white"
               >
                 <input
                   type="radio"

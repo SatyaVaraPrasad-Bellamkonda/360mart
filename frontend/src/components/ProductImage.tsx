@@ -12,7 +12,9 @@ type Props = {
 // Shows the product photo when one exists, otherwise an emoji placeholder.
 export function ProductImage({ name, emoji, image, tint, size = "card", preload }: Props) {
   return (
-    <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-xl ${tint}`}>
+    <div
+      className={`relative flex items-center justify-center overflow-hidden rounded-xl ${tint} ${size === "large" ? "aspect-[4/3] md:aspect-square" : "aspect-square"}`}
+    >
       {image ? (
         <Image
           src={image}

@@ -65,7 +65,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="categories" aria-labelledby="categories-heading" className="scroll-mt-20 mx-auto max-w-6xl px-4 py-12">
+      <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-6xl scroll-mt-32 px-4 py-12 md:scroll-mt-20">
         <h2 id="categories-heading" className="text-2xl font-bold text-ink">
           Shop by category
         </h2>

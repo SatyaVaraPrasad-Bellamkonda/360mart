@@ -18,7 +18,7 @@ export default function CustomerLoginPage() {
       footer={
         <>
           Own a shop?{" "}
-          <Link href="/seller/login" className="font-semibold text-brand-deep hover:underline">
+          <Link href="/seller/login" className="inline-block py-2 font-semibold text-brand-deep hover:underline">
             Shopkeeper login
           </Link>
         </>

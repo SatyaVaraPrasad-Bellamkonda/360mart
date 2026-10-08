@@ -8,6 +8,17 @@ const CHIPS = [
   { text: "Your local favourites", className: "right-[2%] bottom-[18%]", delay: "0.6s" },
 ];
 
+// Speed streaks behind the cart: vertical position, length, thickness,
+// colour, speed and start offset, so they don't move in lockstep.
+const STREAKS = [
+  { top: "38%", width: "45%", height: "h-1.5", color: "from-slate-400/80", duration: "0.8s", delay: "0s" },
+  { top: "46%", width: "60%", height: "h-2", color: "from-brand/85", duration: "0.95s", delay: "0.3s" },
+  { top: "54%", width: "40%", height: "h-1", color: "from-slate-400/80", duration: "0.7s", delay: "0.55s" },
+  { top: "61%", width: "55%", height: "h-2.5", color: "from-brand/70", duration: "1.05s", delay: "0.15s" },
+  { top: "69%", width: "35%", height: "h-1", color: "from-slate-400/70", duration: "0.75s", delay: "0.7s" },
+  { top: "76%", width: "48%", height: "h-1.5", color: "from-brand/60", duration: "0.9s", delay: "0.4s" },
+];
+
 const SPARKLES = [
   "left-[18%] top-[12%] text-xl",
   "right-[22%] top-[2%] text-base",
@@ -28,14 +39,32 @@ export function HeroVisual() {
       <div aria-hidden className="absolute inset-[14%] rounded-full border-2 border-dashed border-amber-200 motion-safe:animate-[spin_60s_linear_infinite]" />
       <div aria-hidden className="absolute inset-x-[-2%] top-[38%] h-[34%] -rotate-12 rounded-[50%] border-[3px] border-brand/45 border-l-transparent" />
 
-      <Image
-        src="/hero-cart.png"
-        alt="Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores"
-        fill
-        preload
-        sizes="(min-width: 640px) 512px, 320px"
-        className="object-contain p-[5%] drop-shadow-[0_20px_25px_rgba(180,83,9,0.18)]"
-      />
+      {/* Speed streaks rush backwards, so the cart looks like it's racing forwards */}
+      <div aria-hidden className="absolute inset-y-0 left-[-8%] w-[70%] overflow-hidden">
+        {STREAKS.map((streak) => (
+          <span
+            key={streak.top}
+            style={{ top: streak.top, width: streak.width, animationDuration: streak.duration, animationDelay: streak.delay }}
+            className={`absolute right-0 rounded-full bg-gradient-to-r ${streak.color} to-transparent opacity-0 motion-safe:animate-speed-line ${streak.height}`}
+          />
+        ))}
+      </div>
+
+      {/* Three layers: zoom in on load → slow forward surge → fast road rumble */}
+      <div className="absolute inset-0 motion-safe:animate-cart-in">
+        <div className="absolute inset-0 motion-safe:animate-cart-surge">
+          <div className="absolute inset-0 origin-bottom motion-safe:animate-cart-rumble">
+            <Image
+              src="/hero-cart.png"
+              alt="Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores"
+              fill
+              preload
+              sizes="(min-width: 640px) 512px, 320px"
+              className="object-contain p-[5%] drop-shadow-[0_20px_25px_rgba(180,83,9,0.18)]"
+            />
+          </div>
+        </div>
+      </div>
 
       {SPARKLES.map((position) => (
         <span key={position} aria-hidden className={`absolute text-amber-300 ${position}`}>

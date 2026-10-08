@@ -24,6 +24,23 @@ export function SiteHeader() {
           <AccountLink />
         </Suspense>
       </div>
+
+      {/* Phones: the menu above is hidden, so show categories as a swipeable row */}
+      <nav aria-label="Categories" className="border-t border-line md:hidden">
+        <ul className="flex gap-2 overflow-x-auto px-4 py-2 [scrollbar-width:none]">
+          {LIVE_CATEGORIES.map((category) => (
+            <li key={category.slug} className="shrink-0">
+              <Link
+                href={`/${category.slug}`}
+                className="flex min-h-9 items-center gap-1.5 rounded-full bg-surface px-3.5 text-sm font-semibold text-ink ring-1 ring-line"
+              >
+                <span aria-hidden>{category.emoji}</span>
+                {category.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </header>
   );
 }
