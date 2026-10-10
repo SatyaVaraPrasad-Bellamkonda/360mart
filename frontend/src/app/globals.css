@@ -16,6 +16,8 @@
   --animate-cart-surge: cart-surge 2.6s ease-in-out infinite;
   --animate-cart-rumble: cart-rumble 0.22s linear infinite;
   --animate-speed-line: speed-line 0.9s linear infinite;
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-ken-burns: ken-burns 18s ease-in-out infinite alternate;
 }
 
 @keyframes float {
@@ -83,6 +85,40 @@ body {
   100% {
     transform: translateX(-160%) scaleX(1);
     opacity: 0;
+  }
+}
+
+/* Content gently rising into place (page load and scroll reveal) */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Slow zoom on banner photos */
+@keyframes ken-burns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Sections fade up as they scroll into view, in browsers that support
+   scroll-driven animations. Elsewhere (and with reduced motion) they simply show. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
   }
 }
 

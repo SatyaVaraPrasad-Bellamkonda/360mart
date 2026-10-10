@@ -7,8 +7,7 @@ export type Subcategory = {
   slug: string; // "mangoes"
   category: string; // "fruits"
   name: string; // "Mangoes"
-  emoji: string;
-  tint: string; // Tailwind background class for placeholder tiles
+  image: string; // e.g. "/images/fruits/subcategories/mangoes.jpg"
   shortDescription: string;
   seoTitle: string;
   seoDescription: string;
@@ -44,8 +43,7 @@ export type Product = {
   category: string;
   subcategory: string;
   name: string;
-  emoji: string;
-  image: string | null; // path under /public, null until real photos exist
+  image: string | null; // e.g. "/images/fruits/products/alphonso-mango.jpg"; null shows a placeholder
   shortDescription: string;
   description: string;
   origin: string;
@@ -58,18 +56,16 @@ export type Product = {
 // What listing pages need: the product plus its cheapest in-stock price.
 export type ProductSummary = Pick<
   Product,
-  "slug" | "category" | "subcategory" | "name" | "emoji" | "image" | "shortDescription" | "inSeason"
+  "slug" | "category" | "subcategory" | "name" | "image" | "shortDescription" | "inSeason"
 > & {
   variantLabel: string;
   price: number | null; // null when no store has it in stock
   mrp: number | null;
   sellerCount: number;
-  tint: string;
 };
 
 export type OfferWithStore = Offer & { store: Store };
 
 export type ProductDetail = Omit<Product, "variants"> & {
-  tint: string;
   variants: (Omit<Variant, "offers"> & { offers: OfferWithStore[] })[];
 };

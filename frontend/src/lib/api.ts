@@ -39,7 +39,6 @@ export async function getProduct(category: string, subcategory: string, slug: st
 
   return {
     ...product,
-    tint: tintFor(product),
     variants: product.variants.map((variant) => ({
       ...variant,
       offers: variant.offers
@@ -65,10 +64,6 @@ export async function getRelatedProducts(
     .slice(0, limit);
 }
 
-function tintFor(product: Product): string {
-  return SUBCATEGORIES.find((s) => s.slug === product.subcategory)?.tint ?? "bg-surface";
-}
-
 // Listing price = cheapest in-stock offer for the product's first variant.
 function toSummary(product: Product): ProductSummary {
   const [variant] = product.variants;
@@ -83,7 +78,6 @@ function toSummary(product: Product): ProductSummary {
     category: product.category,
     subcategory: product.subcategory,
     name: product.name,
-    emoji: product.emoji,
     image: product.image,
     shortDescription: product.shortDescription,
     inSeason: product.inSeason,
@@ -91,7 +85,26 @@ function toSummary(product: Product): ProductSummary {
     price: cheapest?.price ?? null,
     mrp: cheapest?.mrp ?? null,
     sellerCount: inStock.length,
-    tint: tintFor(product),
   };
 }
 
+
+export type CatalogStats = {
+  productCount: number;
+  storeCount: number; // stores with at least one product in stock
+  lowestPrice: number | null; // cheapest in-stock price across the products
+  inSeasonCount: number;
+};
+
+// Headline numbers for a category or subcategory banner.
+export async function getCatalogStats(category: string, subcategory?: string): Promise<CatalogStats> {
+  "use cache";
+  const products = PRODUCTS.filter((p) => p.category === category && (!subcategory || p.subcategory === subcategory));
+  const inStockOffers = products.flatMap((p) => p.variants.flatMap((v) => v.offers)).filter((o) => o.inStock);
+  return {
+    productCount: products.length,
+    storeCount: new Set(inStockOffers.map((o) => o.storeSlug)).size,
+    lowestPrice: inStockOffers.length ? Math.min(...inStockOffers.map((o) => o.price)) : null,
+    inSeasonCount: products.filter((p) => p.inSeason).length,
+  };
+}

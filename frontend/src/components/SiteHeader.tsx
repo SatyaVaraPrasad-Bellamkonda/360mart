@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LIVE_CATEGORIES } from "@/lib/categories";
@@ -32,9 +33,13 @@ export function SiteHeader() {
             <li key={category.slug} className="shrink-0">
               <Link
                 href={`/${category.slug}`}
-                className="flex min-h-9 items-center gap-1.5 rounded-full bg-surface px-3.5 text-sm font-semibold text-ink ring-1 ring-line"
+                className="flex min-h-10 items-center gap-2 rounded-full bg-surface py-1 pl-1 pr-3.5 text-sm font-semibold text-ink ring-1 ring-line"
               >
-                <span aria-hidden>{category.emoji}</span>
+                {category.image && (
+                  <span className="relative size-8 overflow-hidden rounded-full">
+                    <Image src={category.image} alt="" fill sizes="32px" className="object-cover" />
+                  </span>
+                )}
                 {category.name}
               </Link>
             </li>

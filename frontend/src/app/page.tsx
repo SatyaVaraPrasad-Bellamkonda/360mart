@@ -1,3 +1,4 @@
+import { Bike, Leaf, Store } from "lucide-react";
 import type { Metadata } from "next";
 import { CategoryCard } from "@/components/CategoryCard";
 import { HeroVisual } from "@/components/HeroVisual";
@@ -10,9 +11,9 @@ export const metadata: Metadata = {
 };
 
 const HIGHLIGHTS = [
-  { emoji: "🏪", title: "Local stores", text: "Buy from trusted shops in your own neighbourhood." },
-  { emoji: "🌿", title: "Fresh and genuine", text: "Products come from nearby sellers, not distant warehouses." },
-  { emoji: "🛵", title: "Quick delivery", text: "Short distances mean your order reaches you faster." },
+  { icon: Store, title: "Local stores", text: "Buy from trusted shops in your own neighbourhood." },
+  { icon: Leaf, title: "Fresh and genuine", text: "Products come from nearby sellers, not distant warehouses." },
+  { icon: Bike, title: "Quick delivery", text: "Short distances mean your order reaches you faster." },
 ];
 
 const homeJsonLd = {
@@ -84,7 +85,9 @@ export default function HomePage() {
           <ul className="mt-6 grid gap-5 sm:grid-cols-3">
             {HIGHLIGHTS.map((item) => (
               <li key={item.title} className="rounded-2xl bg-white p-6 ring-1 ring-line">
-                <span aria-hidden className="text-3xl">{item.emoji}</span>
+                <span className="flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand-deep">
+                  <item.icon aria-hidden className="size-5" />
+                </span>
                 <h3 className="mt-3 font-bold text-ink">{item.title}</h3>
                 <p className="mt-1 text-sm text-muted">{item.text}</p>
               </li>
