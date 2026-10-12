@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { LogoutButton } from "./LogoutButton";
 
@@ -20,12 +21,12 @@ export function DashboardShell({ badge, title, subtitle, children }: Props) {
   );
 }
 
-export function ComingSoonGrid({ items }: { items: { icon: string; title: string; text: string }[] }) {
+export function ComingSoonGrid({ items }: { items: { icon: LucideIcon; title: string; text: string }[] }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => (
         <li key={item.title} className="rounded-2xl border border-line bg-white p-5">
-          <span aria-hidden className="text-3xl">{item.icon}</span>
+          <item.icon aria-hidden className="size-7 text-brand-deep" />
           <h2 className="mt-3 font-bold text-ink">{item.title}</h2>
           <p className="mt-1 text-sm text-muted">{item.text}</p>
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-deep">Coming soon</p>

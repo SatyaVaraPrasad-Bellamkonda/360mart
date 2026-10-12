@@ -1,3 +1,4 @@
+import { UserRound } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { ROLE_HOME } from "@/lib/auth/roles";
@@ -9,7 +10,7 @@ export async function AccountLink() {
 
   if (!user) {
     return (
-      <Link href="/login" className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/85">
+      <Link href="/login" className="flex min-h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/85">
         Login
       </Link>
     );
@@ -18,10 +19,11 @@ export async function AccountLink() {
   return (
     <Link
       href={ROLE_HOME[user.role]}
-      className="flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-ink"
+      className="flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink hover:border-ink"
     >
-      <span aria-hidden>👤</span>
-      <span className="max-w-36 truncate">{user.displayName}</span>
+      <UserRound aria-hidden className="size-4" />
+      {/* No phone number here: the header is visible to anyone near the screen. */}
+      <span className="max-w-36 truncate">{user.name ?? "My account"}</span>
     </Link>
   );
 }

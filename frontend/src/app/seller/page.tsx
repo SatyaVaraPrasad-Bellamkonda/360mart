@@ -1,7 +1,9 @@
+import { Package, ReceiptText, Store } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ComingSoonGrid, DashboardShell, DashboardSkeleton } from "@/components/auth/DashboardShell";
 import { requireRole } from "@/lib/auth/dal";
+import { formatMobile } from "@/lib/auth/validation";
 
 export const metadata: Metadata = { title: "Seller Dashboard", robots: { index: false, follow: false } };
 
@@ -16,12 +18,12 @@ export default function SellerDashboardPage() {
 async function SellerDashboard() {
   const user = await requireRole("seller");
   return (
-    <DashboardShell badge="Shopkeeper" title={user.displayName} subtitle="Your store dashboard">
+    <DashboardShell badge="Shopkeeper" title="Your store" subtitle={`Signed in as ${user.name ?? formatMobile(user.mobileNumber)}`}>
       <ComingSoonGrid
         items={[
-          { icon: "🧾", title: "Orders", text: "Accept new orders and mark them packed and delivered." },
-          { icon: "🍎", title: "Products & stock", text: "Add products, set prices and update stock." },
-          { icon: "🏪", title: "Store settings", text: "Shop timings, delivery areas and your store page." },
+          { icon: ReceiptText, title: "Orders", text: "Accept new orders and mark them packed and delivered." },
+          { icon: Package, title: "Products & stock", text: "Add products, set prices and update stock." },
+          { icon: Store, title: "Store settings", text: "Shop timings, delivery areas and your store page." },
         ]}
       />
     </DashboardShell>

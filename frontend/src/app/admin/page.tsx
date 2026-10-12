@@ -1,3 +1,4 @@
+import { ChartColumn, FolderTree, Store } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ComingSoonGrid, DashboardShell, DashboardSkeleton } from "@/components/auth/DashboardShell";
@@ -19,9 +20,9 @@ async function AdminDashboard() {
     <DashboardShell badge="Admin" title="Admin panel" subtitle="Manage 360mart">
       <ComingSoonGrid
         items={[
-          { icon: "🏪", title: "Stores", text: "Approve new shopkeepers and manage stores." },
-          { icon: "🗂️", title: "Catalogue", text: "Categories, subcategories, products and SEO text." },
-          { icon: "📊", title: "Orders & reports", text: "All orders across stores, payouts and reports." },
+          { icon: Store, title: "Stores", text: "Approve new shopkeepers and manage stores." },
+          { icon: FolderTree, title: "Catalogue", text: "Categories, subcategories, products and SEO text." },
+          { icon: ChartColumn, title: "Orders & reports", text: "All orders across stores, payouts and reports." },
         ]}
       />
     </DashboardShell>
