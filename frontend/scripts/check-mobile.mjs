@@ -85,6 +85,10 @@ for (const width of [360, 390]) {
 }
 
 ws.close();
-chrome.kill();
-rmSync(profile, { recursive: true, force: true });
+// Wait for Chrome to exit before deleting its profile, or it may still be writing to it.
+await new Promise((resolve) => {
+  chrome.once("exit", resolve);
+  chrome.kill();
+});
+rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 console.log(problems ? `\n${problems} issue(s) to review (visually hidden inputs behind styled labels are expected).` : "\nAll pages pass.");

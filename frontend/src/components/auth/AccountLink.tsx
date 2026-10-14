@@ -1,13 +1,25 @@
 import { UserRound } from "lucide-react";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth/dal";
 import { ROLE_HOME } from "@/lib/auth/roles";
+import { AuthSync } from "./AuthProvider";
 
 // Header link: "Login" for visitors, or the signed-in user's name linking to
 // their dashboard. Reads the session cookie, so it must sit inside <Suspense>.
+// It also hands the same user to <AuthProvider> for client components, so the
+// backend is asked once per page, not twice.
 export async function AccountLink() {
   const user = await getCurrentUser();
 
+  return (
+    <>
+      <AuthSync user={user} />
+      <AccountButton user={user} />
+    </>
+  );
+}
+
+function AccountButton({ user }: { user: CurrentUser | null }) {
   if (!user) {
     return (
       <Link href="/login" className="flex min-h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/85">

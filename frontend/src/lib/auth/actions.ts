@@ -5,7 +5,8 @@ import type { ApiFailure } from "@/lib/backend/client";
 import type { OtpInfo } from "./api-types";
 import * as api from "./auth-service";
 import { ROLE_FROM_API, safeNextPath, type Role } from "./roles";
-import { clearSession, getSessionToken, readSessionCookie, saveSession } from "./session";
+import { toCurrentUser } from "./current-user";
+import { clearSession, getSessionToken, readSessionCookie, saveSession, saveUser } from "./session";
 import { isUuid, loginPasswordError, newPasswordError, normalizeMobile, otpError } from "./validation";
 
 // Server actions = functions the forms call that run on our server (like an
@@ -95,8 +96,8 @@ export async function loginAction(input: { mobileNumber: unknown; password: unkn
     });
   }
 
-  await saveSession(session);
-  redirect(safeNextPath(input.next, role));
+  const user = await startSession(session);
+  redirect(safeNextPath(input.next, user?.role ?? role));
 }
 
 export async function logoutAction(): Promise<void> {
@@ -113,8 +114,21 @@ async function loginAndRedirect(mobileNumber: string, password: string, next: un
   // The password is saved either way; if the automatic login fails (e.g. rate limit), ask them to log in.
   if (!session || !role) redirect(`/login?status=${status}`);
 
+  const user = await startSession(session);
+  redirect(safeNextPath(next, user?.role ?? role));
+}
+
+// Logged in: keep the session cookie, then load the user ONCE from /users/me
+// (the single source of user details, e.g. future profile fields) and store
+// it as userSession. Pages then read it without calling the backend; proxy.ts
+// refreshes it every 15 minutes. If /users/me fails now, the login still
+// stands and the next page load fetches it.
+async function startSession(session: { token: string; maxAge: number }) {
   await saveSession(session);
-  redirect(safeNextPath(next, role));
+  const me = await api.getMe(session.token);
+  const user = me.ok ? toCurrentUser(me.data) : null;
+  if (user) await saveUser(user, session.token);
+  return user;
 }
 
 function checkCodeAndPassword(input: CodeAndPassword): ActionResult<{ mobileNumber: string; otpId: string; otp: string; password: string }> {

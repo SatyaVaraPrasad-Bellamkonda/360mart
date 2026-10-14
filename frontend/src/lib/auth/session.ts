@@ -1,19 +1,18 @@
 import "server-only";
 import { cookies } from "next/headers";
+import type { CurrentUser } from "./current-user";
 import { SESSION_COOKIE } from "./roles";
+import { isSessionToken, USER_COOKIE, USER_COOKIE_OPTIONS, sealUser, secureCookies } from "./user-cookie";
 
 // The session itself lives in the backend's database. The browser only holds
 // a random token in an httpOnly cookie on our own domain, which we copy from
 // the API's login response and send back to the API on every server call.
 
-// The backend issues 32 random bytes, base64url-encoded (43 characters).
-const TOKEN_SHAPE = /^[A-Za-z0-9_-]{20,256}$/;
-
 const DEFAULT_MAX_AGE = 90 * 24 * 60 * 60; // the backend's session-ttl
 
 export async function getSessionToken(): Promise<string | undefined> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  return token && TOKEN_SHAPE.test(token) ? token : undefined;
+  return isSessionToken(token) ? token : undefined;
 }
 
 /** Finds the session token in the API's Set-Cookie headers. */
@@ -23,7 +22,7 @@ export function readSessionCookie(setCookies: string[]): { token: string; maxAge
 
   const [pair, ...attributes] = header.split(";");
   const token = pair.slice(SESSION_COOKIE.length + 1).trim();
-  if (!TOKEN_SHAPE.test(token)) return null;
+  if (!isSessionToken(token)) return null;
 
   const maxAgeAttr = attributes.map((a) => a.trim()).find((a) => a.toLowerCase().startsWith("max-age="));
   const maxAge = maxAgeAttr ? Number(maxAgeAttr.split("=")[1]) : NaN;
@@ -40,12 +39,14 @@ export async function saveSession(session: { token: string; maxAge: number }): P
   });
 }
 
-export async function clearSession(): Promise<void> {
-  (await cookies()).delete({ name: SESSION_COOKIE, path: "/" });
+/** Stores the /users/me answer as "userSession" (see user-cookie.ts). */
+export async function saveUser(user: CurrentUser, sessionToken: string): Promise<void> {
+  const sealed = await sealUser(user, sessionToken, Date.now());
+  if (sealed) (await cookies()).set(USER_COOKIE, sealed, { ...USER_COOKIE_OPTIONS, secure: secureCookies() });
 }
 
-// COOKIE_SECURE=false allows testing a production build over plain http.
-function secureCookies(): boolean {
-  if (process.env.COOKIE_SECURE) return process.env.COOKIE_SECURE !== "false";
-  return process.env.NODE_ENV === "production";
+export async function clearSession(): Promise<void> {
+  const jar = await cookies();
+  jar.delete({ name: SESSION_COOKIE, path: "/" });
+  jar.delete({ name: USER_COOKIE, path: "/" });
 }

@@ -1,34 +1,54 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import { getMe } from "./auth-service";
-import { ROLE_FROM_API, ROLE_LOGIN, type Role } from "./roles";
+import { toCurrentUser, type CurrentUser } from "./current-user";
+import { ROLE_LOGIN, type Role } from "./roles";
 import { getSessionToken } from "./session";
+import { openUser, USER_COOKIE } from "./user-cookie";
 
-// The one place pages check who is logged in. The cookie is only a random
-// token; the backend decides whether it is still valid (not logged out,
-// expired, revoked by a password reset, or the account disabled).
+export type { CurrentUser } from "./current-user";
 
-export type CurrentUser = {
-  userId: string;
-  role: Role;
-  name: string | null; // null until profile editing exists
-  mobileNumber: string; // E.164
-};
+// The one place pages check who is logged in.
+//
+// Normal case: read "userSession", the /users/me answer stored at login and
+// refreshed every 15 minutes by proxy.ts. No backend call.
+// Fallback (cookie missing, e.g. SESSION_SECRET unset): ask /users/me live.
+// Either way the backend still checks the real session on every API call;
+// this only decides what the page shows.
 
-// cache(): the header and the page can both ask, but the API is called once per request.
+// cache(): the header and the page share one answer per request.
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const token = await getSessionToken();
   if (!token) return null;
 
-  const res = await getMe(token);
-  const role = res.ok ? ROLE_FROM_API[res.data.role] : undefined;
-  if (!res.ok || !role) return null;
-  return { userId: res.data.userId, role, name: res.data.fullName, mobileNumber: res.data.mobileNumber };
+  await connection(); // request-time only, so Date.now() below is allowed
+  const stored = await openUser((await cookies()).get(USER_COOKIE)?.value, token, Date.now());
+  if (stored?.fresh) return stored.user;
+
+  const live = await getLiveUser(token);
+  // Backend unreachable: keep showing the last known user rather than "logged out".
+  return live === "unreachable" ? (stored?.user ?? null) : live;
 });
 
+async function getLiveUser(token: string): Promise<CurrentUser | null | "unreachable"> {
+  const res = await getMe(token);
+  if (res.ok) return toCurrentUser(res.data);
+  return res.error.status === 0 || res.error.status >= 500 ? "unreachable" : null;
+}
+
+// Admin pages always confirm with the backend (rare, and the most sensitive);
+// other areas trust the stored copy.
 export async function requireRole(role: Role): Promise<CurrentUser> {
-  const user = await getCurrentUser();
+  const user = role === "admin" ? await requireLiveAdmin() : await getCurrentUser();
   if (!user || user.role !== role) redirect(ROLE_LOGIN[role]);
   return user;
+}
+
+async function requireLiveAdmin(): Promise<CurrentUser | null> {
+  const token = await getSessionToken();
+  const live = token ? await getLiveUser(token) : null;
+  return live === "unreachable" ? null : live;
 }

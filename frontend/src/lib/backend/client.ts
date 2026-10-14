@@ -25,22 +25,34 @@ type Options = {
   method?: "GET" | "POST";
   body?: unknown;
   sessionToken?: string; // sent as the MART360_SESSION cookie
+  // The shopper's request. Defaults to headers() from next/headers; proxy.ts,
+  // where that isn't available, passes request.headers instead.
+  incoming?: Headers;
 };
 
 const TIMEOUT_MS = 10_000;
 
+// Set by proxy.ts on every request; forwarded to Spring Boot and printed in
+// the [api] lines, so a browser request can be matched to its backend calls.
+export const REQUEST_ID_HEADER = "x-request-id";
+
 const GENERIC = "Something went wrong. Please try again.";
 const UNREACHABLE = "We couldn't connect to 360mart right now. Please try again in a moment.";
 
-export async function callApi<T>(path: string, { method = "GET", body, sessionToken }: Options = {}): Promise<ApiResult<T>> {
+export async function callApi<T>(path: string, { method = "GET", body, sessionToken, incoming }: Options = {}): Promise<ApiResult<T>> {
   const base = apiBaseUrl();
   if (!base) return failure(0, "API_UNAVAILABLE", UNREACHABLE);
 
   const requestHeaders = new Headers({ Accept: "application/json" });
   if (body !== undefined) requestHeaders.set("Content-Type", "application/json");
   if (sessionToken) requestHeaders.set("Cookie", `${SESSION_COOKIE}=${sessionToken}`);
-  await forwardClientDetails(requestHeaders);
+  const source = incoming ?? (await headers());
+  forwardClientDetails(source, requestHeaders);
+  const requestId = source.get(REQUEST_ID_HEADER) ?? "-";
+  if (requestId !== "-") requestHeaders.set("X-Request-Id", requestId);
+  const label = `[api] ${requestId} ${method} ${path}`;
 
+  const started = performance.now(); // not Date.now(): Next.js rejects it while prerendering
   let response: Response;
   try {
     response = await fetch(`${base}${path}`, {
@@ -56,24 +68,29 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
     // Next.js cancels in-flight requests on purpose while prerendering; let it.
     unstable_rethrow(error);
     // Log the reason only, never the body (it may hold a password or code).
-    console.error(`[api] ${method} ${path} failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`${label} failed: ${error instanceof Error ? error.message : String(error)}`);
     return failure(0, "API_UNAVAILABLE", UNREACHABLE);
   }
 
   const payload = await readJson(response);
-  if (response.ok) {
-    return { ok: true, status: response.status, data: payload as T, setCookies: response.headers.getSetCookie() };
-  }
-  if (response.status >= 500) console.error(`[api] ${method} ${path} → ${response.status}`);
-  return { ok: false, error: toFailure(response.status, payload) };
+  const result: ApiResult<T> = response.ok
+    ? { ok: true, status: response.status, data: payload as T, setCookies: response.headers.getSetCookie() }
+    : { ok: false, error: toFailure(response.status, payload) };
+
+  // The browser only sees calls to our own site (the BFF design), so show each
+  // backend call here: in development always, in production only failures.
+  // Status and error code only, never a body (it can hold a password or code).
+  const line = `${label} → ${response.status}${result.ok ? "" : ` ${result.error.code}`} in ${Math.round(performance.now() - started)}ms`;
+  if (response.status >= 500) console.error(line);
+  else if (process.env.NODE_ENV === "development") console.log(line);
+  return result;
 }
 
 // The API rate-limits per IP and lists each session's device, so it needs the
 // shopper's IP and browser, not our server's. Vercel sets x-real-ip /
 // x-forwarded-for itself; the backend only trusts X-Forwarded-For from known
 // proxy addresses (server.forward-headers-strategy).
-async function forwardClientDetails(target: Headers): Promise<void> {
-  const incoming = await headers();
+function forwardClientDetails(incoming: Headers, target: Headers): void {
   const userAgent = incoming.get("user-agent");
   if (userAgent) target.set("User-Agent", userAgent.slice(0, 255));
 
