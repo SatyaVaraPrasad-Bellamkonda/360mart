@@ -22,8 +22,8 @@ export type ApiResult<T> =
   | { ok: false; error: ApiFailure };
 
 type Options = {
-  method?: "GET" | "POST";
-  body?: unknown;
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+  body?: unknown; // JSON-encoded, or sent as-is when it's FormData (file uploads)
   sessionToken?: string; // sent as the MART360_SESSION cookie
   // The shopper's request. Defaults to headers() from next/headers; proxy.ts,
   // where that isn't available, passes request.headers instead.
@@ -31,6 +31,7 @@ type Options = {
 };
 
 const TIMEOUT_MS = 10_000;
+const UPLOAD_TIMEOUT_MS = 30_000; // slow mobile uplinks
 
 // Set by proxy.ts on every request; forwarded to Spring Boot and printed in
 // the [api] lines, so a browser request can be matched to its backend calls.
@@ -44,7 +45,9 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
   if (!base) return failure(0, "API_UNAVAILABLE", UNREACHABLE);
 
   const requestHeaders = new Headers({ Accept: "application/json" });
-  if (body !== undefined) requestHeaders.set("Content-Type", "application/json");
+  const isUpload = body instanceof FormData;
+  // FormData: fetch sets "multipart/form-data; boundary=…" itself.
+  if (body !== undefined && !isUpload) requestHeaders.set("Content-Type", "application/json");
   if (sessionToken) requestHeaders.set("Cookie", `${SESSION_COOKIE}=${sessionToken}`);
   const source = incoming ?? (await headers());
   forwardClientDetails(source, requestHeaders);
@@ -58,11 +61,11 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
     response = await fetch(`${base}${path}`, {
       method,
       headers: requestHeaders,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isUpload ? body : JSON.stringify(body),
       cache: "no-store",
       // Never follow a redirect: it could carry the session cookie to another host.
       redirect: "error",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(isUpload ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS),
     });
   } catch (error) {
     // Next.js cancels in-flight requests on purpose while prerendering; let it.

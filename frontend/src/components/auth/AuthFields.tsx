@@ -4,7 +4,7 @@ import { Check, Circle, Eye, EyeOff } from "lucide-react";
 import { useId, useState, type Ref } from "react";
 import { PASSWORD_RULES } from "@/lib/auth/validation";
 
-// Form inputs shared by login, signup and forgot password. Each one shows its
+// Form inputs shared by login, signup, forgot password and the profile form. Each one shows its
 // own error underneath and links it with aria-describedby for screen readers.
 
 const INPUT = "w-full min-h-12 px-3 text-base text-ink outline-none";
@@ -148,6 +148,52 @@ export function PasswordField({ value, onChange, error, autoFocus, ref, label, a
             );
           })}
         </ul>
+      )}
+    </div>
+  );
+}
+
+type TextProps = FieldProps & {
+  label: string;
+  name: string;
+  type?: "text" | "email";
+  autoComplete: string;
+  maxLength: number;
+  hint?: string;
+  optional?: boolean;
+};
+
+export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", autoComplete, maxLength, hint, optional }: TextProps) {
+  const id = useId();
+  const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+        {label}
+        {optional && <span className="ml-1 font-normal text-muted">(optional)</span>}
+      </label>
+      <div className={`${BOX} ${boxBorder(error)}`}>
+        <input
+          ref={ref}
+          id={id}
+          name={name}
+          type={type}
+          inputMode={type === "email" ? "email" : undefined}
+          autoComplete={autoComplete}
+          maxLength={maxLength}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoFocus={autoFocus}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          className={INPUT}
+        />
+      </div>
+      <FieldError id={`${id}-error`} message={error} />
+      {hint && !error && (
+        <p id={`${id}-hint`} className="mt-1.5 text-sm text-muted">
+          {hint}
+        </p>
       )}
     </div>
   );

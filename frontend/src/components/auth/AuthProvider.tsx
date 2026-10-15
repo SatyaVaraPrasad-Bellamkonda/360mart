@@ -24,6 +24,8 @@ type AuthContextValue = {
   status: AuthStatus;
   /** Call when an action reports UNAUTHENTICATED: the session ended, so log in again. */
   sessionExpired: () => void;
+  /** Use the user returned by a profile action straight away (the server copy is already updated). */
+  replaceUser: (user: CurrentUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -58,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (process.env.NODE_ENV !== "production" && status !== "loading") window.userSession = user;
   }, [user, status]);
 
-  const value = useMemo(() => ({ user, status, sessionExpired }), [user, status, sessionExpired]);
+  const value = useMemo(() => ({ user, status, sessionExpired, replaceUser: setUser }), [user, status, sessionExpired, setUser]);
 
   return (
     <SetUserContext value={setUser}>

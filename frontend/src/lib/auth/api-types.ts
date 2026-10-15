@@ -22,14 +22,24 @@ export type MessageResponse = { message: string };
 
 export type ApiRole = "CUSTOMER" | "STORE_OWNER" | "ADMIN";
 
+// Returned by login, GET /users/me and PUT /users/{userId}/updateUser.
 export type UserResponse = {
   userId: string;
-  fullName: string | null;
+  firstName: string | null; // null until the user fills in their profile
+  lastName: string | null;
   mobileNumber: string;
   email: string | null;
+  profileImageUrl: string | null; // signed link, expires after ~1 hour; null = no picture
   role: ApiRole;
   mobileVerified: boolean;
   lastLoginAt: string | null;
+};
+
+// PUT / GET /users/{userId}/profile-image
+export type ProfileImageResponse = {
+  profileImageId: string;
+  url: string; // signed link, expires at expiresAt
+  expiresAt: string;
 };
 
 // Every error response (RFC 9457 problem document + a stable `code`).

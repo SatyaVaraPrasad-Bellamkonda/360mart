@@ -1,5 +1,5 @@
-import { UserRound } from "lucide-react";
 import Link from "next/link";
+import { Avatar } from "@/components/profile/Avatar";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/dal";
 import { ROLE_HOME } from "@/lib/auth/roles";
 import { AuthSync } from "./AuthProvider";
@@ -31,11 +31,12 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
   return (
     <Link
       href={ROLE_HOME[user.role]}
-      className="flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink hover:border-ink"
+      aria-label="My account"
+      className="flex min-h-10 items-center gap-2 rounded-full border border-line py-1 pl-1 pr-4 text-sm font-semibold text-ink hover:border-ink"
     >
-      <UserRound aria-hidden className="size-4" />
-      {/* No phone number here: the header is visible to anyone near the screen. */}
-      <span className="max-w-36 truncate">{user.name ?? "My account"}</span>
+      <Avatar user={user} size="sm" />
+      {/* First name only, never the phone number: the header is visible to anyone near the screen. */}
+      <span className="max-w-28 truncate">{user.firstName ?? "My account"}</span>
     </Link>
   );
 }

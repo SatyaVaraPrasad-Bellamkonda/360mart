@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { LogoutButton } from "./LogoutButton";
 
@@ -21,17 +22,31 @@ export function DashboardShell({ badge, title, subtitle, children }: Props) {
   );
 }
 
-export function ComingSoonGrid({ items }: { items: { icon: LucideIcon; title: string; text: string }[] }) {
+// Dashboard cards: a link when the feature exists, "Coming soon" otherwise.
+export function ComingSoonGrid({ items }: { items: { icon: LucideIcon; title: string; text: string; href?: string }[] }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => (
-        <li key={item.title} className="rounded-2xl border border-line bg-white p-5">
-          <item.icon aria-hidden className="size-7 text-brand-deep" />
-          <h2 className="mt-3 font-bold text-ink">{item.title}</h2>
-          <p className="mt-1 text-sm text-muted">{item.text}</p>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-deep">Coming soon</p>
-        </li>
-      ))}
+      {items.map((item) => {
+        const body = (
+          <>
+            <item.icon aria-hidden className="size-7 text-brand-deep" />
+            <h2 className="mt-3 font-bold text-ink">{item.title}</h2>
+            <p className="mt-1 text-sm text-muted">{item.text}</p>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-deep">{item.href ? "Open" : "Coming soon"}</p>
+          </>
+        );
+        return (
+          <li key={item.title} className="flex">
+            {item.href ? (
+              <Link href={item.href} className="w-full rounded-2xl border border-line bg-white p-5 transition hover:border-ink hover:shadow-sm">
+                {body}
+              </Link>
+            ) : (
+              <div className="w-full rounded-2xl border border-line bg-white p-5">{body}</div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

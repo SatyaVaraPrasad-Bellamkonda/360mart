@@ -18,6 +18,10 @@
   --animate-speed-line: speed-line 0.9s linear infinite;
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-ken-burns: ken-burns 18s ease-in-out infinite alternate;
+  --animate-drift-a: drift-a 26s ease-in-out infinite alternate;
+  --animate-drift-b: drift-b 32s ease-in-out infinite alternate;
+  --animate-drift-c: drift-c 22s ease-in-out infinite alternate;
+  --animate-sheen: sheen 14s ease-in-out infinite;
 }
 
 @keyframes float {
@@ -107,6 +111,46 @@ body {
   }
   to {
     transform: scale(1.08);
+  }
+}
+
+/* Account banner: soft colour glows drifting slowly (each on its own long
+   cycle, so the pattern never visibly repeats). Transforms only, cheap to run. */
+@keyframes drift-a {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(18%, 22%) scale(1.25);
+  }
+}
+
+@keyframes drift-b {
+  from {
+    transform: translate(0, 0) scale(1.1);
+  }
+  to {
+    transform: translate(-24%, -16%) scale(0.9);
+  }
+}
+
+@keyframes drift-c {
+  from {
+    transform: translate(0, 0) scale(0.9);
+  }
+  to {
+    transform: translate(-14%, 26%) scale(1.2);
+  }
+}
+
+/* A faint band of light gliding across, then resting */
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  45%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
   }
 }
 
