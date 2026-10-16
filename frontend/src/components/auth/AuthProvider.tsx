@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { ROLE_LOGIN } from "@/lib/auth/roles";
@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<CurrentUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const router = useRouter();
-  const pathname = usePathname();
 
   const setUser = useCallback((next: CurrentUser | null) => {
     setUserState(next);
@@ -52,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionExpired = useCallback(() => {
     setUser(null);
     const area = user?.role ?? "customer";
-    router.push(`${ROLE_LOGIN[area]}?next=${encodeURIComponent(pathname)}`);
-  }, [router, pathname, setUser, user?.role]);
+    // Read the URL only now: usePathname() in this app-wide provider would make
+    // every page with a URL parameter (e.g. an address id) wait for the request.
+    router.push(`${ROLE_LOGIN[area]}?next=${encodeURIComponent(window.location.pathname)}`);
+  }, [router, setUser, user?.role]);
 
   // Development only, as the backend guide suggests: type `userSession` in the console.
   useEffect(() => {

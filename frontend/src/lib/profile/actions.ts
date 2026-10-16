@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getMe } from "@/lib/auth/auth-service";
 import { toCurrentUser, type CurrentUser } from "@/lib/auth/current-user";
@@ -66,7 +67,8 @@ export async function refreshUserAction(): Promise<Result> {
     const res = await getMe(token);
     if (!res.ok) return fail(res.error);
     const fresh = toCurrentUser(res.data);
-    return fresh ? done(fresh, token) : fail(unexpected());
+    // Only a fresh picture link: nothing changed, so no page needs re-rendering.
+    return fresh ? done(fresh, token, { changed: false }) : fail(unexpected());
   });
 }
 
@@ -81,8 +83,10 @@ async function withSession(run: (token: string, user: CurrentUser) => Promise<Re
   return result;
 }
 
-async function done(user: CurrentUser, token: string): Promise<Result> {
+async function done(user: CurrentUser, token: string, { changed = true } = {}): Promise<Result> {
   await saveUser(user, token);
+  // /account shows the name and photo too; don't let the browser reuse an older copy.
+  if (changed) revalidatePath("/account", "layout");
   return { ok: true, data: user };
 }
 

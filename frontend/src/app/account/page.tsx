@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireRole } from "@/lib/auth/dal";
 import { AccountHero } from "./components/AccountHero";
-import { AccountSkeleton, AddressesCard, OrdersCard, SettingsCard } from "./components/AccountSections";
+import { AccountSkeleton, AddressesCard, AddressesCardSkeleton, OrdersCard, SettingsCard } from "./components/AccountSections";
 import { ProfileProgress } from "./components/ProfileProgress";
 
 export const metadata: Metadata = { title: "My Account", robots: { index: false, follow: false } };
@@ -29,7 +29,10 @@ async function CustomerAccount() {
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           <OrdersCard />
-          <AddressesCard />
+          {/* Its own boundary: the rest of the page doesn't wait for the address list. */}
+          <Suspense fallback={<AddressesCardSkeleton />}>
+            <AddressesCard />
+          </Suspense>
         </div>
         <SettingsCard />
       </div>

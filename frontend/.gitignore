@@ -42,3 +42,6 @@ next-env.d.ts
 
 # allow the env template
 !.env.example
+
+# MapLibre copied from node_modules by scripts/vendor-maplibre.mjs (predev / prebuild)
+/public/vendor/maplibre-gl/

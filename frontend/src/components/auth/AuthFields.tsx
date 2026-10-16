@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, Circle, Eye, EyeOff } from "lucide-react";
+import { Check, ChevronDown, Circle, Eye, EyeOff } from "lucide-react";
 import { useId, useState, type Ref } from "react";
 import { PASSWORD_RULES } from "@/lib/auth/validation";
 
-// Form inputs shared by login, signup, forgot password and the profile form. Each one shows its
+// Form inputs shared by login, signup, forgot password, the profile and the address forms. Each one shows its
 // own error underneath and links it with aria-describedby for screen readers.
 
 const INPUT = "w-full min-h-12 px-3 text-base text-ink outline-none";
@@ -31,19 +31,19 @@ type FieldProps = {
   ref?: Ref<HTMLInputElement>;
 };
 
-export function MobileField({ value, onChange, error, autoFocus, ref, autoComplete = "tel-national" }: FieldProps & { autoComplete?: string }) {
+type MobileProps = FieldProps & { autoComplete?: string; label?: string; name?: string; optional?: boolean; hint?: string };
+
+export function MobileField({ value, onChange, error, autoFocus, ref, autoComplete = "tel-national", label = "Mobile number", name = "mobile", optional, hint }: MobileProps) {
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        Mobile number
-      </label>
+      <FieldLabel id={id} label={label} optional={optional} />
       <div className={`${BOX} ${boxBorder(error)}`}>
         <span className="flex items-center border-r border-line bg-surface px-3 text-sm font-semibold text-muted">+91</span>
         <input
           ref={ref}
           id={id}
-          name="mobile"
+          name={name}
           type="tel"
           inputMode="tel"
           autoComplete={autoComplete}
@@ -53,11 +53,12 @@ export function MobileField({ value, onChange, error, autoFocus, ref, autoComple
           onChange={(e) => onChange(e.target.value)}
           autoFocus={autoFocus}
           aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
+          aria-describedby={describedBy(id, error, hint)}
           className={INPUT}
         />
       </div>
       <FieldError id={`${id}-error`} message={error} />
+      <FieldHint id={`${id}-hint`} hint={hint} error={error} />
     </div>
   );
 }
@@ -102,7 +103,7 @@ type PasswordProps = FieldProps & {
 export function PasswordField({ value, onChange, error, autoFocus, ref, label, autoComplete, showRules }: PasswordProps) {
   const id = useId();
   const [visible, setVisible] = useState(false);
-  const describedBy = [error && `${id}-error`, showRules && `${id}-rules`].filter(Boolean).join(" ") || undefined;
+  const describedByIds = [error && `${id}-error`, showRules && `${id}-rules`].filter(Boolean).join(" ") || undefined;
 
   return (
     <div>
@@ -121,7 +122,7 @@ export function PasswordField({ value, onChange, error, autoFocus, ref, label, a
           onChange={(e) => onChange(e.target.value)}
           autoFocus={autoFocus}
           aria-invalid={!!error}
-          aria-describedby={describedBy}
+          aria-describedby={describedByIds}
           className={INPUT}
         />
         <button
@@ -157,46 +158,140 @@ type TextProps = FieldProps & {
   label: string;
   name: string;
   type?: "text" | "email";
+  inputMode?: "text" | "email" | "numeric";
   autoComplete: string;
   maxLength: number;
+  placeholder?: string;
   hint?: string;
   optional?: boolean;
 };
 
-export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", autoComplete, maxLength, hint, optional }: TextProps) {
+export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", inputMode, autoComplete, maxLength, placeholder, hint, optional }: TextProps) {
   const id = useId();
-  const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}
-        {optional && <span className="ml-1 font-normal text-muted">(optional)</span>}
-      </label>
+      <FieldLabel id={id} label={label} optional={optional} />
       <div className={`${BOX} ${boxBorder(error)}`}>
         <input
           ref={ref}
           id={id}
           name={name}
           type={type}
-          inputMode={type === "email" ? "email" : undefined}
+          inputMode={inputMode ?? (type === "email" ? "email" : undefined)}
           autoComplete={autoComplete}
           maxLength={maxLength}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           autoFocus={autoFocus}
           aria-invalid={!!error}
-          aria-describedby={describedBy}
-          className={INPUT}
+          aria-describedby={describedBy(id, error, hint)}
+          className={`${INPUT} placeholder:text-muted/70`}
         />
       </div>
       <FieldError id={`${id}-error`} message={error} />
-      {hint && !error && (
-        <p id={`${id}-hint`} className="mt-1.5 text-sm text-muted">
-          {hint}
-        </p>
-      )}
+      <FieldHint id={`${id}-hint`} hint={hint} error={error} />
     </div>
   );
+}
+
+type SelectProps = Omit<FieldProps, "ref"> & {
+  label: string;
+  name: string;
+  autoComplete: string;
+  placeholder: string;
+  groups: { label: string; options: readonly string[] }[];
+};
+
+/** A native dropdown: on phones it opens the system picker; on desktop typing "tel…" jumps to Telangana. */
+export function SelectField({ value, onChange, error, label, name, autoComplete, placeholder, groups }: SelectProps) {
+  const id = useId();
+  return (
+    <div>
+      <FieldLabel id={id} label={label} />
+      <div className={`${BOX} ${boxBorder(error)} relative`}>
+        <select
+          id={id}
+          name={name}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={!!error}
+          aria-describedby={describedBy(id, error)}
+          className={`${INPUT} appearance-none bg-transparent pr-10 ${value ? "" : "text-muted"}`}
+        >
+          <option value="" disabled>
+            {placeholder}
+          </option>
+          {groups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map((option) => (
+                <option key={option} value={option} className="text-ink">
+                  {option}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted" />
+      </div>
+      <FieldError id={`${id}-error`} message={error} />
+    </div>
+  );
+}
+
+type TextAreaProps = Omit<FieldProps, "ref"> & { label: string; name: string; maxLength: number; placeholder?: string; hint?: string; optional?: boolean };
+
+export function TextAreaField({ value, onChange, error, label, name, maxLength, placeholder, hint, optional }: TextAreaProps) {
+  const id = useId();
+  return (
+    <div>
+      <FieldLabel id={id} label={label} optional={optional} />
+      <div className={`${BOX} ${boxBorder(error)}`}>
+        <textarea
+          id={id}
+          name={name}
+          rows={3}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={!!error}
+          aria-describedby={describedBy(id, error, hint)}
+          className="min-h-24 w-full resize-y px-3 py-3 text-base text-ink outline-none placeholder:text-muted/70"
+        />
+      </div>
+      <FieldError id={`${id}-error`} message={error} />
+      <div className="mt-1.5 flex justify-between gap-3 text-sm text-muted">
+        <span id={`${id}-hint`}>{!error && hint}</span>
+        <span aria-hidden className="shrink-0 tabular-nums">
+          {value.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function FieldLabel({ id, label, optional }: { id: string; label: string; optional?: boolean }) {
+  return (
+    <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+      {label}
+      {optional && <span className="ml-1 font-normal text-muted">(optional)</span>}
+    </label>
+  );
+}
+
+function FieldHint({ id, hint, error }: { id: string; hint?: string; error?: string }) {
+  if (!hint || error) return null;
+  return (
+    <p id={id} className="mt-1.5 text-sm text-muted">
+      {hint}
+    </p>
+  );
+}
+
+function describedBy(id: string, error?: string, hint?: string): string | undefined {
+  return [error && `${id}-error`, hint && !error && `${id}-hint`].filter(Boolean).join(" ") || undefined;
 }
 
 export function SubmitButton({ pending, label, pendingLabel }: { pending: boolean; label: string; pendingLabel: string }) {

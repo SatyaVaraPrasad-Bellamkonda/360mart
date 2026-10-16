@@ -1,6 +1,9 @@
-import { ChevronRight, LogOut, MapPin, ShieldCheck, ShoppingBag, UserRound, type LucideIcon } from "lucide-react";
+import { ChevronRight, LogOut, MapPin, Plus, ShieldCheck, ShoppingBag, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { loadAddresses } from "@/lib/addresses/data";
+import { addressSummary } from "@/lib/addresses/format";
+import { ADDRESS_TYPE_LABEL } from "@/lib/addresses/types";
 import { logoutAction } from "@/lib/auth/actions";
 
 // The body of /account. Features the backend doesn't support yet are shown as
@@ -20,12 +23,8 @@ function Card({ title, id, action, children }: { title: string; id: string; acti
   );
 }
 
-function SoonPill({ short }: { short?: boolean }) {
-  return (
-    <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-line">
-      {short ? "Soon" : "Coming soon"}
-    </span>
-  );
+function SoonPill() {
+  return <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-line">Soon</span>;
 }
 
 function EmptyState({ icon: Icon, title, text, children }: { icon: LucideIcon; title: string; text: string; children?: ReactNode }) {
@@ -57,23 +56,76 @@ export function OrdersCard() {
   );
 }
 
-export function AddressesCard() {
+export async function AddressesCard() {
+  const list = await loadAddresses("/account");
+  const addresses = list.ok ? list.data : [];
+  const main = addresses.find((a) => a.isDefault) ?? addresses[0];
+  const manage = (
+    <Link href="/account/addresses" className="flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold text-ink transition hover:bg-surface">
+      {addresses.length ? "Manage" : "Add"}
+      <ChevronRight aria-hidden className="size-4" />
+    </Link>
+  );
+
+  if (!list.ok) {
+    return (
+      <Card title="Saved addresses" id="addresses-title" action={manage}>
+        <p className="mt-4 rounded-2xl bg-surface px-4 py-3 text-sm text-muted">{list.error.message}</p>
+      </Card>
+    );
+  }
+
+  if (!main) {
+    return (
+      <Card title="Saved addresses" id="addresses-title">
+        <EmptyState icon={MapPin} title="No saved addresses" text="Save your home or work address once and choose it at checkout.">
+          <Link
+            href="/account/addresses/new"
+            className="mt-5 flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/85"
+          >
+            <Plus aria-hidden className="size-4" />
+            Add address
+          </Link>
+        </EmptyState>
+      </Card>
+    );
+  }
+
+  const others = addresses.length - 1;
   return (
-    <Card title="Saved addresses" id="addresses-title" action={<SoonPill />}>
-      <EmptyState
-        icon={MapPin}
-        title="No saved addresses"
-        text="Soon you'll be able to save your home and work addresses for faster checkout."
-      />
+    <Card title="Saved addresses" id="addresses-title" action={manage}>
+      <Link href="/account/addresses" className="group mt-4 flex items-start gap-3 rounded-2xl bg-surface p-4 transition hover:bg-brand-soft/60">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-deep ring-1 ring-line">
+          <MapPin aria-hidden className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-ink">{ADDRESS_TYPE_LABEL[main.addressType]}</span>
+            {main.isDefault && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-bold text-brand-deep">Default</span>}
+          </span>
+          <span className="mt-0.5 block break-words text-sm text-muted">
+            {main.recipientName} · {addressSummary(main)}
+          </span>
+        </span>
+      </Link>
+      {others > 0 && (
+        <p className="mt-3 text-sm text-muted">
+          + {others} more saved {others === 1 ? "address" : "addresses"}
+        </p>
+      )}
     </Card>
   );
+}
+
+export function AddressesCardSkeleton() {
+  return <div aria-hidden className="h-48 animate-pulse rounded-3xl bg-line/60" />;
 }
 
 type Row = { icon: LucideIcon; title: string; text: string; href?: string };
 
 const SETTINGS: Row[] = [
   { icon: UserRound, title: "Profile details", text: "Name, email and photo", href: "/account/profile" },
-  { icon: MapPin, title: "Saved addresses", text: "Home, work and others" },
+  { icon: MapPin, title: "Saved addresses", text: "Home, work and others", href: "/account/addresses" },
   { icon: ShieldCheck, title: "Login & security", text: "Password and signed-in devices" },
 ];
 
@@ -122,7 +174,7 @@ function SettingsRow({ row }: { row: Row }) {
     return (
       <div aria-disabled className="flex min-h-16 items-center gap-3 px-2 py-2 opacity-75">
         {body}
-        <SoonPill short />
+        <SoonPill />
       </div>
     );
   }
