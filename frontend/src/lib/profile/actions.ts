@@ -85,8 +85,11 @@ async function withSession(run: (token: string, user: CurrentUser) => Promise<Re
 
 async function done(user: CurrentUser, token: string, { changed = true } = {}): Promise<Result> {
   await saveUser(user, token);
-  // /account shows the name and photo too; don't let the browser reuse an older copy.
-  if (changed) revalidatePath("/account", "layout");
+  // /account and the admin panel show the name and photo too; don't let the browser reuse an older copy.
+  if (changed) {
+    revalidatePath("/account", "layout");
+    revalidatePath("/admin", "layout");
+  }
   return { ok: true, data: user };
 }
 

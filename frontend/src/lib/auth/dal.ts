@@ -47,8 +47,9 @@ export async function requireRole(role: Role): Promise<CurrentUser> {
   return user;
 }
 
-async function requireLiveAdmin(): Promise<CurrentUser | null> {
+// cache(): the admin layout and the page both check, with one backend call per request.
+const requireLiveAdmin = cache(async (): Promise<CurrentUser | null> => {
   const token = await getSessionToken();
   const live = token ? await getLiveUser(token) : null;
   return live === "unreachable" ? null : live;
-}
+});

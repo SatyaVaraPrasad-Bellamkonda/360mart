@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, Circle, Eye, EyeOff } from "lucide-react";
-import { useId, useState, type Ref } from "react";
+import { Fragment, useId, useState, type Ref } from "react";
 import { PASSWORD_RULES } from "@/lib/auth/validation";
 
 // Form inputs shared by login, signup, forgot password, the profile and the address forms. Each one shows its
@@ -164,14 +164,21 @@ type TextProps = FieldProps & {
   placeholder?: string;
   hint?: string;
   optional?: boolean;
+  /** Fixed text before the input, like "+91" on the mobile field. */
+  prefix?: string;
 };
 
-export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", inputMode, autoComplete, maxLength, placeholder, hint, optional }: TextProps) {
+export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", inputMode, autoComplete, maxLength, placeholder, hint, optional, prefix }: TextProps) {
   const id = useId();
   return (
     <div>
       <FieldLabel id={id} label={label} optional={optional} />
       <div className={`${BOX} ${boxBorder(error)}`}>
+        {prefix && (
+          <span className="flex min-w-0 max-w-[50%] shrink-0 items-center border-r border-line bg-surface px-3 text-sm font-semibold text-muted">
+            <span className="truncate">{prefix}</span>
+          </span>
+        )}
         <input
           ref={ref}
           id={id}
@@ -195,47 +202,66 @@ export function TextField({ value, onChange, error, autoFocus, ref, label, name,
   );
 }
 
+type SelectOption = string | { value: string; label: string };
+
 type SelectProps = Omit<FieldProps, "ref"> & {
   label: string;
   name: string;
   autoComplete: string;
-  placeholder: string;
-  groups: { label: string; options: readonly string[] }[];
+  /** Shown (and not choosable) while nothing is picked; leave out when there is always a value. */
+  placeholder?: string;
+  /** A group with an empty label is shown without a heading. */
+  groups: { label: string; options: readonly SelectOption[] }[];
+  disabled?: boolean;
+  hint?: string;
 };
 
 /** A native dropdown: on phones it opens the system picker; on desktop typing "tel…" jumps to Telangana. */
-export function SelectField({ value, onChange, error, label, name, autoComplete, placeholder, groups }: SelectProps) {
+export function SelectField({ value, onChange, error, label, name, autoComplete, placeholder, groups, disabled, hint }: SelectProps) {
   const id = useId();
+  const options = (list: readonly SelectOption[]) =>
+    list.map((option) => {
+      const { value: v, label: text } = typeof option === "string" ? { value: option, label: option } : option;
+      return (
+        <option key={v} value={v} className="text-ink">
+          {text}
+        </option>
+      );
+    });
   return (
     <div>
       <FieldLabel id={id} label={label} />
-      <div className={`${BOX} ${boxBorder(error)} relative`}>
+      <div className={`${BOX} ${boxBorder(error)} relative ${disabled ? "bg-surface" : ""}`}>
         <select
           id={id}
           name={name}
           autoComplete={autoComplete}
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={!!error}
-          aria-describedby={describedBy(id, error)}
-          className={`${INPUT} appearance-none bg-transparent pr-10 ${value ? "" : "text-muted"}`}
+          aria-describedby={describedBy(id, error, hint)}
+          className={`${INPUT} appearance-none bg-transparent pr-10 disabled:cursor-not-allowed ${value || placeholder === undefined ? "" : "text-muted"}`}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {groups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.options.map((option) => (
-                <option key={option} value={option} className="text-ink">
-                  {option}
-                </option>
-              ))}
-            </optgroup>
-          ))}
+          {placeholder !== undefined && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {groups.map((group, i) =>
+            group.label ? (
+              <optgroup key={group.label} label={group.label}>
+                {options(group.options)}
+              </optgroup>
+            ) : (
+              <Fragment key={`group-${i}`}>{options(group.options)}</Fragment>
+            ),
+          )}
         </select>
         <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted" />
       </div>
       <FieldError id={`${id}-error`} message={error} />
+      <FieldHint id={`${id}-hint`} hint={hint} error={error} />
     </div>
   );
 }
