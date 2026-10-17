@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Image as ImageIcon, ExternalLink, FolderTree, ImageOff, Layers, Plus, Star, TextCursorInput, UserRoundPen, type LucideIcon } from "lucide-react";
+import { ArrowRight, CheckCircle2, ExternalLink, FolderTree, Image as ImageIcon, ImageOff, PackagePlus, Plus, Star, TextCursorInput, UserRoundPen, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -7,8 +7,8 @@ import { ADMIN_SECTIONS } from "@/components/admin/sections";
 import { Avatar } from "@/components/profile/Avatar";
 import { fullName } from "@/lib/auth/current-user";
 import { requireRole } from "@/lib/auth/dal";
-import { loadCategoryTree } from "@/lib/catalog/data";
-import type { CategoryNode } from "@/lib/catalog/types";
+import { loadTopCategories } from "@/lib/catalog/data";
+import type { Category } from "@/lib/catalog/types";
 
 export const metadata: Metadata = { title: { absolute: "Admin | 360mart" } };
 
@@ -61,17 +61,20 @@ async function Welcome() {
   );
 }
 
+// One backend call: the top-level categories. Numbers about subcategories and
+// products would need a call per category / subcategory, so they wait for a
+// backend summary endpoint.
 async function Catalogue() {
   await requireRole("admin");
-  const tree = await loadCategoryTree();
-  if (!tree.ok) return <AdminLoadFailed message={tree.error.message} />;
+  const top = await loadTopCategories();
+  if (!top.ok) return <AdminLoadFailed message={top.error.message} />;
 
-  const all = tree.data.flatMap((n) => [n.category, ...n.children]);
+  const categories = top.data;
   const stats: { icon: LucideIcon; label: string; value: string; tone: string }[] = [
-    { icon: FolderTree, label: "Categories", value: String(tree.data.length), tone: "bg-amber-100 text-amber-700" },
-    { icon: Layers, label: "Subcategories", value: String(all.length - tree.data.length), tone: "bg-green-100 text-green-700" },
-    { icon: Star, label: "Featured", value: String(all.filter((c) => c.isFeatured).length), tone: "bg-violet-100 text-violet-700" },
-    { icon: ImageIcon, label: "With pictures", value: `${all.filter((c) => c.imageUrl).length}/${all.length}`, tone: "bg-sky-100 text-sky-700" },
+    { icon: FolderTree, label: "Categories", value: String(categories.length), tone: "bg-amber-100 text-amber-700" },
+    { icon: Star, label: "Featured", value: String(categories.filter((c) => c.isFeatured).length), tone: "bg-violet-100 text-violet-700" },
+    { icon: ImageIcon, label: "With pictures", value: `${categories.filter((c) => c.imageUrl).length}/${categories.length}`, tone: "bg-sky-100 text-sky-700" },
+    { icon: TextCursorInput, label: "With description", value: `${categories.filter((c) => c.description).length}/${categories.length}`, tone: "bg-green-100 text-green-700" },
   ];
 
   return (
@@ -82,7 +85,7 @@ async function Catalogue() {
             <h2 id="catalogue-heading" className="text-lg font-extrabold text-ink">
               Catalogue
             </h2>
-            <p className="text-sm text-muted">What shoppers can browse right now.</p>
+            <p className="text-sm text-muted">Top-level categories shoppers can browse right now.</p>
           </div>
           <a href="/" target="_blank" rel="noopener" className="-my-2 flex min-h-10 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
             View shop
@@ -105,40 +108,40 @@ async function Catalogue() {
             <Plus aria-hidden className="size-4" />
             Add category
           </Link>
+          <Link href="/admin/products/new" className={SECONDARY_BUTTON}>
+            <PackagePlus aria-hidden className="size-4" />
+            Add product
+          </Link>
           <Link href="/admin/categories" className={SECONDARY_BUTTON}>
             Open category tree
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         </div>
       </div>
-      <Attention tree={tree.data} />
+      <Attention categories={categories} />
     </section>
   );
 }
 
-// A short to-do list a product manager would want: gaps that make shop pages look empty.
-function Attention({ tree }: { tree: CategoryNode[] }) {
-  const items: { key: string; icon: LucideIcon; text: string; href: string; action: string }[] = [];
-  for (const { category, children } of tree) {
-    if (children.length === 0) items.push({ key: `subs-${category.categoryId}`, icon: Layers, text: `${category.name} has no subcategories`, href: `/admin/categories/new?parent=${category.categoryId}`, action: "Add" });
-    for (const c of [category, ...children]) {
-      if (!c.imageUrl) items.push({ key: `img-${c.categoryId}`, icon: ImageOff, text: `${c.name} has no picture`, href: `/admin/categories/${c.categoryId}/edit`, action: "Fix" });
-      else if (!c.description) items.push({ key: `desc-${c.categoryId}`, icon: TextCursorInput, text: `${c.name} has no description`, href: `/admin/categories/${c.categoryId}/edit`, action: "Fix" });
-    }
+// Gaps that make the top-level shop pages look unfinished (from the same one call).
+function Attention({ categories }: { categories: Category[] }) {
+  const items: { key: string; icon: LucideIcon; text: string; href: string }[] = [];
+  for (const c of categories) {
+    if (!c.imageUrl) items.push({ key: `img-${c.categoryId}`, icon: ImageOff, text: `${c.name} has no picture`, href: `/admin/categories/${c.categoryId}/edit` });
   }
-  // Most important first: an empty category is an empty shop page; a missing picture or text only looks unfinished.
-  const rank = (key: string) => (key.startsWith("subs") ? 0 : key.startsWith("img") ? 1 : 2);
-  items.sort((a, b) => rank(a.key) - rank(b.key));
+  for (const c of categories) {
+    if (!c.description) items.push({ key: `desc-${c.categoryId}`, icon: TextCursorInput, text: `${c.name} has no description`, href: `/admin/categories/${c.categoryId}/edit` });
+  }
   const shown = items.slice(0, 5);
   return (
     <div className="rounded-3xl bg-white p-5 ring-1 ring-line sm:p-6">
       <h2 className="text-lg font-extrabold text-ink">Needs attention</h2>
-      {tree.length === 0 ? (
+      {categories.length === 0 ? (
         <p className="mt-3 text-sm text-muted">Add your first category to start the shop.</p>
       ) : shown.length === 0 ? (
         <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-fresh">
           <CheckCircle2 aria-hidden className="size-5" />
-          Every category has a picture, a description and subcategories.
+          Every category has a picture and a description.
         </p>
       ) : (
         <>
@@ -148,7 +151,7 @@ function Attention({ tree }: { tree: CategoryNode[] }) {
                 <item.icon aria-hidden className="size-4 shrink-0 text-brand-deep" />
                 <span className="min-w-0 flex-1 break-words text-sm text-ink">{item.text}</span>
                 <Link href={item.href} className="-my-1 flex min-h-10 shrink-0 items-center rounded-full px-3 text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
-                  {item.action}
+                  Fix
                   <span className="sr-only">: {item.text}</span>
                 </Link>
               </li>

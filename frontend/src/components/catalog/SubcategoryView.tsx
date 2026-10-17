@@ -1,27 +1,35 @@
-import { PackageOpen } from "lucide-react";
+import { Leaf, Package, PackageOpen } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import type { Category } from "@/lib/catalog/types";
+import { JsonLd } from "@/components/JsonLd";
+import type { ShopSubcategory } from "@/lib/catalog/data";
+import { categoryListJsonLd } from "@/lib/catalog/seo";
 import { categoryPath } from "@/lib/catalog/validation";
 import { CategoryBadge } from "./CategoryBadge";
 import { CategoryImage } from "./CategoryImage";
+import { ProductGrid } from "./ProductGrid";
 import { ComingSoonProducts } from "./ShopStates";
-
-export type SubcategoryData = { category: Category; subcategories: Category[]; subcategory: Category };
 
 // The shared subcategory page body: used by app/[category]/[subcategory], and by
 // a designed category (app/fruits) for subcategories its design doesn't cover yet.
-export function SubcategoryView({ data }: { data: SubcategoryData }) {
-  const { category, subcategories, subcategory } = data;
+export function SubcategoryView({ data }: { data: ShopSubcategory }) {
+  const { category, subcategories, subcategory, products } = data;
   const parentPath = categoryPath(category);
+  const path = categoryPath(subcategory, category);
+  const inSeason = products.filter((p) => p.isInSeason).length;
+  const facts = [
+    products.length > 0 && { icon: Package, text: `${products.length} ${products.length === 1 ? "product" : "products"}` },
+    inSeason > 0 && { icon: Leaf, text: `${inSeason} in season` },
+  ].filter((f) => !!f);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-5 sm:space-y-10 sm:py-6">
+      {products.length > 0 && <JsonLd data={categoryListJsonLd(subcategory.name, products.map((p) => ({ name: p.name, path: `${path}/${p.slug}` })))} />}
       <div className="space-y-4">
         <Breadcrumbs
           items={[
             { name: category.name, href: parentPath },
-            { name: subcategory.name, href: categoryPath(subcategory, category) },
+            { name: subcategory.name, href: path },
           ]}
         />
 
@@ -37,6 +45,16 @@ export function SubcategoryView({ data }: { data: SubcategoryData }) {
             {subcategory.badgeLabel && <CategoryBadge label={subcategory.badgeLabel} className="mt-3 w-fit" />}
             {subcategory.description && (
               <p className="mt-3 whitespace-pre-line break-words text-muted motion-safe:animate-fade-up motion-safe:[animation-delay:100ms]">{subcategory.description}</p>
+            )}
+            {facts.length > 0 && (
+              <ul className="mt-5 flex flex-wrap gap-2 motion-safe:animate-fade-up motion-safe:[animation-delay:200ms]">
+                {facts.map(({ icon: Icon, text }) => (
+                  <li key={text} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
+                    <Icon aria-hidden className="size-4 text-fresh" />
+                    {text}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </section>
@@ -63,7 +81,13 @@ export function SubcategoryView({ data }: { data: SubcategoryData }) {
         </nav>
       )}
 
-      <ComingSoonProducts icon={PackageOpen} title={`${subcategory.name} from local stores, coming soon`} text="Stores near you are adding their products. Check back soon to start shopping." />
+      {products.length > 0 ? (
+        <section aria-label={`${subcategory.name} products`}>
+          <ProductGrid products={products} basePath={path} />
+        </section>
+      ) : (
+        <ComingSoonProducts icon={PackageOpen} title={`${subcategory.name} from local stores, coming soon`} text="Stores near you are adding their products. Check back soon to start shopping." />
+      )}
     </div>
   );
 }

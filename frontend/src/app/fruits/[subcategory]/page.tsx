@@ -21,14 +21,19 @@ export async function generateStaticParams() {
   return subcategories.map((s) => ({ subcategory: s.slug }));
 }
 
+// Which page a Fruits type gets: once the backend has real products in it, the
+// shared page with those products (real data beats the design's samples);
+// else this design's sample page; else (a type only the backend has) the shared page.
+async function choosePage(slug: string) {
+  const [shared, sample] = await Promise.all([getShopSubcategory("fruits", slug), getSubcategory("fruits", slug)]);
+  const real = shared.ok && shared.data && shared.data.products.length > 0;
+  return { shared, sample: real ? null : sample };
+}
+
 export async function generateMetadata({ params }: PageProps<"/fruits/[subcategory]">): Promise<Metadata> {
   const { subcategory: slug } = await params;
-  const subcategory = await getSubcategory("fruits", slug);
-  // Not in our Fruits design: the shared subcategory page (from the backend) shows instead.
-  if (!subcategory) {
-    const shared = await getShopSubcategory("fruits", slug);
-    return subcategoryMetadata(shared.ok ? shared.data : null);
-  }
+  const { shared, sample: subcategory } = await choosePage(slug);
+  if (!subcategory) return subcategoryMetadata(shared.ok ? shared.data : null);
 
   const url = `/fruits/${subcategory.slug}`;
   return {
@@ -41,10 +46,8 @@ export async function generateMetadata({ params }: PageProps<"/fruits/[subcatego
 
 export default async function FruitSubcategoryPage({ params }: PageProps<"/fruits/[subcategory]">) {
   const { subcategory: slug } = await params;
-  const subcategory = await getSubcategory("fruits", slug);
+  const { shared, sample: subcategory } = await choosePage(slug);
   if (!subcategory) {
-    // A Fruits subcategory the admin added that this design doesn't have yet.
-    const shared = await getShopSubcategory("fruits", slug);
     if (!shared.ok) return <CatalogUnavailable message={shared.error.message} />;
     if (!shared.data) notFound();
     return <SubcategoryView data={shared.data} />;

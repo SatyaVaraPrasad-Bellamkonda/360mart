@@ -8,14 +8,15 @@ import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { CatalogUnavailable } from "@/components/catalog/ShopStates";
 import { JsonLd } from "@/components/JsonLd";
 import { categoryPicture } from "@/lib/categories";
-import { getShopTree } from "@/lib/catalog/data";
+import { getShopCategoriesNow } from "@/lib/catalog/data";
 import { CATEGORY_PAGES_INDEXABLE, categoryListJsonLd } from "@/lib/catalog/seo";
 import { categoryPath } from "@/lib/catalog/validation";
 import { SITE } from "@/lib/site";
 
-// Every category and its subcategories on one page: the header shows only the
-// featured ones, so this is where everything else is found ("categories" is a
-// reserved slug, so no category can take this URL).
+// Every category on one page: the header shows only the featured ones, so this
+// is where everything else is found ("categories" is a reserved slug, so no
+// category can take this URL). One backend call (GET /categories); each
+// category's own page lists its subcategories.
 
 export const metadata: Metadata = {
   title: "All categories",
@@ -40,15 +41,15 @@ export default function AllCategoriesPage() {
 }
 
 async function Everything() {
-  const loaded = await getShopTree();
+  const loaded = await getShopCategoriesNow();
   if (!loaded.ok) return <CatalogUnavailable message={loaded.error.message} />;
   if (!loaded.data.length) return <p className="rounded-2xl bg-surface px-5 py-8 text-center text-muted ring-1 ring-line">Categories are on their way. Check back soon.</p>;
 
   return (
     <>
-      <JsonLd data={categoryListJsonLd("All categories", loaded.data.map(({ category }) => ({ name: category.name, path: categoryPath(category) })))} />
+      <JsonLd data={categoryListJsonLd("All categories", loaded.data.map((category) => ({ name: category.name, path: categoryPath(category) })))} />
       <ul className="grid gap-4 md:grid-cols-2">
-        {loaded.data.map(({ category, children }) => (
+        {loaded.data.map((category) => (
           <li key={category.categoryId} className="overflow-hidden rounded-3xl bg-white ring-1 ring-line">
             <Link href={categoryPath(category)} className="group flex items-center gap-4 p-4 transition hover:bg-surface/70">
               <CategoryImage src={categoryPicture(category)} alt="" className="size-16 shrink-0 rounded-2xl ring-1 ring-line sm:size-20" iconClassName="size-8" />
@@ -61,18 +62,6 @@ async function Everything() {
               </div>
               <ArrowRight aria-hidden className="size-5 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
             </Link>
-            {children.length > 0 && (
-              <ul aria-label={`${category.name} types`} className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
-                {children.map((child) => (
-                  <li key={child.categoryId}>
-                    <Link href={categoryPath(child, category)} className="flex min-h-10 items-center gap-1.5 rounded-full bg-surface px-3 text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
-                      {child.name}
-                      {child.badgeLabel && <CategoryBadge label={child.badgeLabel} className="max-w-24" />}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
           </li>
         ))}
       </ul>
@@ -84,7 +73,7 @@ function TreeSkeleton() {
   return (
     <div aria-hidden className="grid gap-4 md:grid-cols-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-36 animate-pulse rounded-3xl bg-line/60" />
+        <div key={i} className="h-28 animate-pulse rounded-3xl bg-line/60" />
       ))}
     </div>
   );

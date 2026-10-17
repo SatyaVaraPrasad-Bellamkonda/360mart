@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AdminLoadFailed, AdminPageHeader } from "@/components/admin/AdminShell";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { requireRole } from "@/lib/auth/dal";
-import { loadCategoryTree } from "@/lib/catalog/data";
+import { loadTopCategories } from "@/lib/catalog/data";
 import { emptyDraft, parseCategoryId } from "@/lib/catalog/validation";
 import { CategoryFormSkeleton } from "../CategoryFormSkeleton";
 
@@ -23,10 +23,11 @@ export default function NewCategoryPage({ searchParams }: PageProps<"/admin/cate
 
 async function NewCategory({ searchParams }: Pick<PageProps<"/admin/categories/new">, "searchParams">) {
   await requireRole("admin");
-  const [tree, { parent }] = await Promise.all([loadCategoryTree(), searchParams]);
-  if (!tree.ok) return <AdminLoadFailed message={tree.error.message} />;
+  // Only the top-level categories (the possible parents): one call.
+  const [top, { parent }] = await Promise.all([loadTopCategories(), searchParams]);
+  if (!top.ok) return <AdminLoadFailed message={top.error.message} />;
 
-  const parents = tree.data.map(({ category: { categoryId, name, slug } }) => ({ categoryId, name, slug }));
+  const parents = top.data.map(({ categoryId, name, slug }) => ({ categoryId, name, slug }));
   const parentId = parseCategoryId(parent);
   const chosen = parents.some((p) => p.categoryId === parentId) ? parentId : null;
   return (

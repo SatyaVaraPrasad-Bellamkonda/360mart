@@ -7,7 +7,10 @@ import { OfferPicker } from "@/components/OfferPicker";
 import { ProductImage } from "@/components/ProductImage";
 import { ProductRail } from "@/components/ProductRail";
 import { SectionHeading } from "@/components/SectionHeading";
+import { ProductView } from "@/components/catalog/ProductView";
 import { getProduct, getProducts, getRelatedProducts, getSubcategory } from "@/lib/api";
+import { getShopProduct, getShopSubcategory } from "@/lib/catalog/data";
+import { productMetadata } from "@/lib/catalog/seo";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { productPath } from "@/lib/paths";
 import { productJsonLd } from "@/lib/seo";
@@ -24,8 +27,11 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subcategory, product: slug } = await params;
+  // A real product from the backend wins over this design's sample with the same address.
+  const real = await getShopProduct("fruits", subcategory, slug);
+  if (real.ok && real.data) return productMetadata(real.data);
   const product = await getProduct("fruits", subcategory, slug);
-  if (!product) return {};
+  if (!product || (await hasRealProducts(subcategory))) return { robots: { index: false, follow: true } };
 
   const [variant] = product.variants;
   const prices = variant.offers.filter((o) => o.inStock).map((o) => o.price);
@@ -42,13 +48,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+async function hasRealProducts(subSlug: string): Promise<boolean> {
+  const shared = await getShopSubcategory("fruits", subSlug);
+  return shared.ok && !!shared.data && shared.data.products.length > 0;
+}
+
 export default async function FruitProductPage({ params }: Props) {
   const { subcategory: subSlug, product: slug } = await params;
-  const [product, subcategory] = await Promise.all([
+  const [real, product, subcategory] = await Promise.all([
+    getShopProduct("fruits", subSlug, slug),
     getProduct("fruits", subSlug, slug),
     getSubcategory("fruits", subSlug),
   ]);
-  if (!product || !subcategory) notFound();
+  if (real.ok && real.data) return <ProductView data={real.data} />;
+  // Samples only while the backend has no real products for this type.
+  if (!product || !subcategory || (await hasRealProducts(subSlug))) notFound();
 
   const related = await getRelatedProducts(product, 8);
   const defaultOffer = product.variants[0].offers.find((o) => o.inStock);

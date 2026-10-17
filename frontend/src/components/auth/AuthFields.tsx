@@ -158,7 +158,7 @@ type TextProps = FieldProps & {
   label: string;
   name: string;
   type?: "text" | "email";
-  inputMode?: "text" | "email" | "numeric";
+  inputMode?: "text" | "email" | "numeric" | "decimal";
   autoComplete: string;
   maxLength: number;
   placeholder?: string;

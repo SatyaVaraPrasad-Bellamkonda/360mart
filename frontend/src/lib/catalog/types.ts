@@ -54,3 +54,108 @@ export type CategoryDraft = {
 
 export type CategoryField = keyof CategoryDraft | "image";
 export type CategoryErrors = Partial<Record<CategoryField, string>>;
+
+// ---- Products and their sizes (MasterProductResponse.java / MasterProductRequest.java) ----
+
+/** The veg / non-veg mark of Indian food labels. null = not a food item. */
+export type FoodType = "VEG" | "NON_VEG" | "EGG";
+export type ProductUnit = "KG" | "GRAM" | "MILLIGRAM" | "LITRE" | "MILLILITRE" | "DOZEN" | "PIECE" | "PACK" | "BUNCH";
+
+/** One size a product is sold in ("1 kg"). Prices come later, per store. */
+export type ProductVariant = {
+  variantId: number;
+  label: string;
+  /** A number: 1.5 arrives as 1.5. Use it (with unit) for maths, show label to people. */
+  quantity: number;
+  unit: ProductUnit;
+  sku: string | null;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+/** A master product. It always sits in a subcategory (categoryId). */
+export type Product = {
+  productId: number;
+  categoryId: number;
+  name: string;
+  slug: string;
+  brand: string | null;
+  shortDescription: string | null;
+  description: string | null;
+  foodType: FoodType | null;
+  origin: string | null;
+  bestSeason: string | null;
+  storageTip: string | null;
+  shelfLifeDays: number | null;
+  isInSeason: boolean;
+  /** Signed link, valid about 1 hour (like category pictures). */
+  imageUrl: string | null;
+  badgeLabel: string | null;
+  hsnCode: string | null;
+  /** 5.00 may arrive as 5 or 5.0. */
+  gstRate: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  displayOrder: number;
+  isFeatured: boolean;
+  isActive: boolean;
+  variants: ProductVariant[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** The JSON part of a product create/update. Update replaces the whole product, so every field is sent. */
+export type ProductInput = {
+  categoryId: number;
+  name: string;
+  slug: string | null;
+  brand: string | null;
+  shortDescription: string | null;
+  description: string | null;
+  foodType: FoodType | null;
+  origin: string | null;
+  bestSeason: string | null;
+  storageTip: string | null;
+  shelfLifeDays: number | null;
+  isInSeason: boolean;
+  badgeLabel: string | null;
+  hsnCode: string | null;
+  gstRate: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  displayOrder: number;
+  isFeatured: boolean;
+  isActive: boolean;
+};
+
+/** What the product form edits: text inputs hold strings. categoryId 0 = not chosen yet. */
+export type ProductDraft = {
+  categoryId: number;
+  name: string;
+  slug: string;
+  brand: string;
+  shortDescription: string;
+  description: string;
+  foodType: FoodType | "";
+  origin: string;
+  bestSeason: string;
+  storageTip: string;
+  shelfLifeDays: string;
+  isInSeason: boolean;
+  badgeLabel: string;
+  hsnCode: string;
+  gstRate: string;
+  seoTitle: string;
+  seoDescription: string;
+  displayOrder: string;
+  isFeatured: boolean;
+  isActive: boolean;
+};
+
+export type ProductField = keyof ProductDraft | "image";
+export type ProductErrors = Partial<Record<ProductField, string>>;
+
+/** The JSON body of a size create/update (plain JSON, no multipart). */
+export type VariantInput = { label: string; quantity: number; unit: ProductUnit; sku: string | null; displayOrder: number; isActive: boolean };
+export type VariantDraft = { label: string; quantity: string; unit: ProductUnit; sku: string; displayOrder: string; isActive: boolean };
+export type VariantErrors = Partial<Record<keyof VariantDraft, string>>;

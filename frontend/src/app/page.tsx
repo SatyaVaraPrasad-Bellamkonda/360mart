@@ -84,6 +84,7 @@ export default function HomePage() {
         </Suspense>
       </section>
 
+
       <section aria-labelledby="why-heading" className="bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <h2 id="why-heading" className="text-2xl font-bold text-ink">

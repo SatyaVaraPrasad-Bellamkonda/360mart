@@ -7,8 +7,8 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { clearSession, getSessionToken } from "@/lib/auth/session";
 import type { ApiFailure } from "@/lib/backend/client";
 import * as api from "./category-service";
-import { CATEGORIES_TAG } from "./data";
-import type { CategoryField } from "./types";
+import { CATEGORIES_TAG, loadSubcategories } from "./data";
+import type { Category, CategoryField } from "./types";
 import { categoryErrors, categoryImageError, parseCategoryId, readDraft, toCategoryInput } from "./validation";
 
 // Admin category actions. The browser sends the form as FormData: "draft" (the
@@ -27,6 +27,20 @@ const FIELD_OF: Record<string, CategoryField> = {
   INVALID_IMAGE: "image",
   IMAGE_TOO_LARGE: "image",
 };
+
+/**
+ * The subcategories of one category, fetched when the admin picks or opens it
+ * (one call, never one per category). Admins only: it's for the admin screens.
+ */
+export async function loadSubcategoriesAction(categoryId: unknown): Promise<ActionResult<Category[]>> {
+  const id = parseCategoryId(categoryId);
+  if (id === null) return fail(error("CATEGORY_NOT_FOUND", "Category not found.")) as ActionResult<Category[]>;
+  const user = await getCurrentUser();
+  if (!user) return fail(error("UNAUTHENTICATED", "Please login to continue.")) as ActionResult<Category[]>;
+  if (user.role !== "admin") return fail(error("FORBIDDEN", "Only admins can do this.")) as ActionResult<Category[]>;
+  const res = await loadSubcategories(id);
+  return res.ok ? { ok: true, data: res.data } : (fail(res.error) as ActionResult<Category[]>);
+}
 
 /** Create (categoryId = null) or update a category, then go back to the list. */
 export async function saveCategoryAction(categoryId: number | null, form: FormData): Promise<ActionResult> {
@@ -64,7 +78,9 @@ export async function saveCategoryAction(categoryId: number | null, form: FormDa
   // Shop pages read the categories from the cache: drop it so they show the change at once.
   updateTag(CATEGORIES_TAG);
   revalidatePath("/admin", "layout");
-  redirect(`/admin/categories?saved=${categoryId === null ? "added" : "updated"}`);
+  // A subcategory: open its parent's branch in the tree (that branch is the only one loaded).
+  const open = res.data.parentCategoryId ? `&open=${res.data.parentCategoryId}` : "";
+  redirect(`/admin/categories?saved=${categoryId === null ? "added" : "updated"}${open}`);
 }
 
 function toFieldError(failure: ApiFailure): ActionError {

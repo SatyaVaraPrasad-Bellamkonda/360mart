@@ -6,11 +6,11 @@
 import { collapse } from "@/lib/addresses/validation";
 import type { Category, CategoryDraft, CategoryErrors, CategoryInput } from "./types";
 
-const CATALOG_NAME = /^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N} &,.'()/-]*$/u;
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const CATALOG_NAME = /^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N} &,.'()/-]*$/u;
+export const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 // No control characters or < > (the backend's SAFE_LINE / SAFE_MULTILINE).
-const SAFE_LINE = /^[^\x00-\x1F\x7F<>]*$/;
-const SAFE_MULTILINE = /^[^\x00-\x09\x0B-\x1F\x7F<>]*$/;
+export const SAFE_LINE = /^[^\x00-\x1F\x7F<>]*$/;
+export const SAFE_MULTILINE = /^[^\x00-\x09\x0B-\x1F\x7F<>]*$/;
 
 export const CATEGORY_LIMITS = {
   name: 100,
@@ -40,7 +40,7 @@ export const RESERVED_SLUGS = new Set([
 export const CUSTOM_CATEGORY_PAGES = new Set(["fruits"]);
 
 /** Same as the backend's SlugUtil: "Fruits & Veggies" → "fruits-and-veggies"; null when nothing usable is left. */
-export function slugFromName(name: string): string | null {
+export function slugFromName(name: string, maxLength: number = CATEGORY_LIMITS.slug): string | null {
   const slug = name
     .normalize("NFD")
     .replace(/\p{M}+/gu, "")
@@ -48,7 +48,7 @@ export function slugFromName(name: string): string | null {
     .replaceAll("&", " and ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, CATEGORY_LIMITS.slug)
+    .slice(0, maxLength)
     .replace(/-+$/, "");
   return slug || null;
 }
@@ -176,7 +176,7 @@ export function isSlug(value: string): boolean {
   return value.length <= CATEGORY_LIMITS.slug && SLUG.test(value);
 }
 
-/** Category ids are positive whole numbers; anything else can't exist. */
+/** Ids (category, product, size) are positive whole numbers; anything else can't exist. */
 export function parseCategoryId(value: unknown): number | null {
   const id = typeof value === "number" ? value : typeof value === "string" && /^\d{1,15}$/.test(value) ? Number(value) : NaN;
   return Number.isSafeInteger(id) && id > 0 ? id : null;

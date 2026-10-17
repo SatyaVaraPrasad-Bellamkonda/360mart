@@ -4,7 +4,8 @@
 
 import type { Metadata } from "next";
 import { SITE } from "@/lib/site";
-import type { Category } from "./types";
+import { foodTypeLabel, shopProductPath } from "./product-validation";
+import type { Category, Product } from "./types";
 import { categoryPath } from "./validation";
 
 type Text = { name: string; seoTitle: string | null; seoDescription: string | null; description: string | null };
@@ -45,4 +46,43 @@ export function subcategoryMetadata(data: { category: Category; subcategory: Cat
   const description = categoryDescription(subcategory, category.name);
   const url = categoryPath(subcategory, category);
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, robots: { index: CATEGORY_PAGES_INDEXABLE, follow: true } };
+}
+
+/** The product page title before the site's " | 360mart" suffix. */
+export function productTitle(p: Pick<Product, "name" | "seoTitle">, subcategoryName?: string): string {
+  return p.seoTitle || (subcategoryName ? `${p.name} | ${subcategoryName}` : p.name);
+}
+
+export function productDescription(p: Pick<Product, "name" | "seoDescription" | "shortDescription" | "description">, subcategoryName?: string): string {
+  if (p.seoDescription) return p.seoDescription;
+  const fromText = (p.shortDescription || p.description)?.replace(/\s+/g, " ").trim();
+  if (fromText) return fromText.length > 160 ? `${fromText.slice(0, 157).trimEnd()}…` : fromText;
+  return `Buy ${p.name}${subcategoryName ? ` (${subcategoryName})` : ""} from local stores near you on ${SITE.name}.`;
+}
+
+/** Metadata of a shared product page (null = not found: keep it out of Google). */
+export function productMetadata(data: { category: Category; subcategory: Category; product: Product } | null): Metadata {
+  if (!data) return { robots: { index: false, follow: true } };
+  const { category, subcategory, product } = data;
+  const title = productTitle(product, subcategory.name);
+  const description = productDescription(product, subcategory.name);
+  const url = shopProductPath(category, subcategory, product);
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, robots: { index: CATEGORY_PAGES_INDEXABLE, follow: true } };
+}
+
+/**
+ * schema.org Product. No offers yet (no prices), and no image: picture links
+ * expire after an hour, so Google would keep a dead link.
+ */
+export function productJsonLdFrom(product: Product, category: Category, subcategory: Category) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    url: `${SITE.url}${shopProductPath(category, subcategory, product)}`,
+    description: productDescription(product, subcategory.name),
+    category: `${category.name} > ${subcategory.name}`,
+    ...(product.brand && { brand: { "@type": "Brand", name: product.brand } }),
+    ...(product.foodType && { additionalProperty: [{ "@type": "PropertyValue", name: "Food type", value: foodTypeLabel(product.foodType) }] }),
+  };
 }
