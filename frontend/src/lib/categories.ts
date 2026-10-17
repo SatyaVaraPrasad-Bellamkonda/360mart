@@ -1,19 +1,17 @@
-export type Category = {
-  slug: string;
-  name: string;
-  tagline: string;
-  image: string | null; // e.g. "/images/categories/fruits.jpg"
-  // Only live categories appear on the site, in navigation and in the sitemap.
-  isLive: boolean;
+// Our own photos for categories whose slug we already designed for. Used when
+// the admin hasn't uploaded a picture yet, so the home page and header still look
+// finished. Categories themselves (names, order, badges) come only from the
+// backend (lib/catalog). Safe for client components.
+
+export const LOCAL_CATEGORY_PHOTOS: Record<string, string> = {
+  fruits: "/images/categories/fruits.jpg",
+  meat: "/images/categories/meat-fish.jpg",
+  "meat-fish": "/images/categories/meat-fish.jpg",
+  groceries: "/images/categories/groceries.jpg",
+  fashion: "/images/categories/fashion.jpg",
 };
 
-export const CATEGORIES: Category[] = [
-  { slug: "fruits", name: "Fruits", tagline: "Fresh seasonal fruits from local farms and stores", image: "/images/categories/fruits.jpg", isLive: true },
-  { slug: "meat", name: "Meat & Fish", tagline: "Fresh chicken, mutton and fish, kept cold to your door", image: "/images/categories/meat-fish.jpg", isLive: true },
-  { slug: "groceries", name: "Groceries", tagline: "Daily essentials, staples and kitchen needs", image: "/images/categories/groceries.jpg", isLive: true },
-  { slug: "fashion", name: "Fashion", tagline: "Clothing and accessories from local boutiques", image: "/images/categories/fashion.jpg", isLive: true },
-  { slug: "fabrics", name: "Fabrics", tagline: "Textiles and materials sold by the metre", image: null, isLive: false },
-  { slug: "electricals", name: "Electricals", tagline: "Hardware and home appliances", image: null, isLive: false },
-];
-
-export const LIVE_CATEGORIES = CATEGORIES.filter((c) => c.isLive);
+/** The picture to show: the uploaded one, else our photo for that slug, else null (placeholder). */
+export function categoryPicture(category: { slug: string; imageUrl: string | null }): string | null {
+  return category.imageUrl ?? LOCAL_CATEGORY_PHOTOS[category.slug] ?? null;
+}

@@ -6,8 +6,12 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FaqSection } from "@/components/FaqSection";
 import { JsonLd } from "@/components/JsonLd";
+import { CatalogUnavailable } from "@/components/catalog/ShopStates";
+import { SubcategoryView } from "@/components/catalog/SubcategoryView";
 import { ProductBrowser } from "@/components/ProductBrowser";
 import { getCatalogStats, getProducts, getSubcategories, getSubcategory } from "@/lib/api";
+import { getShopSubcategory } from "@/lib/catalog/data";
+import { subcategoryMetadata } from "@/lib/catalog/seo";
 import { formatPrice } from "@/lib/format";
 import { itemListJsonLd } from "@/lib/seo";
 
@@ -20,7 +24,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/fruits/[subcategory]">): Promise<Metadata> {
   const { subcategory: slug } = await params;
   const subcategory = await getSubcategory("fruits", slug);
-  if (!subcategory) return {};
+  // Not in our Fruits design: the shared subcategory page (from the backend) shows instead.
+  if (!subcategory) {
+    const shared = await getShopSubcategory("fruits", slug);
+    return subcategoryMetadata(shared.ok ? shared.data : null);
+  }
 
   const url = `/fruits/${subcategory.slug}`;
   return {
@@ -34,7 +42,13 @@ export async function generateMetadata({ params }: PageProps<"/fruits/[subcatego
 export default async function FruitSubcategoryPage({ params }: PageProps<"/fruits/[subcategory]">) {
   const { subcategory: slug } = await params;
   const subcategory = await getSubcategory("fruits", slug);
-  if (!subcategory) notFound();
+  if (!subcategory) {
+    // A Fruits subcategory the admin added that this design doesn't have yet.
+    const shared = await getShopSubcategory("fruits", slug);
+    if (!shared.ok) return <CatalogUnavailable message={shared.error.message} />;
+    if (!shared.data) notFound();
+    return <SubcategoryView data={shared.data} />;
+  }
 
   const [products, siblings, stats] = await Promise.all([
     getProducts("fruits", slug),

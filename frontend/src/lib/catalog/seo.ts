@@ -2,7 +2,10 @@
 // form's Google preview, so the admin sees exactly what Google will get.
 // Safe for client components.
 
+import type { Metadata } from "next";
 import { SITE } from "@/lib/site";
+import type { Category } from "./types";
+import { categoryPath } from "./validation";
 
 type Text = { name: string; seoTitle: string | null; seoDescription: string | null; description: string | null };
 
@@ -32,4 +35,14 @@ export function categoryListJsonLd(name: string, items: { name: string; path: st
     numberOfItems: items.length,
     itemListElement: items.map((item, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE.url}${item.path}`, name: item.name })),
   };
+}
+
+/** Metadata of a shared subcategory page (null = not found: keep it out of Google). */
+export function subcategoryMetadata(data: { category: Category; subcategory: Category } | null): Metadata {
+  if (!data) return { robots: { index: false, follow: true } };
+  const { category, subcategory } = data;
+  const title = categoryTitle(subcategory, category.name);
+  const description = categoryDescription(subcategory, category.name);
+  const url = categoryPath(subcategory, category);
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, robots: { index: CATEGORY_PAGES_INDEXABLE, follow: true } };
 }

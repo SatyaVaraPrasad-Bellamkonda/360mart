@@ -1,9 +1,13 @@
-import { Bike, Leaf, Store } from "lucide-react";
+import { ArrowRight, Bike, Leaf, Store } from "lucide-react";
 import type { Metadata } from "next";
-import { CategoryCard } from "@/components/CategoryCard";
+import Link from "next/link";
+import { Suspense } from "react";
+import { CategoryCard, CategoryCardSkeleton } from "@/components/CategoryCard";
 import { HeroVisual } from "@/components/HeroVisual";
 import { JsonLd } from "@/components/JsonLd";
-import { LIVE_CATEGORIES } from "@/lib/categories";
+import { getShopCategoriesNow } from "@/lib/catalog/data";
+import { categoryListJsonLd } from "@/lib/catalog/seo";
+import { categoryPath } from "@/lib/catalog/validation";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -67,14 +71,17 @@ export default function HomePage() {
       </section>
 
       <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-6xl scroll-mt-32 px-4 py-12 md:scroll-mt-20">
-        <h2 id="categories-heading" className="text-2xl font-bold text-ink">
-          Shop by category
-        </h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-          {LIVE_CATEGORIES.map((category) => (
-            <CategoryCard key={category.slug} category={category} />
-          ))}
+        <div className="flex items-end justify-between gap-4">
+          <h2 id="categories-heading" className="text-2xl font-bold text-ink">
+            Shop by category
+          </h2>
+          <Link href="/categories" className="-my-2 flex min-h-10 shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep hover:underline">
+            All categories <ArrowRight aria-hidden className="size-4" />
+          </Link>
         </div>
+        <Suspense fallback={<CategoryGridSkeleton />}>
+          <HomeCategories />
+        </Suspense>
       </section>
 
       <section aria-labelledby="why-heading" className="bg-surface">
@@ -96,5 +103,50 @@ export default function HomePage() {
         </div>
       </section>
     </>
+  );
+}
+
+// The categories come only from the backend (GET /categories), in the order the
+// admin set. A category with its own designed folder (fruits) links there.
+async function HomeCategories() {
+  const loaded = await getShopCategoriesNow();
+  if (!loaded.ok) {
+    return (
+      <p role="alert" className="mt-6 rounded-2xl bg-surface px-5 py-6 text-sm text-muted ring-1 ring-line">
+        We couldn&apos;t load the categories right now. Please refresh the page in a moment.
+      </p>
+    );
+  }
+  const categories = loaded.data;
+  if (!categories.length) {
+    return (
+      <div className="mt-6 flex flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+        <Store aria-hidden className="size-8 text-brand-deep" />
+        <p className="mt-3 font-bold text-ink">Categories are on their way</p>
+        <p className="mt-1 max-w-sm text-sm text-muted">Local stores are getting ready. Check back soon.</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <JsonLd data={categoryListJsonLd("Shop by category", categories.map((c) => ({ name: c.name, path: categoryPath(c) })))} />
+      <ul className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+        {categories.map((category, i) => (
+          <li key={category.categoryId}>
+            <CategoryCard category={category} priority={i < 2} />
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function CategoryGridSkeleton() {
+  return (
+    <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+      {Array.from({ length: 4 }, (_, i) => (
+        <CategoryCardSkeleton key={i} />
+      ))}
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import type { ApiFailure } from "@/lib/backend/client";
 import * as api from "./category-service";
 import type { Category, CategoryNode } from "./types";
+import { isSlug } from "./validation";
 
 // Category data for pages.
 //
@@ -67,6 +69,26 @@ export function getShopCategories(): Promise<Loaded<Category[]>> {
   return attempt(cachedTopLevel);
 }
 
+/**
+ * The same, for parts of the site frame and home page (header, footer, home
+ * grid): read at request time (from the cache), never at build time, so a build
+ * without the backend can't bake an empty menu into the static page.
+ */
+export async function getShopCategoriesNow(): Promise<Loaded<Category[]>> {
+  await connection();
+  return getShopCategories();
+}
+
+/** Every active category with its active subcategories (the /categories page). */
+export async function getShopTree(): Promise<Loaded<CategoryNode[]>> {
+  await connection();
+  return attempt(async () => {
+    const top = await cachedTopLevel();
+    const children = await Promise.all(top.map((c) => cachedSubcategories(c.categoryId)));
+    return top.map((category, i) => ({ category, children: children[i] }));
+  });
+}
+
 /** A top-level category and its active subcategories, or data: null when there is no such (active) category. */
 export function getShopCategory(slug: string): Promise<Loaded<{ category: Category; subcategories: Category[] } | null>> {
   return attempt(async () => {
@@ -74,6 +96,15 @@ export function getShopCategory(slug: string): Promise<Loaded<{ category: Catego
     if (!category) return null;
     return { category, subcategories: await cachedSubcategories(category.categoryId) };
   });
+}
+
+/** A subcategory with its parent and siblings, or data: null when either isn't an active category. */
+export async function getShopSubcategory(parentSlug: string, slug: string): Promise<Loaded<{ category: Category; subcategories: Category[]; subcategory: Category } | null>> {
+  if (!isSlug(parentSlug) || !isSlug(slug)) return { ok: true, data: null };
+  const loaded = await getShopCategory(parentSlug);
+  if (!loaded.ok) return loaded;
+  const subcategory = loaded.data?.subcategories.find((s) => s.slug === slug);
+  return { ok: true, data: loaded.data && subcategory ? { ...loaded.data, subcategory } : null };
 }
 
 /** Live tree for the admin pages: each top-level category with its subcategories. */
