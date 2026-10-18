@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AuthCard, LocalOtpHint } from "@/components/auth/AuthCard";
+import { AuthCard } from "@/components/auth/AuthCard";
 import { FormSkeleton } from "@/components/auth/FormSkeleton";
 import { OtpPasswordForm } from "@/components/auth/OtpPasswordForm";
 import { RedirectIfSignedIn } from "@/components/auth/RedirectIfSignedIn";
@@ -29,7 +29,6 @@ export default function ForgotPasswordPage() {
       <Suspense fallback={<FormSkeleton />}>
         <OtpPasswordForm mode="reset" />
       </Suspense>
-      <LocalOtpHint />
     </AuthCard>
   );
 }

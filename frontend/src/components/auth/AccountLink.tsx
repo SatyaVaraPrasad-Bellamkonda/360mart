@@ -1,3 +1,4 @@
+import { Store } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/profile/Avatar";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/dal";
@@ -28,9 +29,30 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
     );
   }
 
+  // Shopkeepers shop too: their avatar opens the shopping account, and a
+  // separate button opens their store. Customers never see the store link.
+  const account = user.role === "seller" ? "/account" : ROLE_HOME[user.role];
+  return (
+    <div className="flex items-center gap-2">
+      {user.role === "seller" && (
+        <Link
+          href="/seller"
+          aria-label="Your store"
+          className="flex size-10 items-center justify-center gap-2 rounded-full bg-ink text-sm font-semibold text-white hover:bg-ink/85 sm:w-auto sm:px-4"
+        >
+          <Store aria-hidden className="size-4 shrink-0" />
+          <span className="hidden sm:inline">Your store</span>
+        </Link>
+      )}
+      <AccountChip user={user} href={account} />
+    </div>
+  );
+}
+
+function AccountChip({ user, href }: { user: CurrentUser; href: string }) {
   return (
     <Link
-      href={ROLE_HOME[user.role]}
+      href={href}
       aria-label="My account"
       className="flex min-h-10 items-center gap-2 rounded-full border border-line py-1 pl-1 pr-4 text-sm font-semibold text-ink hover:border-ink"
     >

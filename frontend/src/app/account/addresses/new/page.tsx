@@ -8,6 +8,7 @@ import { MAX_ADDRESSES } from "@/lib/addresses/types";
 import { emptyDraft } from "@/lib/addresses/validation";
 import { fullName } from "@/lib/auth/current-user";
 import { requireRole } from "@/lib/auth/dal";
+import { SHOPPERS } from "@/lib/auth/roles";
 import { mapConfig } from "@/lib/maps/config";
 import { AddressPageHeader, FormSkeleton, LoadFailed } from "../AddressPageHeader";
 
@@ -27,7 +28,7 @@ export default function NewAddressPage() {
 }
 
 async function NewAddress() {
-  const user = await requireRole("customer");
+  const user = await requireRole(SHOPPERS);
   const list = await loadAddresses("/account/addresses/new");
   if (!list.ok) return <LoadFailed message={list.error.message} />;
 

@@ -33,21 +33,3 @@ export function FormMessage({ error, notice }: { error?: ReactNode; notice?: Rea
   }
   return null;
 }
-
-export function TestModeHint({ children }: { children: ReactNode }) {
-  return (
-    <div className="mt-6 rounded-xl border border-dashed border-brand/50 bg-brand-soft/50 px-4 py-3 text-xs text-brand-deep">
-      <strong>Local testing:</strong> {children}
-    </div>
-  );
-}
-
-// Local development only: no SMS is sent yet, the backend prints the code.
-export function LocalOtpHint() {
-  if (process.env.NODE_ENV !== "development") return null;
-  return (
-    <TestModeHint>
-      no SMS is sent locally. Find the code in the backend log: <code>docker logs mart360-api</code>
-    </TestModeHint>
-  );
-}

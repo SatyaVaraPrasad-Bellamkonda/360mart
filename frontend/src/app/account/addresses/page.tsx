@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AddressBook } from "@/components/addresses/AddressBook";
 import { loadAddresses } from "@/lib/addresses/data";
 import { requireRole } from "@/lib/auth/dal";
+import { SHOPPERS } from "@/lib/auth/roles";
 import { AddressPageHeader, LoadFailed } from "./AddressPageHeader";
 
 export const metadata: Metadata = { title: "Saved Addresses", robots: { index: false, follow: false } };
@@ -21,7 +22,7 @@ export default function AddressesPage({ searchParams }: PageProps<"/account/addr
 }
 
 async function Addresses({ searchParams }: Pick<PageProps<"/account/addresses">, "searchParams">) {
-  await requireRole("customer");
+  await requireRole(SHOPPERS);
   const [list, { saved }] = await Promise.all([loadAddresses("/account/addresses"), searchParams]);
   if (!list.ok) return <LoadFailed message={list.error.message} />;
   return <AddressBook initial={list.data} saved={saved === "added" || saved === "updated" ? saved : null} />;

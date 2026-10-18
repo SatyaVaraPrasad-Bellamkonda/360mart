@@ -6,7 +6,7 @@ import type { ApiFailure } from "@/lib/backend/client";
 import * as api from "./address-service";
 import type { Address } from "./types";
 
-// Address data for pages (server components). Call after requireRole("customer").
+// Address data for pages (server components). Call after requireRole(SHOPPERS).
 // An ended session goes to login and comes back here afterwards; any other
 // failure is returned so the page can show a message instead of crashing.
 

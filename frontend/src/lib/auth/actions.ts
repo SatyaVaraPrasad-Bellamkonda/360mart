@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import type { ApiFailure } from "@/lib/backend/client";
-import type { OtpInfo } from "./api-types";
+import type { AccountType, OtpInfo } from "./api-types";
 import * as api from "./auth-service";
 import { ROLE_FROM_API, safeNextPath, type Role } from "./roles";
 import { toCurrentUser } from "./current-user";
@@ -19,11 +19,13 @@ export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error:
 type CodeAndPassword = { mobileNumber: unknown; otpId: unknown; otp: unknown; password: unknown; next?: unknown };
 
 // Step 1 of signup: create the account (or resume an unfinished one) and text a code.
-export async function startSignupAction(mobileInput: unknown): Promise<ActionResult<{ mobileNumber: string; otp: OtpInfo }>> {
+// A shopkeeper account (STORE_OWNER) can shop too, and also register a store.
+export async function startSignupAction(mobileInput: unknown, accountTypeInput?: unknown): Promise<ActionResult<{ mobileNumber: string; otp: OtpInfo }>> {
   const mobile = normalizeMobile(mobileInput);
   if (!mobile) return invalid({ mobileNumber: "Enter a valid 10-digit Indian mobile number" });
+  const accountType: AccountType = accountTypeInput === "STORE_OWNER" ? "STORE_OWNER" : "CUSTOMER";
 
-  const res = await api.signup(mobile);
+  const res = await api.signup(mobile, accountType);
   if (!res.ok) return fail(res.error);
   return { ok: true, data: { mobileNumber: res.data.mobileNumber, otp: res.data.otp } };
 }
@@ -62,9 +64,9 @@ export async function resetPasswordAction(input: CodeAndPassword): Promise<Actio
   return loginAndRedirect(mobileNumber, password, input.next, "password-reset");
 }
 
-// `area` = which login page was used. The customer page accepts everyone and
-// sends them to their own dashboard; the shopkeeper and admin pages only
-// accept their own role.
+// `area` = which login page was used. /login is the one login for customers and
+// shopkeepers (the backend's answer says which role the number has) and sends
+// everyone to their own home; the admin panel's login only accepts admins.
 export async function loginAction(input: { mobileNumber: unknown; password: unknown; area: unknown; next?: unknown }): Promise<ActionResult> {
   const mobile = normalizeMobile(input.mobileNumber);
   const password = typeof input.password === "string" ? input.password : "";
@@ -74,7 +76,7 @@ export async function loginAction(input: { mobileNumber: unknown; password: unkn
   if (passwordProblem) fieldErrors.password = passwordProblem;
   if (!mobile || passwordProblem) return invalid(fieldErrors);
 
-  const area: Role = input.area === "seller" || input.area === "admin" ? input.area : "customer";
+  const area: Role = input.area === "admin" ? "admin" : "customer";
   const res = await api.login(mobile, password, await getSessionToken());
   if (!res.ok) return fail(res.error);
 
@@ -86,14 +88,7 @@ export async function loginAction(input: { mobileNumber: unknown; password: unkn
     // Right password, wrong door: end the session that was just created.
     await api.logout(session.token);
     await clearSession();
-    return fail({
-      code: "WRONG_AREA",
-      message:
-        area === "seller"
-          ? "This number isn't registered as a 360mart store. Please use the customer login."
-          : "This account doesn't have admin access.",
-      fieldErrors: {},
-    });
+    return fail({ code: "WRONG_AREA", message: "This account doesn't have admin access.", fieldErrors: {} });
   }
 
   const user = await startSession(session);

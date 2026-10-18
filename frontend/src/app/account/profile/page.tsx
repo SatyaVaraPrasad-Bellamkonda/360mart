@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { DashboardSkeleton } from "@/components/auth/DashboardShell";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { requireRole } from "@/lib/auth/dal";
+import { SHOPPERS } from "@/lib/auth/roles";
 
 export const metadata: Metadata = { title: "My Profile", robots: { index: false, follow: false } };
 
@@ -27,6 +28,6 @@ export default function ProfilePage() {
 }
 
 async function Editor() {
-  const user = await requireRole("customer");
+  const user = await requireRole(SHOPPERS);
   return <ProfileEditor initialUser={user} />;
 }

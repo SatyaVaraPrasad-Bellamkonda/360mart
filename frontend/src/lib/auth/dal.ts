@@ -39,11 +39,13 @@ async function getLiveUser(token: string): Promise<CurrentUser | null | "unreach
   return res.error.status === 0 || res.error.status >= 500 ? "unreachable" : null;
 }
 
-// Admin pages always confirm with the backend (rare, and the most sensitive);
-// other areas trust the stored copy.
-export async function requireRole(role: Role): Promise<CurrentUser> {
-  const user = role === "admin" ? await requireLiveAdmin() : await getCurrentUser();
-  if (!user || user.role !== role) redirect(ROLE_LOGIN[role]);
+// One role, or several (SHOPPERS for the shopping account). Anyone else goes to
+// the login of the first role listed. Admin pages always confirm with the
+// backend (rare, and the most sensitive); other areas trust the stored copy.
+export async function requireRole(role: Role | Role[]): Promise<CurrentUser> {
+  const allowed = Array.isArray(role) ? role : [role];
+  const user = allowed.includes("admin") ? await requireLiveAdmin() : await getCurrentUser();
+  if (!user || !allowed.includes(user.role)) redirect(ROLE_LOGIN[allowed[0]]);
   return user;
 }
 

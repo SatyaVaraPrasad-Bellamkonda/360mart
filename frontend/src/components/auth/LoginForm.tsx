@@ -15,8 +15,9 @@ const STATUS_NOTICE: Record<string, string> = {
   "password-reset": "Your password was changed. Please log in with the new one.",
 };
 
-// Mobile number + password. `area` is the login page it sits on (customer,
-// shopkeeper or admin); the server checks the account's role against it.
+// Mobile number + password. `area` is the login page it sits on: "customer" =
+// the shared login for customers and shopkeepers, "admin" = the panel's login,
+// where the server refuses other roles.
 export function LoginForm({ area }: { area: Role }) {
   const params = useSearchParams();
   const next = params.get("next") ?? "";

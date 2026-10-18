@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
@@ -11,7 +11,7 @@ import {
   startSignupAction,
   type ActionError,
 } from "@/lib/auth/actions";
-import type { OtpInfo } from "@/lib/auth/api-types";
+import type { AccountType, OtpInfo } from "@/lib/auth/api-types";
 import { formatMobile, mobileError, newPasswordError, normalizeMobile, otpError } from "@/lib/auth/validation";
 import { FormMessage } from "./AuthCard";
 import { CodeField, MobileField, PasswordField, SubmitButton } from "./AuthFields";
@@ -38,7 +38,10 @@ const COPY = {
 
 export function OtpPasswordForm({ mode }: { mode: Mode }) {
   const copy = COPY[mode];
-  const next = useSearchParams().get("next") ?? "";
+  const params = useSearchParams();
+  const next = params.get("next") ?? "";
+  // Signup only: shop, or sell (a shopkeeper account, which can shop too). /signup?as=seller starts on sell.
+  const [accountType, setAccountType] = useState<AccountType>(params.get("as") === "seller" ? "STORE_OWNER" : "CUSTOMER");
   const [pending, startTransition] = useTransition();
 
   const [step, setStep] = useState<"mobile" | "verify">("mobile");
@@ -79,7 +82,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
 
     setAlert(null);
     startTransition(async () => {
-      const res = mode === "signup" ? await startSignupAction(mobileInput) : await sendCodeAction(mobileInput, copy.purpose);
+      const res = mode === "signup" ? await startSignupAction(mobileInput, accountType) : await sendCodeAction(mobileInput, copy.purpose);
       if (!res.ok) return showError(res.error);
 
       const info = "otp" in res.data ? res.data.otp : res.data;
@@ -152,6 +155,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
   if (step === "mobile") {
     return (
       <form onSubmit={handleSend} noValidate className="space-y-4">
+        {mode === "signup" && <AccountTypePicker value={accountType} onChange={setAccountType} />}
         <AlertMessage alert={alert} />
         <MobileField value={mobileInput} onChange={setMobileInput} error={errors.mobile} autoFocus />
         <SubmitButton pending={pending} label={copy.sendLabel} pendingLabel="Sending code…" />
@@ -167,6 +171,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
       <div className="flex flex-wrap items-center justify-between gap-x-3 rounded-xl bg-surface px-4 py-2 text-sm">
         <span className="text-muted">
           Code sent to <strong className="font-semibold text-ink">{formatMobile(mobile)}</strong>
+          {mode === "signup" && accountType === "STORE_OWNER" && <span className="block text-xs font-semibold text-brand-deep">Shopkeeper account</span>}
         </span>
         <button type="button" onClick={changeNumber} disabled={pending} className="flex min-h-10 items-center gap-1 font-semibold text-brand-deep hover:underline">
           <ArrowLeft aria-hidden className="size-4" />
@@ -205,6 +210,37 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
 
       <SubmitButton pending={pending} label={copy.finishLabel} pendingLabel={copy.finishing} />
     </form>
+  );
+}
+
+const ACCOUNT_TYPES: { value: AccountType; title: string; text: string; icon: typeof Store }[] = [
+  { value: "CUSTOMER", title: "Shop", text: "Order from stores near you", icon: ShoppingBag },
+  { value: "STORE_OWNER", title: "Sell", text: "Register your store, and shop too", icon: Store },
+];
+
+function AccountTypePicker({ value, onChange }: { value: AccountType; onChange: (value: AccountType) => void }) {
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-sm font-semibold text-ink">I want to</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {ACCOUNT_TYPES.map((type) => {
+          const selected = value === type.value;
+          return (
+            <label
+              key={type.value}
+              className={`flex min-h-12 cursor-pointer flex-col gap-1 rounded-2xl border p-3 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40 ${selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"}`}
+            >
+              <input type="radio" name="accountType" value={type.value} checked={selected} onChange={() => onChange(type.value)} className="sr-only" />
+              <span className="flex items-center gap-2 font-bold">
+                <type.icon aria-hidden className="size-4 shrink-0" />
+                {type.title}
+              </span>
+              <span className={`text-xs leading-snug ${selected ? "text-white/80" : "text-muted"}`}>{type.text}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

@@ -5,6 +5,7 @@ import { AddressForm } from "@/components/addresses/AddressForm";
 import { loadAddress } from "@/lib/addresses/data";
 import { toDraft } from "@/lib/addresses/validation";
 import { requireRole } from "@/lib/auth/dal";
+import { SHOPPERS } from "@/lib/auth/roles";
 import { mapConfig } from "@/lib/maps/config";
 import { AddressPageHeader, FormSkeleton, LoadFailed } from "../../AddressPageHeader";
 
@@ -24,7 +25,7 @@ export default function EditAddressPage({ params }: PageProps<"/account/addresse
 }
 
 async function EditAddress({ params }: Pick<PageProps<"/account/addresses/[addressId]/edit">, "params">) {
-  await requireRole("customer");
+  await requireRole(SHOPPERS);
   const { addressId } = await params;
   const loaded = await loadAddress(addressId, `/account/addresses/${encodeURIComponent(addressId)}/edit`);
   if (!loaded.ok) return <LoadFailed message={loaded.error.message} />;

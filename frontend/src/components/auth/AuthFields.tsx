@@ -157,8 +157,10 @@ export function PasswordField({ value, onChange, error, autoFocus, ref, label, a
 type TextProps = FieldProps & {
   label: string;
   name: string;
-  type?: "text" | "email";
+  type?: "text" | "email" | "date";
   inputMode?: "text" | "email" | "numeric" | "decimal";
+  /** Earliest date (YYYY-MM-DD) for type="date". */
+  min?: string;
   autoComplete: string;
   maxLength: number;
   placeholder?: string;
@@ -168,7 +170,7 @@ type TextProps = FieldProps & {
   prefix?: string;
 };
 
-export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", inputMode, autoComplete, maxLength, placeholder, hint, optional, prefix }: TextProps) {
+export function TextField({ value, onChange, error, autoFocus, ref, label, name, type = "text", inputMode, autoComplete, maxLength, placeholder, hint, optional, prefix, min }: TextProps) {
   const id = useId();
   return (
     <div>
@@ -187,13 +189,14 @@ export function TextField({ value, onChange, error, autoFocus, ref, label, name,
           inputMode={inputMode ?? (type === "email" ? "email" : undefined)}
           autoComplete={autoComplete}
           maxLength={maxLength}
+          min={min}
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           autoFocus={autoFocus}
           aria-invalid={!!error}
           aria-describedby={describedBy(id, error, hint)}
-          className={`${INPUT} placeholder:text-muted/70`}
+          className={`${INPUT} min-w-0 bg-transparent placeholder:text-muted/70`}
         />
       </div>
       <FieldError id={`${id}-error`} message={error} />

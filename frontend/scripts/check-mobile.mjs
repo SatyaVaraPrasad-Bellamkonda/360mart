@@ -15,7 +15,7 @@ import { join } from "node:path";
 const [base = "http://localhost:3360", ...paths] = process.argv.slice(2);
 const pages = paths.length
   ? paths
-  : ["/", "/fruits", "/fruits/apples", "/fruits/apples/shimla-apple", "/login", "/seller/login", "/admin/login"];
+  : ["/", "/fruits", "/fruits/apples", "/fruits/apples/shimla-apple", "/login", "/signup", "/admin/login"];
 const chromePath = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const port = 9400 + Math.floor(Math.random() * 500);
 const profile = mkdtempSync(join(tmpdir(), "check-mobile-"));

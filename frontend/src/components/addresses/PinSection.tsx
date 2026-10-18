@@ -28,7 +28,11 @@ type Props = {
   /** Fill the form from a place; returns the names of the fields it filled. */
   onSuggest: (place: PlaceSuggestion) => string[];
   onActionError: (error: ActionError, show: (text: string) => void) => void;
+  /** Wording for other forms (the store form needs the pin and talks about the shop, not your door). */
+  copy?: { title: string; optional: boolean; help: string };
 };
+
+const ADDRESS_COPY = { title: "Pin your exact location", optional: true, help: "Helps the delivery partner find your door." };
 
 // A dragged pin settles before we look it up (and the lookup service allows 1 request a second).
 const LOOKUP_DELAY_MS = 700;
@@ -36,7 +40,7 @@ const LOOKUP_DELAY_MS = 700;
 // "Pin your exact location" (optional): search for a place, use the phone's
 // location or tap the map. Each time the pin moves, the address fields are
 // filled from it (when a lookup service is configured); the shopper checks them.
-export function PinSection({ pin, onPin, map, error, onSuggest, onActionError }: Props) {
+export function PinSection({ pin, onPin, map, error, onSuggest, onActionError, copy = ADDRESS_COPY }: Props) {
   const searchId = useId();
   const [open, setOpen] = useState(false);
   const [mapBroken, setMapBroken] = useState(false);
@@ -159,11 +163,9 @@ export function PinSection({ pin, onPin, map, error, onSuggest, onActionError }:
         </span>
         <div className="min-w-0">
           <p className="font-semibold text-ink">
-            Pin your exact location <span className="font-normal text-muted">(optional)</span>
+            {copy.title} {copy.optional && <span className="font-normal text-muted">(optional)</span>}
           </p>
-          <p className="mt-0.5 text-sm text-muted">
-            {map.canSuggest ? "We fill in the address from the pin, and it helps the delivery partner find your door." : "Helps the delivery partner find your door."}
-          </p>
+          <p className="mt-0.5 text-sm text-muted">{map.canSuggest ? `We fill in the address from the pin. ${copy.help}` : copy.help}</p>
         </div>
       </div>
 

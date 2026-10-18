@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AuthCard, LocalOtpHint } from "@/components/auth/AuthCard";
+import { AuthCard } from "@/components/auth/AuthCard";
 import { FormSkeleton } from "@/components/auth/FormSkeleton";
 import { OtpPasswordForm } from "@/components/auth/OtpPasswordForm";
 import { RedirectIfSignedIn } from "@/components/auth/RedirectIfSignedIn";
@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: "Create account", robots: { index: fa
 export default function SignupPage() {
   return (
     <AuthCard
-      badge="New customer"
+      badge="New account"
       title="Create your 360mart account"
-      subtitle="We'll text a 6-digit code to confirm your mobile number. Then choose a password."
+      subtitle="Shop from neighbourhood stores, or register your own store. We'll text a 6-digit code to confirm your number, then you choose a password."
       footer={
         <>
           Already have an account?{" "}
@@ -29,7 +29,6 @@ export default function SignupPage() {
       <Suspense fallback={<FormSkeleton />}>
         <OtpPasswordForm mode="signup" />
       </Suspense>
-      <LocalOtpHint />
     </AuthCard>
   );
 }

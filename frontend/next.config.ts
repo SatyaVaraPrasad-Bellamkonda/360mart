@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   experimental: {
     serverActions: {
-      // Profile photos are up to 2 MB (backend limit); room for multipart overhead.
-      bodySizeLimit: "3mb",
+      // Pictures are up to 2 MB and store documents up to 5 MB (backend limits);
+      // room for multipart overhead. The backend refuses anything above ~6 MB anyway.
+      bodySizeLimit: "6mb",
     },
   },
   logging: {
@@ -15,6 +16,10 @@ const nextConfig: NextConfig = {
     serverFunctions: false,
   },
   partialPrefetching: true,
+  async redirects() {
+    // There's one login for customers and shopkeepers now; keep old links working.
+    return [{ source: "/seller/login", destination: "/login", permanent: false }];
+  },
   async headers() {
     return [
       {

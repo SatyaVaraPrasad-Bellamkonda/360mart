@@ -1,12 +1,12 @@
 import "server-only";
 import { callApi } from "@/lib/backend/client";
-import type { MessageResponse, OtpInfo, OtpPurpose, SignupResponse, UserResponse } from "./api-types";
+import type { AccountType, MessageResponse, OtpInfo, OtpPurpose, SignupResponse, UserResponse } from "./api-types";
 
 // One function per Spring Boot auth endpoint. Inputs are already validated by
 // the caller (actions.ts); the backend validates them again.
 
-export function signup(mobileNumber: string) {
-  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber } });
+export function signup(mobileNumber: string, accountType: AccountType) {
+  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber, accountType } });
 }
 
 export function sendOtp(mobileNumber: string, purpose: OtpPurpose) {
