@@ -6,6 +6,7 @@ import { ImagePicker, Section } from "@/components/admin/FormParts";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { MobileField, SelectField, SubmitButton, TextAreaField, TextField } from "@/components/auth/AuthFields";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toastError, toastSuccess } from "@/components/Toaster";
 import { ActionBar } from "./ActionBar";
 import { STATES, UNION_TERRITORIES } from "@/lib/addresses/types";
 import type { ActionError } from "@/lib/auth/actions";
@@ -71,7 +72,10 @@ export function StoreDetailsForm({ application, initial, map, onSaved, onDraft }
     const found = storeErrors(draft);
     setErrors(found);
     setMessage(null);
-    if (Object.keys(found).length) return focusFirstError();
+    if (Object.keys(found).length) {
+      toastError("Please fix the highlighted fields.");
+      return focusFirstError();
+    }
 
     startTransition(async () => {
       const form = new FormData();
@@ -80,14 +84,18 @@ export function StoreDetailsForm({ application, initial, map, onSaved, onDraft }
       const res = await saveStoreAction(application === null, form);
       if (res.ok) {
         setLogo(null);
+        toastSuccess(application ? "Store details saved" : "Application started. Your details are saved.");
         return onSaved(res.data);
       }
       const fieldErrors = storeFieldErrors(res.error.fieldErrors);
       if (Object.keys(fieldErrors).length) {
         setErrors(fieldErrors);
-        setMessage(res.error.code === "VALIDATION_FAILED" ? "Please fix the highlighted fields." : res.error.message);
+        const text = res.error.code === "VALIDATION_FAILED" ? "Please fix the highlighted fields." : res.error.message;
+        setMessage(text);
+        toastError(`Couldn't save. ${text}`);
         return focusFirstError();
       }
+      if (res.error.code !== "UNAUTHENTICATED") toastError(`Couldn't save. ${res.error.message}`);
       handleActionError(res.error, setMessage);
     });
   }

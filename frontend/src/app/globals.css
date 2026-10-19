@@ -154,6 +154,21 @@ body {
   }
 }
 
+/* Seller store card: a gradient border that slowly turns. The angle is a
+   registered property so it can animate (browsers without @property just
+   show the gradient standing still). */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
 /* Sections fade up as they scroll into view, in browsers that support
    scroll-driven animations. Elsewhere (and with reduced motion) they simply show. */
 @supports (animation-timeline: view()) {

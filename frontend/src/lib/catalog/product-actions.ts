@@ -25,6 +25,7 @@ const PRODUCT_FIELD_OF: Record<string, ProductField> = {
   INVALID_PRODUCT_CATEGORY: "categoryId",
   INVALID_IMAGE: "image",
   IMAGE_TOO_LARGE: "image",
+  FILE_TOO_LARGE: "image", // over the server's ~6 MB upload limit
 };
 
 const VARIANT_FIELD_OF: Record<string, keyof VariantDraft> = {

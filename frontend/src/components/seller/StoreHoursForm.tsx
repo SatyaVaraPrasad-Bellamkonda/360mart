@@ -4,23 +4,33 @@ import { Copy } from "lucide-react";
 import { useState, useTransition, type FormEvent } from "react";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toastError, toastSuccess } from "@/components/Toaster";
 import { SubmitButton } from "@/components/auth/AuthFields";
 import { saveHoursAction } from "@/lib/stores/actions";
 import { ActionBar } from "./ActionBar";
 import { DAY_LABEL, type DayHoursDraft, type DayOfWeek, type StoreApplication } from "@/lib/stores/types";
 import { hoursErrors, toHoursDraft } from "@/lib/stores/validation";
 
-type Props = { application: StoreApplication; onSaved: (application: StoreApplication) => void };
+type Props = {
+  application: StoreApplication;
+  onSaved: (application: StoreApplication) => void;
+  /** Live store (shown in a dialog): plain rows and "Save hours" + Cancel, instead of the registration step's card and "Save and continue". */
+  onCancel?: () => void;
+  /** The page this form is on, when it isn't the store page (the dashboard's dialog). */
+  from?: "/seller";
+};
 
-// Step 2: opening hours, all 7 days saved together (the backend needs every day
-// once). Times are shop-local 24-hour; closing after midnight isn't supported yet.
-export function StoreHoursForm({ application, onSaved }: Props) {
+// Opening hours, all 7 days saved together (the backend needs every day once):
+// step 2 of registration, and later the live store's "Change hours".
+// Times are shop-local 24-hour; closing after midnight isn't supported yet.
+export function StoreHoursForm({ application, onSaved, onCancel, from }: Props) {
   const { sessionExpired } = useAuth();
   const [days, setDays] = useState<DayHoursDraft[]>(() => toHoursDraft(application.hours));
   const [errors, setErrors] = useState<Partial<Record<DayOfWeek, string>>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const saved = application.checklist.hoursSet;
+  const inDialog = !!onCancel;
 
   function change(day: DayOfWeek, patch: Partial<DayHoursDraft>) {
     setDays((list) => list.map((d) => (d.dayOfWeek === day ? { ...d, ...patch } : d)));
@@ -38,21 +48,25 @@ export function StoreHoursForm({ application, onSaved }: Props) {
     const found = hoursErrors(days);
     setErrors(found);
     setMessage(null);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) return toastError("Please fix the highlighted days.");
     startTransition(async () => {
-      const res = await saveHoursAction(days);
-      if (res.ok) return onSaved(res.data);
+      const res = await saveHoursAction(days, from);
+      if (res.ok) {
+        toastSuccess(inDialog ? "Opening hours saved. Shoppers see the new times." : "Opening hours saved");
+        return onSaved(res.data);
+      }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setErrors(res.error.fieldErrors as Partial<Record<DayOfWeek, string>>);
       setMessage(res.error.message);
+      toastError(`Couldn't save the hours. ${res.error.message}`);
     });
   }
 
   return (
-    <form onSubmit={save} noValidate className="space-y-5">
-      <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
+    <form onSubmit={save} noValidate className={inDialog ? "space-y-4" : "space-y-5"}>
+      <section className={inDialog ? "" : "rounded-3xl border border-line bg-white p-5 sm:p-6"}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="min-w-0 text-sm text-muted">{saved ? "Saved. Change any day and save again." : "Check each day, then save. Shoppers see these times."}</p>
+          <p className="min-w-0 text-sm text-muted">{onCancel ? "Change any day, then save." : saved ? "Saved. Change any day and save again." : "Check each day, then save. Shoppers see these times."}</p>
           <button type="button" onClick={copyMonday} className="flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
             <Copy aria-hidden className="size-4" />
             Copy Monday to all days
@@ -70,9 +84,19 @@ export function StoreHoursForm({ application, onSaved }: Props) {
         {message && <FormMessage error={message} />}
       </div>
 
-      <ActionBar note="Times are in your shop's local time.">
-        <SubmitButton pending={pending} label="Save and continue" pendingLabel="Saving…" />
-      </ActionBar>
+      {inDialog ? (
+        // Pinned to the bottom of the dialog, so Save is always in reach.
+        <div className="sticky bottom-0 -mx-5 flex gap-2 border-t border-line bg-white px-5 py-3">
+          <button type="button" onClick={onCancel} disabled={pending} className="flex min-h-12 shrink-0 items-center justify-center rounded-full px-5 font-semibold text-muted ring-1 ring-line hover:text-ink hover:ring-ink">
+            Cancel
+          </button>
+          <SubmitButton pending={pending} label="Save hours" pendingLabel="Saving…" />
+        </div>
+      ) : (
+        <ActionBar note="Times are in your shop's local time.">
+          <SubmitButton pending={pending} label="Save and continue" pendingLabel="Saving…" />
+        </ActionBar>
+      )}
     </form>
   );
 }
@@ -112,7 +136,7 @@ function DayRow({ day, error, onChange }: { day: DayHoursDraft; error?: string; 
   );
 }
 
-function TimeInput({ label, short, value, onChange, invalid, errorId }: { label: string; short: string; value: string; onChange: (value: string) => void; invalid: boolean; errorId: string }) {
+export function TimeInput({ label, short, value, onChange, invalid, errorId }: { label: string; short: string; value: string; onChange: (value: string) => void; invalid: boolean; errorId: string }) {
   return (
     // Label above the time, so the time gets the full width on a 360px phone.
     <label className={`flex min-h-12 flex-col justify-center rounded-xl border bg-white px-3 py-1 focus-within:ring-2 focus-within:ring-brand/40 ${invalid ? "border-red-500" : "border-line focus-within:border-ink"}`}>

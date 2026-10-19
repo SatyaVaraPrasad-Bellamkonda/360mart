@@ -1,8 +1,9 @@
-import { ArrowRight, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
+import { ArrowRight, Radius, Scooter, ShoppingCart, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { HoursCard } from "@/components/seller/HoursCard";
 import { placeText, StatusPill, StoreLogo } from "@/components/stores/StoreParts";
 import { requireRole } from "@/lib/auth/dal";
 import { loadMyStore } from "@/lib/stores/data";
@@ -49,7 +50,7 @@ async function SellerDashboard() {
         <Welcome />
       )}
 
-      <section aria-labelledby="next-title">
+      <section aria-labelledby="next-title" className="motion-safe:animate-fade-up motion-safe:[animation-delay:240ms]">
         <h2 id="next-title" className="text-lg font-bold text-ink">
           {app?.store.status === "ACTIVE" ? "Run your store" : "After you go live"}
         </h2>
@@ -186,6 +187,7 @@ function StorePreview() {
 const STEP_ICON: Record<Step, LucideIcon> = { details: Store, hours: Clock, documents: FileText, submit: Send };
 
 function Application({ app }: { app: StoreApplication }) {
+  if (app.store.status === "ACTIVE") return <LiveStore app={app} />;
   const { store, checklist } = app;
   const editable = store.status === "DRAFT" || store.status === "REJECTED";
   const done = doneCount(app);
@@ -193,7 +195,7 @@ function Application({ app }: { app: StoreApplication }) {
   const nextMeta = STEPS.find((s) => s.id === next)!;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <section className="overflow-hidden rounded-3xl border border-line bg-white">
         <div className="flex items-center gap-4 p-5 sm:p-6">
           <StoreLogo store={store} className="size-16 rounded-2xl sm:size-20" />
@@ -248,7 +250,7 @@ function Application({ app }: { app: StoreApplication }) {
           </section>
         ) : (
           <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
-            <p className="font-bold text-ink">{store.status === "ACTIVE" ? "Your store details" : "Your application"}</p>
+            <p className="font-bold text-ink">Your application</p>
             <p className="mt-1 text-sm text-muted">See everything you submitted: details, hours and documents.</p>
             <Link href="/seller/store" className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 font-semibold text-white transition hover:bg-ink/85">
               View
@@ -270,6 +272,103 @@ function Application({ app }: { app: StoreApplication }) {
           </section>
         )}
       </aside>
+    </div>
+  );
+}
+
+// "₹20", or "₹20.50" when there are paise.
+const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+// A live store: a storefront card (turning gradient border, slowly drifting
+// aurora glows, logo with a live dot, three stat tiles with line icons), then
+// its hours and holidays side by side. Every number here comes from the one load.
+function LiveStore({ app }: { app: StoreApplication }) {
+  const { store } = app;
+  const fee = store.deliveryFee ?? 0;
+  const min = store.minOrderAmount ?? 0;
+  const facts: { icon: LucideIcon; label: string; value: string }[] = [
+    { icon: Radius, label: "Delivers within", value: store.deliveryRadiusKm != null ? `${store.deliveryRadiusKm} km` : "Not set" },
+    { icon: Scooter, label: "Delivery fee", value: fee > 0 ? money.format(fee) : "Free" },
+    { icon: ShoppingCart, label: "Minimum order", value: min > 0 ? money.format(min) : "None" },
+  ];
+  return (
+    <div className="space-y-6">
+      {/* A 1.5px border: the wrapper's turning gradient shows around the card. */}
+      <div className="rounded-[2rem] bg-[conic-gradient(from_var(--border-angle),#fbbf24,#f472b6,#a78bfa,#38bdf8,#fbbf24)] p-[1.5px] shadow-[0_24px_60px_-32px_rgba(124,58,237,0.35)] motion-safe:[animation:border-spin_10s_linear_infinite,fade-up_0.7s_cubic-bezier(0.16,1,0.3,1)_both]">
+        <section className="relative isolate overflow-hidden rounded-[calc(2rem-1.5px)] bg-white">
+          {/* Decoration only: an "aurora" of soft gold, pink, violet and sky glows drifting
+              slowly, a fine grid fading from the top right, and a light sheen passing now and then. */}
+          <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-amber-50 via-white to-violet-50" />
+          <div aria-hidden className="absolute -left-24 -top-28 -z-10 size-80 rounded-full bg-amber-200/60 blur-3xl motion-safe:animate-drift-a" />
+          <div aria-hidden className="absolute left-1/3 -top-36 -z-10 size-80 rounded-full bg-pink-200/50 blur-3xl motion-safe:animate-drift-b" />
+          <div aria-hidden className="absolute -bottom-32 right-1/4 -z-10 size-96 rounded-full bg-violet-200/50 blur-3xl motion-safe:animate-drift-c" />
+          <div aria-hidden className="absolute -right-24 -top-16 -z-10 size-72 rounded-full bg-sky-200/50 blur-3xl motion-safe:animate-drift-b" />
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.05)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:radial-gradient(ellipse_80%_70%_at_100%_0%,black,transparent)]"
+          />
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-1/4 bg-gradient-to-r from-transparent via-white/60 to-transparent motion-safe:animate-sheen motion-reduce:hidden" />
+
+          <div className="p-5 sm:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
+                {/* The logo, with a "live" dot on its corner. */}
+                <div className="relative shrink-0">
+                  <StoreLogo store={store} className="size-16 rounded-2xl bg-white shadow-md shadow-slate-900/10 sm:size-20" />
+                  <span className="absolute -bottom-1 -right-1 flex size-4">
+                    <span aria-hidden className="absolute inline-flex size-full rounded-full bg-green-400 opacity-60 motion-safe:animate-ping" />
+                    <span aria-hidden className="relative inline-flex size-4 rounded-full bg-green-500 ring-[3px] ring-white" />
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Your storefront</p>
+                  <h2 className="mt-1 break-words text-2xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">{store.name}</h2>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-ink ring-1 ring-line">
+                      <span aria-hidden className="size-1.5 rounded-full bg-green-500" />
+                      Live
+                    </span>
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-ink/80 ring-1 ring-line">
+                      <MapPin aria-hidden className="size-3.5 shrink-0 text-muted" />
+                      <span className="truncate">{placeText(store) ?? "Area not added"}</span>
+                    </span>
+                    <span className="hidden min-w-0 items-center rounded-full bg-white px-2.5 py-1 font-medium text-muted ring-1 ring-line sm:inline-flex">
+                      <span className="truncate">360mart.in/{store.slug}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <Link href="/seller/store" className="group/cta inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/90">
+                  Store details
+                  <ArrowRight aria-hidden className="size-4 transition-transform group-hover/cta:translate-x-0.5" />
+                </Link>
+                <p className="text-xs text-muted sm:text-right">Live since {dateTimeText(store.approvedAt)}</p>
+              </div>
+            </div>
+
+            {/* What shoppers see. */}
+            <dl className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+              {facts.map((f, i) => (
+                <div
+                  key={f.label}
+                  style={{ animationDelay: `${150 + i * 80}ms` }}
+                  className="group rounded-2xl bg-white/80 p-3 ring-1 ring-line backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-16px_rgba(15,23,42,0.35)] motion-safe:animate-fade-up motion-reduce:hover:translate-y-0 sm:p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{f.label}</dt>
+                    <span className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-surface text-ink ring-1 ring-line transition group-hover:bg-ink group-hover:text-white sm:flex">
+                      <f.icon aria-hidden className="size-4" strokeWidth={1.75} />
+                    </span>
+                  </div>
+                  <dd className="mt-1.5 truncate text-lg font-extrabold tracking-tight text-ink sm:mt-2 sm:text-2xl">{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      </div>
+      <HoursCard initial={app} />
     </div>
   );
 }
@@ -332,7 +431,7 @@ function Tile({ icon: Icon, title, text, href }: { icon: LucideIcon; title: stri
   return (
     <li className="flex">
       {href ? (
-        <Link href={href} className="flex w-full items-start gap-3 rounded-2xl border border-line bg-white p-4 transition hover:border-ink">
+        <Link href={href} className="flex w-full items-start gap-3 rounded-2xl border border-line bg-white p-4 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-md motion-reduce:hover:translate-y-0">
           {body}
         </Link>
       ) : (

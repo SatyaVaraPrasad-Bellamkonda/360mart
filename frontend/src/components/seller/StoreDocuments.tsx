@@ -4,6 +4,7 @@ import { FileUp, Trash2, Upload, X } from "lucide-react";
 import { useId, useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toastError, toastSuccess } from "@/components/Toaster";
 import { FieldError, TextField } from "@/components/auth/AuthFields";
 import { DocumentPill, DocumentRow } from "@/components/stores/StoreParts";
 import { deleteDocumentAction, uploadDocumentAction } from "@/lib/stores/actions";
@@ -60,9 +61,13 @@ function DocumentCard({ type, required, documents, prefill, onChanged }: CardPro
     startTransition(async () => {
       const res = await deleteDocumentAction(documentId);
       setRemoving(null);
-      if (res.ok) return onChanged(res.data);
+      if (res.ok) {
+        toastSuccess(`File removed from ${DOCUMENT_LABEL[type]}`);
+        return onChanged(res.data);
+      }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setMessage(res.error.message);
+      toastError(`Couldn't remove the file. ${res.error.message}`);
     });
   }
 
@@ -151,16 +156,20 @@ function UploadForm({ type, prefill, replacing, onCancel, onUploaded }: { type: 
     const found = documentErrors(draft, file);
     setErrors(found);
     setMessage(null);
-    if (Object.keys(found).length || !file) return;
+    if (Object.keys(found).length || !file) return toastError(`Couldn't upload. ${Object.values(found)[0] ?? "Choose the file to upload"}`);
     startTransition(async () => {
       const form = new FormData();
       form.append("document", JSON.stringify(draft));
       form.append("file", file);
       const res = await uploadDocumentAction(form);
-      if (res.ok) return onUploaded(res.data);
+      if (res.ok) {
+        toastSuccess(`${DOCUMENT_LABEL[type]} uploaded. Our team will check it.`);
+        return onUploaded(res.data);
+      }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setErrors(res.error.fieldErrors as DocumentErrors);
       setMessage(Object.keys(res.error.fieldErrors).length ? null : res.error.message);
+      toastError(`Couldn't upload. ${Object.values(res.error.fieldErrors)[0] ?? res.error.message}`);
     });
   }
 

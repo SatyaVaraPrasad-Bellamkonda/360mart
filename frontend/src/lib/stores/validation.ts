@@ -16,6 +16,9 @@ import {
   type DocumentErrors,
   type DocumentInput,
   type DocumentType,
+  type HoursExceptionDraft,
+  type HoursExceptionErrors,
+  type HoursExceptionInput,
   type Store,
   type StoreDraft,
   type StoreErrors,
@@ -337,6 +340,61 @@ export function timeText(value: string | null): string {
   const [h, m] = value.slice(0, 5).split(":").map(Number);
   const suffix = h < 12 ? "am" : "pm";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+// ---- holidays and special hours (one date overrides the weekly hours) ----
+
+/** How far ahead a date can be set (the backend's MAX_HOURS_EXCEPTION_DAYS_AHEAD). */
+export const EXCEPTION_DAYS_AHEAD = 365;
+
+/** YYYY-MM-DD `days` after `date` (calendar days, no time zone involved). */
+export function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export function exceptionErrors(draft: HoursExceptionDraft): HoursExceptionErrors {
+  const errors: HoursExceptionErrors = {};
+  const today = todayInIndia();
+  if (!DATE.test(draft.date)) errors.date = "Choose a date";
+  else if (draft.date < today) errors.date = "Choose today or a later date";
+  else if (draft.date > addDays(today, EXCEPTION_DAYS_AHEAD)) errors.date = "Choose a date within the next 12 months";
+  if (!draft.isClosed) {
+    if (!TIME.test(draft.opensAt) || !TIME.test(draft.closesAt)) errors.times = "Enter both times";
+    else if (draft.closesAt <= draft.opensAt) errors.times = "Closing time must be after opening time (past midnight isn't supported yet)";
+  }
+  const reason = collapse(draft.reason);
+  if (reason.length > 150) errors.reason = "Reason must be at most 150 characters";
+  else if (!SAFE_LINE.test(reason)) errors.reason = "Reason contains characters that are not allowed";
+  return errors;
+}
+
+export function toExceptionInput(draft: HoursExceptionDraft): HoursExceptionInput {
+  const base = { ...(draft.exceptionId ? { exceptionId: draft.exceptionId } : {}), date: draft.date, reason: collapse(draft.reason) || null };
+  return draft.isClosed ? { ...base, isClosed: true } : { ...base, isClosed: false, opensAt: draft.opensAt, closesAt: draft.closesAt };
+}
+
+export function readExceptionDraft(input: unknown): HoursExceptionDraft | null {
+  if (!input || typeof input !== "object") return null;
+  const raw = input as Record<string, unknown>;
+  const str = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string) : "");
+  const id = raw.exceptionId;
+  return {
+    exceptionId: typeof id === "number" && Number.isSafeInteger(id) && id > 0 ? id : null,
+    date: str("date"),
+    isClosed: raw.isClosed !== false,
+    opensAt: str("opensAt"),
+    closesAt: str("closesAt"),
+    reason: str("reason"),
+  };
+}
+
+/** "Mon, 20 Oct" (and the year when it isn't this year). */
+export function shortDateText(date: string, today = todayInIndia()): string {
+  const d = new Date(`${date}T00:00:00+05:30`);
+  const sameYear = date.slice(0, 4) === today.slice(0, 4);
+  return new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }), timeZone: "Asia/Kolkata" }).format(d);
 }
 
 // ---- documents ----

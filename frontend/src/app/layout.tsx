@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteFooter } from "@/components/SiteFooter";
+import { Toaster } from "@/components/Toaster";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

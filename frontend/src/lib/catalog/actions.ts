@@ -26,6 +26,7 @@ const FIELD_OF: Record<string, CategoryField> = {
   CATEGORY_HAS_PRODUCTS: "parentCategoryId",
   INVALID_IMAGE: "image",
   IMAGE_TOO_LARGE: "image",
+  FILE_TOO_LARGE: "image", // over the server's ~6 MB upload limit
 };
 
 /**

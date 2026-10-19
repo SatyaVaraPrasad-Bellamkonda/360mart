@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, CircleAlert, Clock, FileText, MapPin, PartyPopper, Send, Store as StoreIcon, Truck } from "lucide-react";
+import { ArrowRight, Check, CircleAlert, Clock, FileText, MapPin, PartyPopper, Pencil, Send, Store as StoreIcon, Truck } from "lucide-react";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
+import { Dialog } from "@/components/Dialog";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Card, DocumentRow, StoreDetailsList, StoreHoursList } from "@/components/stores/StoreParts";
+import { toastError, toastSuccess } from "@/components/Toaster";
+import { Card, DocumentRow, StatusPill, StoreDetailsList, StoreHoursList } from "@/components/stores/StoreParts";
 import type { MapConfig } from "@/lib/maps/config";
 import { submitStoreAction, withdrawStoreAction } from "@/lib/stores/actions";
 import { doneCount, firstOpenStep, isDone, STEPS, type Step } from "@/lib/stores/progress";
@@ -14,6 +16,7 @@ import { dateTimeText, emptyStoreDraft, storeSlug, toStoreDraft } from "@/lib/st
 import { ActionBar } from "./ActionBar";
 import { StoreDetailsForm } from "./StoreDetailsForm";
 import { StoreDocuments } from "./StoreDocuments";
+import { SpecialHours } from "./SpecialHours";
 import { StoreHoursForm } from "./StoreHoursForm";
 
 type Props = {
@@ -30,7 +33,7 @@ type Props = {
 function version(app: StoreApplication | null): string {
   if (!app) return "none";
   // Milliseconds: a save's answer and a later re-read can spell the same time with different precision.
-  return [Date.parse(app.store.updatedAt), app.store.status, app.hours.map((h) => `${h.dayOfWeek}${h.opensAt}${h.closesAt}${h.isClosed}`).join(), app.documents.map((d) => `${d.documentId}${d.status}`).join()].join("|");
+  return [Date.parse(app.store.updatedAt), app.store.status, app.hours.map((h) => `${h.dayOfWeek}${h.opensAt}${h.closesAt}${h.isClosed}`).join(), (app.hoursExceptions ?? []).map((e) => `${e.exceptionId}${e.date}${e.isClosed}${e.opensAt}${e.closesAt}${e.reason}`).join(), app.documents.map((d) => `${d.documentId}${d.status}`).join()].join("|");
 }
 
 // The shopkeeper's application in 4 steps. Every save returns the whole
@@ -68,54 +71,86 @@ export function StoreWizard({ initial, ownerPhone, map, startStep }: Props) {
   }
 
   if (app && !EDITABLE_STATUSES.includes(app.store.status)) {
-    return <LockedView app={app} onChanged={(next) => saved(next, firstOpenStep(next))} />;
+    return (
+      <>
+        <PageTitle app={app} />
+        <LockedView app={app} onChanged={(next) => saved(next, firstOpenStep(next))} onHoursSaved={(next) => saved(next)} />
+      </>
+    );
   }
 
   const meta = STEPS.find((s) => s.id === step)!;
   const index = STEPS.indexOf(meta);
   return (
-    <div ref={top} className="grid scroll-mt-24 grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-      <aside className="space-y-4 lg:sticky lg:top-24">
-        <StepNav app={app} step={step} onStep={goTo} />
-        <div className="hidden lg:block">
-          <StorePreviewCard app={app} preview={step === "details" ? preview : null} />
-        </div>
-      </aside>
+    <>
+      <PageTitle app={app} />
+      <div ref={top} className="grid scroll-mt-24 grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="space-y-4 lg:sticky lg:top-24">
+          <StepNav app={app} step={step} onStep={goTo} />
+          <div className="hidden lg:block">
+            <StorePreviewCard app={app} preview={step === "details" ? preview : null} />
+          </div>
+        </aside>
 
-      <div className="min-w-0 space-y-5">
-        {app?.store.status === "REJECTED" && <RejectedBanner app={app} />}
-        <div>
-          <p className="text-sm font-semibold text-brand-deep">
-            Step {index + 1} of {STEPS.length}
-          </p>
-          <h2 className="mt-0.5 text-xl font-extrabold tracking-tight text-ink sm:text-2xl">{meta.label}</h2>
-          <p className="mt-0.5 text-muted">{meta.text}.</p>
-        </div>
+        <div className="min-w-0 space-y-5">
+          {app?.store.status === "REJECTED" && <RejectedBanner app={app} />}
+          <div>
+            <p className="text-sm font-semibold text-brand-deep">
+              Step {index + 1} of {STEPS.length}
+            </p>
+            <h2 className="mt-0.5 text-xl font-extrabold tracking-tight text-ink sm:text-2xl">{meta.label}</h2>
+            <p className="mt-0.5 text-muted">{meta.text}.</p>
+          </div>
 
-        {step === "details" && (
-          <StoreDetailsForm
-            key={`details-${visit}`}
-            application={app}
-            initial={app ? toStoreDraft(app.store) : emptyStoreDraft(ownerPhone)}
-            map={map}
-            onSaved={(next) => saved(next, "hours")}
-            onDraft={onDraft}
-          />
-        )}
-        {step === "hours" && app && <StoreHoursForm key={`hours-${visit}`} application={app} onSaved={(next) => saved(next, "documents")} />}
-        {step === "documents" && app && (
-          <>
-            <StoreDocuments application={app} onChanged={(next) => saved(next)} />
-            <ActionBar note={isDone(app, "documents") ? "Required documents are uploaded." : "Upload the required documents to continue."}>
-              <button type="button" onClick={() => goTo("submit")} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-6 font-semibold text-white hover:bg-ink/85">
-                Continue
-                <ArrowRight aria-hidden className="size-4" />
-              </button>
-            </ActionBar>
-          </>
-        )}
-        {step === "submit" && app && <SubmitStep app={app} onStep={goTo} onSubmitted={(next) => saved(next)} />}
+          {step === "details" && (
+            <StoreDetailsForm
+              key={`details-${visit}`}
+              application={app}
+              initial={app ? toStoreDraft(app.store) : emptyStoreDraft(ownerPhone)}
+              map={map}
+              onSaved={(next) => saved(next, "hours")}
+              onDraft={onDraft}
+            />
+          )}
+          {step === "hours" && app && (
+            <>
+              <StoreHoursForm key={`hours-${visit}`} application={app} onSaved={(next) => saved(next, "documents")} />
+              <SpecialHours app={app} onChanged={(next) => saved(next)} />
+            </>
+          )}
+          {step === "documents" && app && (
+            <>
+              <StoreDocuments application={app} onChanged={(next) => saved(next)} />
+              <ActionBar note={isDone(app, "documents") ? "Required documents are uploaded." : "Upload the required documents to continue."}>
+                <button type="button" onClick={() => goTo("submit")} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-6 font-semibold text-white hover:bg-ink/85">
+                  Continue
+                  <ArrowRight aria-hidden className="size-4" />
+                </button>
+              </ActionBar>
+            </>
+          )}
+          {step === "submit" && app && <SubmitStep app={app} onStep={goTo} onSubmitted={(next) => saved(next)} />}
+        </div>
       </div>
+    </>
+  );
+}
+
+/** The page's heading: from the saved application, so it changes as soon as a save does. */
+function PageTitle({ app }: { app: StoreApplication | null }) {
+  const text =
+    !app || EDITABLE_STATUSES.includes(app.store.status)
+      ? "Save each step as you go, and submit when all are done."
+      : app.store.status === "ACTIVE"
+        ? "Your live store's details. Opening hours can be changed any time."
+        : "Your application as submitted.";
+  return (
+    <div className="min-w-0">
+      <h1 className="flex flex-wrap items-center gap-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+        {app?.store.name ?? "Register your store"}
+        {app && <StatusPill status={app.store.status} />}
+      </h1>
+      <p className="mt-1 text-muted">{text}</p>
     </div>
   );
 }
@@ -243,9 +278,13 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
     setMessage(null);
     startTransition(async () => {
       const res = await submitStoreAction();
-      if (res.ok) return onSubmitted(res.data);
+      if (res.ok) {
+        toastSuccess("Submitted for review. We'll check your details and documents.");
+        return onSubmitted(res.data);
+      }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setMessage(res.error.message);
+      toastError(`Couldn't submit. ${res.error.message}`);
     });
   }
 
@@ -296,8 +335,11 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
 }
 
 /** Under review, live (or suspended / closed): the application as submitted, nothing editable. */
-function LockedView({ app, onChanged }: { app: StoreApplication; onChanged: (app: StoreApplication) => void }) {
+function LockedView({ app, onChanged, onHoursSaved }: { app: StoreApplication; onChanged: (app: StoreApplication) => void; onHoursSaved: (app: StoreApplication) => void }) {
   const { store } = app;
+  // Once live, the shopkeeper can still change the opening hours (in a dialog; the other details stay locked).
+  const live = store.status === "ACTIVE";
+  const [editing, setEditing] = useState(false);
   return (
     <div className="space-y-5">
       {store.status === "PENDING_APPROVAL" && <UnderReview app={app} onWithdrawn={onChanged} />}
@@ -307,9 +349,19 @@ function LockedView({ app, onChanged }: { app: StoreApplication; onChanged: (app
             <PartyPopper aria-hidden className="size-5" />
             Your store is approved and live
           </p>
-          <p className="mt-1 text-sm text-green-900">Approved {dateTimeText(store.approvedAt)}. Changing these details after approval isn&apos;t possible here yet.</p>
+          <p className="mt-1 text-sm text-green-900">Approved {dateTimeText(store.approvedAt)}. You can change your opening hours any time; other details can&apos;t be changed here yet.</p>
         </div>
       )}
+      <Dialog open={editing} onClose={() => setEditing(false)} title="Change opening hours" description="Shoppers see the new times as soon as you save.">
+        <StoreHoursForm
+          application={app}
+          onCancel={() => setEditing(false)}
+          onSaved={(next) => {
+            setEditing(false);
+            onHoursSaved(next);
+          }}
+        />
+      </Dialog>
       {(store.status === "SUSPENDED" || store.status === "CLOSED") && (
         <div role="status" className="rounded-3xl border border-line bg-white p-5">
           <p className="font-bold text-ink">This store is {store.status === "SUSPENDED" ? "suspended" : "closed"}.</p>
@@ -321,9 +373,26 @@ function LockedView({ app, onChanged }: { app: StoreApplication; onChanged: (app
           <StoreDetailsList store={store} />
         </Card>
         <div className="space-y-5">
-          <Card title="Opening hours" icon={Clock}>
+          <Card
+            title="Opening hours"
+            icon={Clock}
+            action={
+              live && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  aria-label="Edit opening hours"
+                  title="Edit opening hours"
+                  className="-my-2 flex size-10 items-center justify-center rounded-full text-ink ring-1 ring-line transition hover:bg-surface hover:ring-ink"
+                >
+                  <Pencil aria-hidden className="size-4" />
+                </button>
+              )
+            }
+          >
             <StoreHoursList hours={app.hours} />
           </Card>
+          {store.status !== "CLOSED" && <SpecialHours app={app} onChanged={onHoursSaved} />}
           <Card title="Documents" icon={FileText}>
             {app.documents.length ? (
               <ul className="space-y-3">
@@ -351,8 +420,12 @@ function UnderReview({ app, onWithdrawn }: { app: StoreApplication; onWithdrawn:
     setMessage(null);
     startTransition(async () => {
       const res = await withdrawStoreAction();
-      if (res.ok) return onWithdrawn(res.data);
+      if (res.ok) {
+        toastSuccess("Application withdrawn. You can edit it now.");
+        return onWithdrawn(res.data);
+      }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
+      toastError(`Couldn't withdraw. ${res.error.message}`);
       setConfirming(false);
       setMessage(res.error.message);
     });

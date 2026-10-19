@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StoreWizard } from "@/components/seller/StoreWizard";
-import { StatusPill } from "@/components/stores/StoreParts";
 import { requireRole } from "@/lib/auth/dal";
 import { mapConfig } from "@/lib/maps/config";
 import { loadMyStore } from "@/lib/stores/data";
@@ -25,7 +24,7 @@ export default function StoreRegistrationPage({ searchParams }: PageProps<"/sell
   );
 }
 
-// One backend call; after that every save returns the whole application.
+// One backend call. Each save then writes and reads the application once (lib/stores/actions.ts).
 async function Registration({ searchParams }: Pick<PageProps<"/seller/store">, "searchParams">) {
   const user = await requireRole("seller");
   const { step } = await searchParams;
@@ -48,15 +47,7 @@ async function Registration({ searchParams }: Pick<PageProps<"/seller/store">, "
             </li>
           </ol>
         </nav>
-        <div>
-          <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-              {app?.store.name ?? "Register your store"}
-              {app && <StatusPill status={app.store.status} />}
-            </h1>
-            <p className="mt-1 text-muted">{editing ? "Save each step as you go, and submit when all are done." : "Your application as submitted."}</p>
-          </div>
-        </div>
+        {/* The heading (name, status) is drawn by StoreWizard, so it updates after each save. */}
       </header>
       {res.ok ? (
         <StoreWizard initial={app} ownerPhone={user.mobileNumber} map={mapConfig()} startStep={isStep(step) ? step : undefined} />

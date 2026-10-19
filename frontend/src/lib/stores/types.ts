@@ -105,6 +105,26 @@ export type StoreHours = {
   closesAt: string | null;
 };
 
+/** One date that overrides the weekly hours (a holiday, or different timings). */
+export type HoursException = {
+  exceptionId: number;
+  date: string; // YYYY-MM-DD
+  isClosed: boolean;
+  opensAt: string | null; // "09:00:00" (show the first 5 characters)
+  closesAt: string | null;
+  reason: string | null; // shown to customers ("Closed today for Diwali")
+};
+
+/** Body of PUT /seller/store/hours/exceptions: add or update (by date), or delete (id + date). */
+export type HoursExceptionInput =
+  | { exceptionId?: number; date: string; isClosed: true; reason: string | null }
+  | { exceptionId?: number; date: string; isClosed: false; opensAt: string; closesAt: string; reason: string | null }
+  | { exceptionId: number; date: string; delete: true };
+
+/** The add / edit form's values. */
+export type HoursExceptionDraft = { exceptionId: number | null; date: string; isClosed: boolean; opensAt: string; closesAt: string; reason: string };
+export type HoursExceptionErrors = Partial<Record<"date" | "times" | "reason", string>>;
+
 export type StoreDocument = {
   documentId: string;
   documentType: DocumentType;
@@ -130,6 +150,7 @@ export type StoreChecklist = {
 export type StoreApplication = {
   store: Store;
   hours: StoreHours[]; // Monday first
+  hoursExceptions?: HoursException[]; // upcoming dates only, soonest first (absent from older backends)
   documents: StoreDocument[]; // newest first; rejected ones stay
   checklist: StoreChecklist;
 };

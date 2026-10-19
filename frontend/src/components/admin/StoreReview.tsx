@@ -4,11 +4,12 @@ import { BadgeCheck, CircleAlert, Clock, FileText, Store as StoreIcon, X } from 
 import { useId, useState, useTransition } from "react";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toastError, toastSuccess } from "@/components/Toaster";
 import { Card, DocumentPill, DocumentRow, placeText, StatusPill, StoreDetailsList, StoreHoursList, StoreLogo } from "@/components/stores/StoreParts";
 import { formatMobile } from "@/lib/auth/validation";
 import type { ActionResult } from "@/lib/auth/actions";
 import { reviewDocumentAction, reviewStoreAction } from "@/lib/stores/actions";
-import type { ReviewDecision, StoreApplication, StoreDocument } from "@/lib/stores/types";
+import { DOCUMENT_LABEL, type ReviewDecision, type StoreApplication, type StoreDocument } from "@/lib/stores/types";
 import { dateTimeText, reasonError, STORE_LIMITS } from "@/lib/stores/validation";
 
 /** Changes whenever the store or any document's review changes. */
@@ -95,16 +96,18 @@ function useDecision(onDone: (app: StoreApplication) => void) {
   const { sessionExpired } = useAuth();
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  function decide(call: () => Promise<ActionResult<StoreApplication>>, after?: () => void) {
+  function decide(call: () => Promise<ActionResult<StoreApplication>>, done: string, after?: () => void) {
     setMessage(null);
     startTransition(async () => {
       const res = await call();
       if (res.ok) {
         after?.();
+        toastSuccess(done);
         return onDone(res.data);
       }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setMessage(res.error.message);
+      toastError(res.error.message);
     });
   }
   return { message, pending, decide };
@@ -113,7 +116,8 @@ function useDecision(onDone: (app: StoreApplication) => void) {
 function DocumentDecision({ storeId, document, onDone }: { storeId: string; document: StoreDocument; onDone: (app: StoreApplication) => void }) {
   const { message, pending, decide } = useDecision(onDone);
   const [rejecting, setRejecting] = useState(false);
-  const review = (decision: ReviewDecision) => decide(() => reviewDocumentAction(storeId, document.documentId, decision));
+  const review = (decision: ReviewDecision) =>
+    decide(() => reviewDocumentAction(storeId, document.documentId, decision), `${DOCUMENT_LABEL[document.documentType]} ${decision.approved ? "verified" : "rejected"}`);
 
   if (rejecting) {
     return (
@@ -204,7 +208,7 @@ function Decision({ app, onDone }: { app: StoreApplication; onDone: (app: StoreA
             pending={pending}
             serverError={message}
             onCancel={() => setRejecting(false)}
-            onSubmit={(reason) => decide(() => reviewStoreAction(store.storeId, { approved: false, reason }), () => setRejecting(false))}
+            onSubmit={(reason) => decide(() => reviewStoreAction(store.storeId, { approved: false, reason }), "Sent back to the shopkeeper with your reason", () => setRejecting(false))}
           />
         </div>
       ) : (
@@ -212,7 +216,7 @@ function Decision({ app, onDone }: { app: StoreApplication; onDone: (app: StoreA
           <button
             type="button"
             disabled={!canApprove || pending}
-            onClick={() => decide(() => reviewStoreAction(store.storeId, { approved: true }))}
+            onClick={() => decide(() => reviewStoreAction(store.storeId, { approved: true }), `${store.name} is approved and live`)}
             className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-fresh px-6 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-fresh/40"
           >
             <BadgeCheck aria-hidden className="size-5" />
