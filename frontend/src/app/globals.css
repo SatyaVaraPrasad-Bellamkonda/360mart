@@ -22,6 +22,7 @@
   --animate-drift-b: drift-b 32s ease-in-out infinite alternate;
   --animate-drift-c: drift-c 22s ease-in-out infinite alternate;
   --animate-sheen: sheen 14s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes float {
@@ -97,6 +98,18 @@ body {
   from {
     opacity: 0;
     transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A value swapping in (e.g. the price when another store is chosen). */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
   }
   to {
     opacity: 1;

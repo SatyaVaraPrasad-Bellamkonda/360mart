@@ -1,4 +1,4 @@
-import { CalendarRange, Clock, Leaf, MapPin, Refrigerator, Store } from "lucide-react";
+import { CalendarRange, Clock, Leaf, MapPin, Refrigerator } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
@@ -8,16 +8,18 @@ import { foodTypeLabel, shelfLifeText, shopProductPath, sortVariants } from "@/l
 import { productJsonLdFrom } from "@/lib/catalog/seo";
 import type { Product } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
+import { mapConfig } from "@/lib/maps/config";
 import { CategoryBadge } from "./CategoryBadge";
 import { CategoryImage } from "./CategoryImage";
 import { FoodMark } from "./FoodMark";
 import { ShopProductCard } from "./ShopProductCard";
+import { StoreOffers } from "./StoreOffers";
 
 const MORE_SHOWN = 8;
 
 // The shared product page body (/<category>/<subcategory>/<product>) for
-// products from the backend. Sizes are shown, prices aren't: each store will
-// set its own, so the page says so plainly instead of showing a made-up price.
+// products from the backend. The product itself comes from the cache; prices
+// are per store and per location, so StoreOffers loads them live in the browser.
 export function ProductView({ data }: { data: ShopSubcategory & { product: Product } }) {
   const { category, subcategory, product, products } = data;
   const subPath = categoryPath(subcategory, category);
@@ -72,32 +74,8 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
             )}
             {product.shortDescription && <p className="mt-4 break-words text-lg text-ink/80">{product.shortDescription}</p>}
 
-            <section aria-labelledby="sizes-heading" className="mt-6">
-              <h2 id="sizes-heading" className="text-sm font-bold uppercase tracking-wider text-muted">
-                {sizes.length === 1 ? "Size" : "Available sizes"}
-              </h2>
-              {sizes.length > 0 ? (
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {sizes.map((v) => (
-                    <li key={v.variantId} className="flex min-h-11 items-center rounded-2xl bg-white px-4 text-sm font-bold text-ink ring-1 ring-line">
-                      {v.label}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-sm text-muted">Sizes are being added.</p>
-              )}
-            </section>
-
-            <div className="mt-6 flex gap-3 rounded-3xl bg-gradient-to-br from-brand-soft via-amber-50 to-white p-4 ring-1 ring-brand/20 sm:p-5">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-deep ring-1 ring-brand/20">
-                <Store aria-hidden className="size-5" />
-              </span>
-              <div>
-                <p className="font-bold text-ink">Prices from stores near you, coming soon</p>
-                <p className="mt-0.5 text-sm text-muted">Local stores are setting their prices for {product.name}. You&apos;ll be able to compare them and order here.</p>
-              </div>
-            </div>
+            {/* Sizes, and the stores that deliver the chosen size to the shopper (live prices, never cached). */}
+            <StoreOffers productId={product.productId} productName={product.name} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} map={mapConfig()} />
 
             {facts.length > 0 && (
               <dl className="mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">

@@ -94,6 +94,11 @@ export async function getShopCategoriesNow(): Promise<Loaded<Category[]>> {
   return getShopCategories();
 }
 
+/** Active subcategories of one category (cached; [] when it's hidden or gone). */
+export function getShopSubcategories(categoryId: number): Promise<Loaded<Category[]>> {
+  return attempt(() => cachedSubcategories(categoryId));
+}
+
 /** A top-level category and its active subcategories, or data: null when there is no such (active) category. */
 export function getShopCategory(slug: string): Promise<Loaded<{ category: Category; subcategories: Category[] } | null>> {
   return attempt(async () => {

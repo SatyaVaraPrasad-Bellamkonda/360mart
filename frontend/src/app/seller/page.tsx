@@ -56,7 +56,8 @@ async function SellerDashboard() {
         </h2>
         <ul className="mt-3 grid gap-3 sm:grid-cols-3">
           <Tile icon={ReceiptText} title="Orders" text="Accept orders and mark them packed and delivered." />
-          <Tile icon={Package} title="Products and prices" text="Pick products from the catalogue, set prices and stock." />
+          {/* Products can be set up from the moment a store is started (customers see them once it's live). */}
+          <Tile icon={Package} title="Products and prices" text="Pick products from the catalogue, set prices and stock." href={app ? "/seller/products" : undefined} />
           <Tile icon={ShoppingBag} title="Shop on 360mart" text="Your own shopping account: addresses, profile, orders." href="/account" />
         </ul>
       </section>
