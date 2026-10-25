@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronDown, Info, MapPin, ShoppingBag } from "lucide-react";
+import { ChevronDown, Clock, Info, MapPin, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { setDeliveryLocation, useDeliveryLocation } from "@/components/location/delivery-location";
 import { DeliverToDialog } from "@/components/location/DeliverToDialog";
+import { RichText } from "@/components/RichText";
 import { toastError } from "@/components/Toaster";
+import type { FoodTheme } from "@/lib/catalog/food-theme";
 import type { ProductUnit } from "@/lib/catalog/types";
 import { money } from "@/lib/inventory/validation";
 import { loadAddressChoicesAction } from "@/lib/location/actions";
@@ -29,7 +31,7 @@ function unitPrice(price: number, quantity: number, unit: ProductUnit): string |
 // "Stores that deliver this to me": pick a size, see every store that delivers
 // it to the chosen location, best offer first (the backend's order). One call
 // per size + location (+1 per "Show more"), never cached: prices and stock are live.
-export function StoreOffers({ productId, productName, sizes, map }: { productId: number; productName: string; sizes: Size[]; map: MapConfig }) {
+export function StoreOffers({ productId, productName, sizes, catalogShelfLife, theme, map }: { productId: number; productName: string; sizes: Size[]; catalogShelfLife: string | null; theme: FoodTheme; map: MapConfig }) {
   const { status } = useAuth();
   const location = useDeliveryLocation();
   const [variantId, setVariantId] = useState(sizes[0]?.variantId ?? 0);
@@ -132,6 +134,8 @@ export function StoreOffers({ productId, productName, sizes, map }: { productId:
           size={size}
           sizeChips={sizeChips}
           deliverTo={deliverTo}
+          catalogShelfLife={catalogShelfLife}
+          theme={theme}
         />
       ) : (
         <div className="space-y-6">
@@ -156,6 +160,7 @@ export function StoreOffers({ productId, productName, sizes, map }: { productId:
               ))}
             </div>
           )}
+          <ShelfLife text={catalogShelfLife} theme={theme} />
           <CartButton />
         </div>
       )}
@@ -189,6 +194,8 @@ function Offers({
   size,
   sizeChips,
   deliverTo,
+  catalogShelfLife,
+  theme,
 }: {
   items: StoreOffer[];
   total: number;
@@ -198,6 +205,8 @@ function Offers({
   size: Size | undefined;
   sizeChips: ReactNode;
   deliverTo: ReactNode;
+  catalogShelfLife: string | null;
+  theme: FoodTheme;
 }) {
   const inStock = items.filter((o) => o.isInStock);
   const best = inStock[0] ?? null;
@@ -259,7 +268,7 @@ function Offers({
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink">{o.storeName}</span>
-                    {isBest && <span className="rounded-md bg-fresh px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">Best price</span>}
+                    {isBest && <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${theme.solid}`}>Best price</span>}
                   </span>
                   {(o.area || o.city) && (
                     <span className="mt-0.5 flex items-center gap-1 text-xs text-muted">
@@ -296,7 +305,25 @@ function Offers({
         ) : null}
       </fieldset>
 
+      <ShelfLife text={selected ? selected.shelfLife : catalogShelfLife} store={selected && selected.shelfLife !== catalogShelfLife ? selected.storeName : undefined} theme={theme} />
       <CartButton />
+    </div>
+  );
+}
+
+/**
+ * How long it keeps, one line per storage condition. Follows the chosen store
+ * (a store can keep it differently, e.g. frozen); hidden when there's none.
+ */
+function ShelfLife({ text, store, theme }: { text: string | null; store?: string; theme: FoodTheme }) {
+  if (!text?.trim()) return null;
+  return (
+    <div className="flex gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line motion-safe:animate-pop-in">
+      <Clock aria-hidden className={`mt-0.5 size-5 shrink-0 ${theme.text}`} />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-muted">Shelf life{store ? ` at ${store}` : ""}</p>
+        <RichText text={text} className="mt-0.5 text-sm font-medium text-ink" />
+      </div>
     </div>
   );
 }

@@ -7,11 +7,11 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FaqSection } from "@/components/FaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import { CatalogUnavailable } from "@/components/catalog/ShopStates";
-import { SubcategoryView } from "@/components/catalog/SubcategoryView";
+import { CategoryPageView } from "@/components/category-page/CategoryPageView";
 import { ProductBrowser } from "@/components/ProductBrowser";
 import { getCatalogStats, getProducts, getSubcategories, getSubcategory } from "@/lib/api";
 import { getShopSubcategory } from "@/lib/catalog/data";
-import { subcategoryMetadata } from "@/lib/catalog/seo";
+import { categoryPageMetadata } from "@/lib/catalog/seo";
 import { formatPrice } from "@/lib/format";
 import { itemListJsonLd } from "@/lib/seo";
 
@@ -30,10 +30,10 @@ async function choosePage(slug: string) {
   return { shared, sample: real ? null : sample };
 }
 
-export async function generateMetadata({ params }: PageProps<"/fruits/[subcategory]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/fruits-old/[subcategory]">): Promise<Metadata> {
   const { subcategory: slug } = await params;
   const { shared, sample: subcategory } = await choosePage(slug);
-  if (!subcategory) return subcategoryMetadata(shared.ok ? shared.data : null);
+  if (!subcategory) return categoryPageMetadata(shared.ok ? (shared.data?.page ?? null) : null);
 
   const url = `/fruits/${subcategory.slug}`;
   return {
@@ -44,13 +44,13 @@ export async function generateMetadata({ params }: PageProps<"/fruits/[subcatego
   };
 }
 
-export default async function FruitSubcategoryPage({ params }: PageProps<"/fruits/[subcategory]">) {
+export default async function FruitSubcategoryPage({ params }: PageProps<"/fruits-old/[subcategory]">) {
   const { subcategory: slug } = await params;
   const { shared, sample: subcategory } = await choosePage(slug);
   if (!subcategory) {
     if (!shared.ok) return <CatalogUnavailable message={shared.error.message} />;
     if (!shared.data) notFound();
-    return <SubcategoryView data={shared.data} />;
+    return <CategoryPageView data={shared.data.page} />;
   }
 
   const [products, siblings, stats] = await Promise.all([
@@ -72,8 +72,8 @@ export default async function FruitSubcategoryPage({ params }: PageProps<"/fruit
       <div className="space-y-4">
         <Breadcrumbs
           items={[
-            { name: "Fruits", href: "/fruits" },
-            { name: subcategory.name, href: `/fruits/${subcategory.slug}` },
+            { name: "Fruits", href: "/fruits-old" },
+            { name: subcategory.name, href: `/fruits-old/${subcategory.slug}` },
           ]}
         />
 
@@ -90,7 +90,7 @@ export default async function FruitSubcategoryPage({ params }: PageProps<"/fruit
             />
           </div>
           <div className="flex flex-col justify-center p-5 sm:p-8 md:order-1 lg:p-10">
-            <Link href="/fruits" className="-my-3 inline-block py-3 text-xs font-semibold uppercase tracking-wider text-fresh hover:underline">
+            <Link href="/fruits-old" className="-my-3 inline-block py-3 text-xs font-semibold uppercase tracking-wider text-fresh hover:underline">
               Fruits
             </Link>
             <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink motion-safe:animate-fade-up sm:text-4xl">
@@ -115,7 +115,7 @@ export default async function FruitSubcategoryPage({ params }: PageProps<"/fruit
           {siblings.map((s) => (
             <li key={s.slug} className="shrink-0">
               <Link
-                href={`/fruits/${s.slug}`}
+                href={`/fruits-old/${s.slug}`}
                 aria-current={s.slug === slug ? "page" : undefined}
                 className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-white py-1 pl-1 pr-4 text-sm font-semibold text-ink transition hover:border-ink aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-white"
               >

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { categoryPicture } from "@/lib/categories";
 import type { Category } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
+import { richTextToPlain } from "@/lib/rich-text";
 import { CategoryBadge } from "./catalog/CategoryBadge";
 import { CategoryImage } from "./catalog/CategoryImage";
 
@@ -27,7 +28,7 @@ export function CategoryCard({ category, priority }: { category: Category; prior
       </div>
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="break-words text-base font-bold text-ink sm:text-lg">{category.name}</h3>
-        {category.description && <p className="mt-1 line-clamp-2 flex-1 text-xs text-muted sm:text-sm">{category.description}</p>}
+        {category.description && <p className="mt-1 line-clamp-2 flex-1 text-xs text-muted sm:text-sm">{richTextToPlain(category.description)}</p>}
         <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold text-brand-deep">
           Shop now <ArrowRight aria-hidden className="size-4 transition group-hover:translate-x-1" />
         </span>

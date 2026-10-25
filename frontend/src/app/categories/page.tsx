@@ -11,6 +11,7 @@ import { categoryPicture } from "@/lib/categories";
 import { getShopCategoriesNow } from "@/lib/catalog/data";
 import { CATEGORY_PAGES_INDEXABLE, categoryListJsonLd } from "@/lib/catalog/seo";
 import { categoryPath } from "@/lib/catalog/validation";
+import { richTextToPlain } from "@/lib/rich-text";
 import { SITE } from "@/lib/site";
 
 // Every category on one page: the header shows only the featured ones, so this
@@ -58,7 +59,7 @@ async function Everything() {
                   <h2 className="break-words text-lg font-extrabold text-ink">{category.name}</h2>
                   {category.badgeLabel && <CategoryBadge label={category.badgeLabel} />}
                 </div>
-                {category.description && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{category.description}</p>}
+                {category.description && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{richTextToPlain(category.description)}</p>}
               </div>
               <ArrowRight aria-hidden className="size-5 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
             </Link>

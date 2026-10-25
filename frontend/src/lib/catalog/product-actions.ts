@@ -8,7 +8,7 @@ import { clearSession, getSessionToken } from "@/lib/auth/session";
 import type { ApiFailure } from "@/lib/backend/client";
 import { PRODUCTS_TAG } from "./data";
 import * as api from "./product-service";
-import { productErrors, readProductDraft, readVariantDraft, toProductInput, toVariantInput, variantErrors } from "./product-validation";
+import { productErrors, readProductDraft, readVariantDraft, toProductInput, toVariantInput, VARIANT_LIMITS, variantErrors } from "./product-validation";
 import type { ProductField, ProductVariant, VariantDraft } from "./types";
 import { categoryImageError, parseCategoryId } from "./validation";
 
@@ -74,10 +74,40 @@ export async function saveProductAction(productId: number | null, form: FormData
   redirect(where ? `/admin/products?${where}&saved=updated` : "/admin/products");
 }
 
-/** Add (variantId = null) or update one size. Stays on the page; the caller refreshes the list. */
-export async function saveVariantAction(productId: number, variantId: number | null, input: unknown): Promise<ActionResult<ProductVariant>> {
+/**
+ * Add 1–20 sizes in one request (all or nothing). Row problems come back as
+ * fieldErrors keyed like the backend's: "variants[2].label" = row 3's label.
+ * The caller re-reads the list (router.refresh) on success.
+ */
+export async function addVariantsAction(productId: number, input: unknown): Promise<ActionResult<{ message: string }>> {
   if (parseCategoryId(productId) === null) return fail(error("PRODUCT_NOT_FOUND", "Product not found."));
-  if (variantId !== null && parseCategoryId(variantId) === null) return fail(error("VARIANT_NOT_FOUND", "Size not found for this product."));
+  if (!Array.isArray(input) || input.length < 1 || input.length > VARIANT_LIMITS.perProduct) return fail(unexpected());
+  const drafts = input.map(readVariantDraft);
+  if (drafts.some((d) => d === null)) return fail(unexpected());
+
+  const fieldErrors: Record<string, string> = {};
+  (drafts as VariantDraft[]).forEach((draft, i) => {
+    for (const [field, message] of Object.entries(variantErrors(draft))) if (message) fieldErrors[`variants[${i}].${field}`] = message;
+  });
+  if (Object.keys(fieldErrors).length) return fail({ code: "VALIDATION_FAILED", message: "Please fix the highlighted fields.", fieldErrors });
+
+  const token = await adminToken();
+  if (typeof token !== "string") return fail(token);
+
+  const res = await api.addVariants(token, productId, (drafts as VariantDraft[]).map(toVariantInput));
+  if (!res.ok) {
+    if (res.error.code === "UNAUTHENTICATED") await clearSession();
+    if (res.error.code === "FORBIDDEN") return fail(forbidden());
+    return fail({ code: res.error.code, message: res.error.message, fieldErrors: res.error.fieldErrors });
+  }
+  changed();
+  return { ok: true, data: { message: res.data.message || `Added ${drafts.length} ${drafts.length === 1 ? "size" : "sizes"}.` } };
+}
+
+/** Update one size (PUT replaces it whole, so hide / show sends every field too). The caller refreshes the list. */
+export async function saveVariantAction(productId: number, variantId: number, input: unknown): Promise<ActionResult<ProductVariant>> {
+  if (parseCategoryId(productId) === null) return fail(error("PRODUCT_NOT_FOUND", "Product not found."));
+  if (parseCategoryId(variantId) === null) return fail(error("VARIANT_NOT_FOUND", "Size not found for this product."));
   const draft = readVariantDraft(input);
   if (!draft) return fail(unexpected());
   const fieldErrors = variantErrors(draft) as Record<string, string>;
@@ -87,7 +117,7 @@ export async function saveVariantAction(productId: number, variantId: number | n
   if (typeof token !== "string") return fail(token);
 
   const body = toVariantInput(draft);
-  const res = variantId === null ? await api.createVariant(token, productId, body) : await api.updateVariant(token, productId, variantId, body);
+  const res = await api.updateVariant(token, productId, variantId, body);
   if (!res.ok) {
     if (res.error.code === "UNAUTHENTICATED") await clearSession();
     const field = VARIANT_FIELD_OF[res.error.code];

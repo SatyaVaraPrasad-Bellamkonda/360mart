@@ -3,6 +3,7 @@
 // feedback, again in the server action, and finally by the backend).
 // Safe for client components.
 
+import { cleanShelfLife, shelfLifeError } from "@/lib/catalog/product-validation";
 import { todayInIndia } from "@/lib/stores/validation";
 import type { BatchDraft, BatchErrors, BatchInput, Listing, ListingDraft, ListingErrors, ListingInput, StockAction, StockAdjustmentInput, StockDraft, StockErrors } from "./types";
 
@@ -34,7 +35,7 @@ export function stockState(l: Pick<Listing, "stockQuantity" | "isLowStock">): St
 // ---- listing (add / edit) ----
 
 export function emptyListingDraft(): ListingDraft {
-  return { price: "", mrp: "", openingStock: "", lowStockThreshold: "5", maxPerOrder: "", isAvailable: true, tracksBatches: false, storeSku: "" };
+  return { price: "", mrp: "", openingStock: "", lowStockThreshold: "5", maxPerOrder: "", isAvailable: true, tracksBatches: false, storeSku: "", useCatalogShelfLife: true, shelfLife: "" };
 }
 
 export function toListingDraft(l: Listing): ListingDraft {
@@ -47,6 +48,9 @@ export function toListingDraft(l: Listing): ListingDraft {
     isAvailable: l.isAvailable,
     tracksBatches: l.tracksBatches,
     storeSku: l.storeSku ?? "",
+    useCatalogShelfLife: l.shelfLife == null,
+    // The catalog's text as a starting point when the store writes its own.
+    shelfLife: l.shelfLife ?? l.catalogShelfLife ?? "",
   };
 }
 
@@ -70,6 +74,11 @@ export function listingErrors(d: ListingDraft, creating: boolean): ListingErrors
   if (max && (!WHOLE.test(max) || Number(max) < 1 || Number(max) > MAX_PER_ORDER)) e.maxPerOrder = `Enter 1 to ${MAX_PER_ORDER}, or leave empty for no limit`;
   const sku = d.storeSku.trim();
   if (sku && !SKU.test(sku)) e.storeSku = "Use letters, digits, - and _ (up to 50)";
+  if (!d.useCatalogShelfLife) {
+    const problem = shelfLifeError(d.shelfLife);
+    if (problem) e.shelfLife = problem;
+    else if (!cleanShelfLife(d.shelfLife)) e.shelfLife = "Enter your shelf life, or switch on “Use catalogue shelf life”";
+  }
   return e;
 }
 
@@ -85,6 +94,7 @@ export function toListingInput(d: ListingDraft, create?: { variantId: number }):
     isAvailable: d.isAvailable,
     tracksBatches: d.tracksBatches,
     storeSku: d.storeSku.trim() || null,
+    shelfLife: d.useCatalogShelfLife ? null : cleanShelfLife(d.shelfLife),
   };
 }
 
@@ -101,6 +111,8 @@ export function readListingDraft(input: unknown): ListingDraft | null {
     isAvailable: r.isAvailable !== false,
     tracksBatches: r.tracksBatches === true,
     storeSku: str("storeSku"),
+    useCatalogShelfLife: r.useCatalogShelfLife !== false,
+    shelfLife: str("shelfLife"),
   };
 }
 

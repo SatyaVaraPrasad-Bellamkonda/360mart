@@ -47,7 +47,7 @@ export default async function FruitsPage() {
       <JsonLd data={itemListJsonLd("Fresh fruits", products)} />
 
       <div className="space-y-4">
-        <Breadcrumbs items={[{ name: "Fruits", href: "/fruits" }]} />
+        <Breadcrumbs items={[{ name: "Fruits", href: "/fruits-old" }]} />
 
         {/* Banner: text + photo. Photo first on phones. */}
         <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 via-white to-amber-50 ring-1 ring-line">

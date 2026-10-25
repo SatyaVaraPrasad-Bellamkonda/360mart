@@ -16,7 +16,7 @@ export const PRODUCT_LIMITS = {
   origin: 100,
   bestSeason: 100,
   storageTip: 500,
-  shelfLifeDays: 3650,
+  shelfLife: 500,
   badgeLabel: 30,
   seoTitle: 70,
   seoDescription: 160,
@@ -86,11 +86,26 @@ export function foodTypeLabel(type: FoodType | null): string | null {
   return FOOD_TYPES.find((f) => f.value === type)?.label ?? null;
 }
 
-/** "Best within 7 days", "Best within 1 year" (whole years only). */
-export function shelfLifeText(days: number | null): string | null {
-  if (!days) return null;
-  if (days % 365 === 0) return `${days / 365} ${days === 365 ? "year" : "years"}`;
-  return `${days} ${days === 1 ? "day" : "days"}`;
+/**
+ * Shelf life as saved: one line per storage condition ("Refrigerated: 2 to 3 days"),
+ * trimmed, without empty lines; null when nothing is left. Used for the catalog
+ * product and for a store's own text.
+ */
+export function cleanShelfLife(text: string): string | null {
+  const lines = text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((l) => l.trim().replace(/ {2,}/g, " "))
+    .filter(Boolean);
+  return lines.length ? lines.join("\n") : null;
+}
+
+/** The backend's rules: optional, at most 500 characters, line breaks allowed, no < >. */
+export function shelfLifeError(text: string): string | undefined {
+  const value = cleanShelfLife(text) ?? "";
+  if (value.length > PRODUCT_LIMITS.shelfLife) return `Shelf life must be at most ${PRODUCT_LIMITS.shelfLife} characters`;
+  if (!SAFE_MULTILINE.test(value)) return "Shelf life contains characters that are not allowed (< or >)";
+  return undefined;
 }
 
 /** Sizes in the order shoppers see them. */
@@ -143,10 +158,8 @@ export function productErrors(draft: ProductDraft): ProductErrors {
 
   if (draft.foodType && !isFoodType(draft.foodType)) errors.foodType = "Choose veg, non-veg or egg.";
 
-  const shelf = draft.shelfLifeDays.trim();
-  if (shelf && !/^\d+$/.test(shelf)) errors.shelfLifeDays = "Shelf life must be a whole number of days";
-  else if (shelf && Number(shelf) < 1) errors.shelfLifeDays = "Shelf life must be at least 1 day";
-  else if (Number(shelf) > PRODUCT_LIMITS.shelfLifeDays) errors.shelfLifeDays = "Shelf life must be at most 3650 days (10 years)";
+  const shelf = shelfLifeError(draft.shelfLife);
+  if (shelf) errors.shelfLife = shelf;
 
   const hsn = draft.hsnCode.trim();
   if (hsn && !HSN_CODE.test(hsn)) errors.hsnCode = "HSN code must be 4, 6 or 8 digits";
@@ -176,7 +189,7 @@ export function toProductInput(draft: ProductDraft): ProductInput {
     origin: optional(draft.origin),
     bestSeason: optional(draft.bestSeason),
     storageTip: draft.storageTip.trim() || null,
-    shelfLifeDays: number(draft.shelfLifeDays),
+    shelfLife: cleanShelfLife(draft.shelfLife),
     isInSeason: draft.isInSeason,
     badgeLabel: optional(draft.badgeLabel),
     hsnCode: draft.hsnCode.trim() || null,
@@ -201,7 +214,7 @@ export function toProductDraft(product: Product): ProductDraft {
     origin: product.origin ?? "",
     bestSeason: product.bestSeason ?? "",
     storageTip: product.storageTip ?? "",
-    shelfLifeDays: product.shelfLifeDays === null ? "" : String(product.shelfLifeDays),
+    shelfLife: product.shelfLife ?? "",
     isInSeason: product.isInSeason,
     badgeLabel: product.badgeLabel ?? "",
     hsnCode: product.hsnCode ?? "",
@@ -226,7 +239,7 @@ export function emptyProductDraft(categoryId = 0): ProductDraft {
     origin: "",
     bestSeason: "",
     storageTip: "",
-    shelfLifeDays: "",
+    shelfLife: "",
     isInSeason: false,
     badgeLabel: "",
     hsnCode: "",
@@ -241,7 +254,7 @@ export function emptyProductDraft(categoryId = 0): ProductDraft {
 
 const PRODUCT_TEXT_FIELDS = [
   "name", "slug", "brand", "shortDescription", "description", "origin", "bestSeason", "storageTip",
-  "shelfLifeDays", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder",
+  "shelfLife", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder",
 ] as const;
 
 /** A draft from untrusted input (a server action argument), or null when it isn't shaped like one. */
@@ -280,6 +293,37 @@ export function variantErrors(draft: VariantDraft): VariantErrors {
   if (order && !/^\d+$/.test(order)) errors.displayOrder = "Display order must be a whole number";
   else if (Number(order) > VARIANT_LIMITS.displayOrder) errors.displayOrder = `Display order must be at most ${VARIANT_LIMITS.displayOrder}`;
   return errors;
+}
+
+const labelKey = (label: string) => collapse(label).toLowerCase();
+const amountKey = (quantity: string | number, unit: ProductUnit) => `${Number(quantity)} ${unit}`;
+
+/**
+ * The clashes the backend refuses with a 409, caught before sending: the same
+ * label (any case), the same amount ("1 kg" = "1.000 kg") or the same SKU, within
+ * the rows or against the product's other sizes. One entry per row.
+ */
+export function variantClashes(rows: VariantDraft[], others: ProductVariant[]): VariantErrors[] {
+  return rows.map((row, i) => {
+    const errors: VariantErrors = {};
+    const earlier = rows.slice(0, i);
+    const label = labelKey(row.label);
+    const amount = Number(row.quantity) > 0 ? amountKey(row.quantity, row.unit) : null;
+    const sku = row.sku.trim().toUpperCase();
+    const size = (v: ProductVariant) => `"${v.label}"`;
+
+    const sameLabel = others.find((v) => labelKey(v.label) === label);
+    if (label && sameLabel) errors.label = `This product already has ${size(sameLabel)}`;
+    else if (label && earlier.some((r) => labelKey(r.label) === label)) errors.label = "This label is already in the list above";
+
+    const sameAmount = amount && others.find((v) => amountKey(v.quantity, v.unit) === amount);
+    if (sameAmount) errors.quantity = `Same amount as ${size(sameAmount)}`;
+    else if (amount && earlier.some((r) => amountKey(r.quantity, r.unit) === amount)) errors.quantity = "This amount is already in the list above";
+
+    if (sku && others.some((v) => v.sku?.toUpperCase() === sku)) errors.sku = "Another size of this product uses this SKU";
+    else if (sku && earlier.some((r) => r.sku.trim().toUpperCase() === sku)) errors.sku = "This SKU is already in the list above";
+    return errors;
+  });
 }
 
 export function toVariantInput(draft: VariantDraft): VariantInput {

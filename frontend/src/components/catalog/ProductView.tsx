@@ -1,10 +1,12 @@
-import { CalendarRange, Clock, Leaf, MapPin, Refrigerator } from "lucide-react";
+import { CalendarRange, Leaf, MapPin, Refrigerator } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
+import { RichText } from "@/components/RichText";
 import { SectionHeading } from "@/components/SectionHeading";
 import type { ShopSubcategory } from "@/lib/catalog/data";
-import { foodTypeLabel, shelfLifeText, shopProductPath, sortVariants } from "@/lib/catalog/product-validation";
+import { foodTypeLabel, shopProductPath, sortVariants } from "@/lib/catalog/product-validation";
+import { foodTheme } from "@/lib/catalog/food-theme";
 import { productJsonLdFrom } from "@/lib/catalog/seo";
 import type { Product } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
@@ -24,11 +26,11 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
   const { category, subcategory, product, products } = data;
   const subPath = categoryPath(subcategory, category);
   const sizes = sortVariants(product.variants);
+  const theme = foodTheme(product.foodType);
   const more = products.filter((p) => p.productId !== product.productId).slice(0, MORE_SHOWN);
   const facts = [
     product.origin && { icon: MapPin, label: "Origin", value: product.origin },
     product.bestSeason && { icon: CalendarRange, label: "Best season", value: product.bestSeason },
-    shelfLifeText(product.shelfLifeDays) && { icon: Clock, label: "Shelf life", value: `About ${shelfLifeText(product.shelfLifeDays)}` },
   ].filter((f) => !!f);
 
   return (
@@ -61,13 +63,13 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
 
           {/* Details */}
           <div className="min-w-0">
-            <Link href={subPath} className="-my-3 inline-block py-3 text-xs font-bold uppercase tracking-wider text-fresh hover:underline">
+            <Link href={subPath} className={`-my-3 inline-block py-3 text-xs font-bold uppercase tracking-wider hover:underline ${theme.text}`}>
               {subcategory.name}
             </Link>
             <h1 className="mt-1 break-words text-3xl font-extrabold leading-tight tracking-tight text-ink motion-safe:animate-fade-up sm:text-4xl">{product.name}</h1>
             {product.brand && <p className="mt-1 text-sm font-semibold text-muted">by {product.brand}</p>}
             {product.isInSeason && (
-              <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-fresh-soft px-3 py-1 text-sm font-bold text-fresh">
+              <p className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${theme.soft} ${theme.text}`}>
                 <Leaf aria-hidden className="size-4" />
                 In season now
               </p>
@@ -75,13 +77,13 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
             {product.shortDescription && <p className="mt-4 break-words text-lg text-ink/80">{product.shortDescription}</p>}
 
             {/* Sizes, and the stores that deliver the chosen size to the shopper (live prices, never cached). */}
-            <StoreOffers productId={product.productId} productName={product.name} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} map={mapConfig()} />
+            <StoreOffers productId={product.productId} productName={product.name} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} catalogShelfLife={product.shelfLife} theme={theme} map={mapConfig()} />
 
             {facts.length > 0 && (
               <dl className="mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
                 {facts.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line">
-                    <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-fresh" />
+                    <Icon aria-hidden className={`mt-0.5 size-5 shrink-0 ${theme.text}`} />
                     <div className="min-w-0">
                       <dt className="text-xs font-semibold text-muted">{label}</dt>
                       <dd className="break-words text-sm font-bold text-ink">{value}</dd>
@@ -101,7 +103,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
               <h2 id="about-heading" className="text-xl font-extrabold tracking-tight text-ink">
                 About {product.name}
               </h2>
-              <p className="mt-3 whitespace-pre-line break-words leading-relaxed text-muted">{product.description}</p>
+              <RichText text={product.description} className="mt-3 leading-relaxed text-muted" />
             </section>
           )}
           {product.storageTip && (
@@ -110,7 +112,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
                 <Refrigerator aria-hidden className="size-5 text-sky-700" />
                 How to store it
               </h2>
-              <p className="mt-3 whitespace-pre-line break-words leading-relaxed text-ink/75">{product.storageTip}</p>
+              <RichText text={product.storageTip} className="mt-3 leading-relaxed text-ink/75" />
             </section>
           )}
         </div>

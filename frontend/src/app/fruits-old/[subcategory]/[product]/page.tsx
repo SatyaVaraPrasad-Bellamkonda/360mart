@@ -17,7 +17,7 @@ import { productJsonLd } from "@/lib/seo";
 import { FruitFacts } from "../../components/FruitFacts";
 import { SeasonBadge } from "../../components/SeasonBadge";
 
-type Props = PageProps<"/fruits/[subcategory]/[product]">;
+type Props = PageProps<"/fruits-old/[subcategory]/[product]">;
 
 // Pre-build a page for every fruit product at build time.
 export async function generateStaticParams() {
@@ -75,8 +75,8 @@ export default async function FruitProductPage({ params }: Props) {
       <div className="space-y-4">
         <Breadcrumbs
           items={[
-            { name: "Fruits", href: "/fruits" },
-            { name: subcategory.name, href: `/fruits/${subcategory.slug}` },
+            { name: "Fruits", href: "/fruits-old" },
+            { name: subcategory.name, href: `/fruits-old/${subcategory.slug}` },
             { name: product.name, href: productPath(product) },
           ]}
         />
@@ -106,7 +106,7 @@ export default async function FruitProductPage({ params }: Props) {
           <div className="space-y-6 motion-safe:animate-fade-up">
             <div>
               <Link
-                href={`/fruits/${subcategory.slug}`}
+                href={`/fruits-old/${subcategory.slug}`}
                 className="-my-3 inline-block py-3 text-xs font-semibold uppercase tracking-wider text-fresh hover:underline"
               >
                 {subcategory.name}

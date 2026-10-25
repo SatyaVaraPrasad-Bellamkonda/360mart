@@ -12,6 +12,10 @@ export type Category = {
   /** Signed link, valid about 1 hour: use it in <img> straight away, never store it. Null = no picture. */
   imageUrl: string | null;
   badgeLabel: string | null;
+  /** The page colours (a subcategory always has its parent's). */
+  theme: PageTheme;
+  /** The page's own colour ("#0e7490"), overriding theme; a subcategory has its parent's. */
+  customColour?: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   displayOrder: number;
@@ -59,6 +63,12 @@ export type CategoryErrors = Partial<Record<CategoryField, string>>;
 
 /** The veg / non-veg mark of Indian food labels. null = not a food item. */
 export type FoodType = "VEG" | "NON_VEG" | "EGG";
+/**
+ * Colour preset of a category page (set in the page editor). The backend sends
+ * colour names; the old food-type names (VEG = green, NON_VEG = red, EGG = amber,
+ * GENERAL = indigo) are still read, in case an old cached copy has them.
+ */
+export type PageTheme = "VEG" | "NON_VEG" | "EGG" | "GENERAL" | "GREEN" | "RED" | "AMBER" | "ORANGE" | "PINK" | "PURPLE" | "INDIGO" | "BLUE" | "TEAL" | "SLATE";
 export type ProductUnit = "KG" | "GRAM" | "MILLIGRAM" | "LITRE" | "MILLILITRE" | "DOZEN" | "PIECE" | "PACK" | "BUNCH";
 
 /** One size a product is sold in ("1 kg"). Prices come later, per store. */
@@ -86,7 +96,8 @@ export type Product = {
   origin: string | null;
   bestSeason: string | null;
   storageTip: string | null;
-  shelfLifeDays: number | null;
+  /** How long it keeps, one line per storage condition ("Refrigerated: 2 to 3 days"); null = not given. */
+  shelfLife: string | null;
   isInSeason: boolean;
   /** Signed link, valid about 1 hour (like category pictures). */
   imageUrl: string | null;
@@ -116,7 +127,8 @@ export type ProductInput = {
   origin: string | null;
   bestSeason: string | null;
   storageTip: string | null;
-  shelfLifeDays: number | null;
+  /** How long it keeps, one line per storage condition ("Refrigerated: 2 to 3 days"); null = not given. */
+  shelfLife: string | null;
   isInSeason: boolean;
   badgeLabel: string | null;
   hsnCode: string | null;
@@ -140,7 +152,7 @@ export type ProductDraft = {
   origin: string;
   bestSeason: string;
   storageTip: string;
-  shelfLifeDays: string;
+  shelfLife: string;
   isInSeason: boolean;
   badgeLabel: string;
   hsnCode: string;

@@ -4,6 +4,9 @@ import { Check, EyeOff, ImagePlus, RotateCcw } from "lucide-react";
 import { useId, useState, type ChangeEvent, type ReactNode } from "react";
 import { FieldError } from "@/components/auth/AuthFields";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
+import { FoodMark } from "@/components/catalog/FoodMark";
+import { FOOD_TYPES } from "@/lib/catalog/product-validation";
+import type { FoodType } from "@/lib/catalog/types";
 import { CATEGORY_IMAGE_TYPES, categoryImageError } from "@/lib/catalog/validation";
 
 // Pieces shared by the admin forms (categories, products): a card per group of
@@ -126,5 +129,28 @@ export function GooglePreview({ title, url, description }: { title: string; url:
         <p className="mt-1 line-clamp-2 break-words text-sm text-muted">{description}</p>
       </div>
     </figure>
+  );
+}
+
+// Veg / non-veg / egg as big tap targets with the familiar mark (or not a food item).
+export function FoodTypePicker({ value, onChange, error, legend = "Food type", hint }: { value: FoodType | ""; onChange: (value: FoodType | "") => void; error?: string; legend?: string; hint?: string }) {
+  const options: { value: FoodType | ""; label: string }[] = [...FOOD_TYPES, { value: "", label: "Not food" }];
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-sm font-semibold text-ink">{legend}</legend>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {options.map((o) => (
+          <label
+            key={o.value || "none"}
+            className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40"
+          >
+            <input type="radio" name="foodType" value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="sr-only" />
+            {o.value ? <FoodMark type={o.value} decorative /> : <span aria-hidden className="size-4 rounded-[3px] border-[1.5px] border-dashed border-current opacity-50" />}
+            {o.label}
+          </label>
+        ))}
+      </div>
+      {error ? <p className="mt-1.5 text-sm text-red-700">{error}</p> : hint && <p className="mt-1.5 text-sm text-muted">{hint}</p>}
+    </fieldset>
   );
 }

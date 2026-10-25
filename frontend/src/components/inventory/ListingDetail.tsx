@@ -4,6 +4,7 @@ import { ArchiveRestore, CalendarClock, CalendarPlus, Lock, PackageMinus, Packag
 import { useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
+import { RichText } from "@/components/RichText";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { loadBatchesAction, loadMovementsAction, loadPriceHistoryAction, updateListingAction } from "@/lib/inventory/actions";
 import { MOVEMENT_LABEL, type Batch, type Listing, type Page, type PriceChange, type StockAction, type StockMovement } from "@/lib/inventory/types";
@@ -136,6 +137,7 @@ export function ListingDetail({ initial, initialMovements }: { initial: Listing;
             <Fact label="Max per order" value={listing.maxPerOrder ? String(listing.maxPerOrder) : "No limit"} />
             <Fact label="SKU" value={listing.storeSku ?? "None"} />
           </dl>
+          <ShelfLifeFact own={listing.shelfLife} catalog={listing.catalogShelfLife} />
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button type="button" disabled={!!locked} onClick={() => setDialog({ kind: "edit" })} className="flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/85 disabled:cursor-not-allowed disabled:opacity-50">
@@ -227,7 +229,7 @@ export function ListingDetail({ initial, initialMovements }: { initial: Listing;
 
       <Dialog open={dialog?.kind === "edit"} onClose={() => setDialog(null)} title="Edit price & settings" description={`${listing.productName} · ${listing.variantLabel}`}>
         {dialog?.kind === "edit" && (
-          <ListingForm mode="edit" listingId={listing.listingId} stock={listing.stockQuantity} initial={toListingDraft(listing)} onCancel={() => setDialog(null)} onSaved={(next) => changed(next, "settings")} />
+          <ListingForm mode="edit" listingId={listing.listingId} stock={listing.stockQuantity} catalogShelfLife={listing.catalogShelfLife} initial={toListingDraft(listing)} onCancel={() => setDialog(null)} onSaved={(next) => changed(next, "settings")} />
         )}
       </Dialog>
       <Dialog open={dialog?.kind === "stock"} onClose={() => setDialog(null)} title={dialog?.kind === "stock" ? STOCK_TITLE[dialog.action] : ""} description={`${listing.productName} · ${listing.variantLabel} · ${listing.stockQuantity} in stock now`}>
@@ -247,6 +249,20 @@ function Fact({ label, value }: { label: string; value: string }) {
     <div className="min-w-0 rounded-xl bg-surface px-3 py-2 ring-1 ring-line">
       <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</dt>
       <dd className="truncate font-bold text-ink">{value}</dd>
+    </div>
+  );
+}
+
+// What customers see: the store's own text, else the catalogue's.
+function ShelfLifeFact({ own, catalog }: { own: string | null; catalog: string | null }) {
+  const text = own ?? catalog;
+  return (
+    <div className="mt-2 rounded-xl bg-surface px-3 py-2 text-sm ring-1 ring-line">
+      <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+        Shelf life
+        <span className="rounded-full bg-white px-2 py-0.5 normal-case tracking-normal ring-1 ring-line">{own != null ? "Your own" : "From catalogue"}</span>
+      </p>
+      {text ? <RichText text={text} className="mt-0.5 font-medium text-ink" /> : <p className="mt-0.5 text-muted">Not set. Customers won&apos;t see a shelf life.</p>}
     </div>
   );
 }

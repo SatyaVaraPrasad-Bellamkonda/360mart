@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ExternalLink, FolderTree, Info, LoaderCircle, Package, Pencil, Plus, Search, Star } from "lucide-react";
+import { ChevronDown, ExternalLink, FolderTree, Info, LayoutTemplate, LoaderCircle, Package, Pencil, Plus, Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -199,6 +199,11 @@ function Branch({ category, kids, loaded, loading, error, open, onToggle, onRetr
             <span className="hidden md:inline">Subcategory</span>
             <span className="sr-only md:hidden">Add a subcategory to {category.name}</span>
           </Link>
+          <Link href={`/admin/categories/${category.categoryId}/design`} className={ICON_BUTTON} title={`Design the ${category.name} page`}>
+            <LayoutTemplate aria-hidden className="size-4" />
+            <span className="hidden md:inline">Page</span>
+            <span className="sr-only md:hidden">Design the {category.name} page</span>
+          </Link>
           <Link href={`/admin/categories/${category.categoryId}/edit`} className={ICON_BUTTON} title={`Edit ${category.name}`}>
             <Pencil aria-hidden className="size-4" />
             <span className="hidden md:inline">Edit</span>
@@ -238,6 +243,11 @@ function Branch({ category, kids, loaded, loading, error, open, onToggle, onRetr
                   <Package aria-hidden className="size-4" />
                   <span className="hidden md:inline">Products</span>
                   <span className="sr-only md:hidden">Products in {child.name}</span>
+                </Link>
+                <Link href={`/admin/categories/${child.categoryId}/design?parent=${category.categoryId}`} className={ICON_BUTTON} title={`Design the ${child.name} page`}>
+                  <LayoutTemplate aria-hidden className="size-4" />
+                  <span className="hidden md:inline">Page</span>
+                  <span className="sr-only md:hidden">Design the {child.name} page</span>
                 </Link>
                 <Link href={`/admin/categories/${child.categoryId}/edit?parent=${category.categoryId}`} className={ICON_BUTTON} title={`Edit ${child.name}`}>
                   <Pencil aria-hidden className="size-4" />

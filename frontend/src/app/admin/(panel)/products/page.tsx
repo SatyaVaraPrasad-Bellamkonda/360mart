@@ -45,17 +45,18 @@ async function Products({ searchParams }: Pick<PageProps<"/admin/products">, "se
   }
 
   // Products of the chosen subcategory only (none until one is chosen).
-  const products = category && subcategory ? await loadProducts(subcategory.categoryId) : { ok: true as const, data: [] };
+  const products = category && subcategory ? await loadProducts(subcategory.categoryId) : { ok: true as const, data: { items: [], totalItems: 0 } };
   if (!products.ok) return <AdminLoadFailed message={products.error.message} />;
 
-  const version = products.data.map((p) => `${p.productId}@${p.updatedAt}:${p.variants.length}`).join("|");
+  const version = products.data.items.map((p) => `${p.productId}@${p.updatedAt}:${p.variants.length}`).join("|");
   return (
     <ProductList
       // Fresh state (search, notice, picker) for another subcategory or after a save.
       key={`${category?.categoryId ?? 0}/${subcategory?.categoryId ?? 0}#${version}`}
       start={start}
       selected={category && subcategory ? { category, subcategory } : null}
-      products={products.data}
+      products={products.data.items}
+      total={products.data.totalItems}
       saved={saved === "updated" ? "updated" : null}
     />
   );

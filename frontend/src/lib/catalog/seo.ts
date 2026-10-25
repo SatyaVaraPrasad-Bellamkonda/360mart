@@ -3,6 +3,8 @@
 // Safe for client components.
 
 import type { Metadata } from "next";
+import type { CategoryPage } from "@/lib/category-page/types";
+import { richTextToPlain } from "@/lib/rich-text";
 import { SITE } from "@/lib/site";
 import { foodTypeLabel, shopProductPath } from "./product-validation";
 import type { Category, Product } from "./types";
@@ -17,14 +19,14 @@ export function categoryTitle(c: Text, parentName?: string): string {
 
 export function categoryDescription(c: Text, parentName?: string): string {
   if (c.seoDescription) return c.seoDescription;
-  const fromText = c.description?.replace(/\s+/g, " ").trim();
+  const fromText = c.description && richTextToPlain(c.description);
   if (fromText) return fromText.length > 160 ? `${fromText.slice(0, 157).trimEnd()}…` : fromText;
   return `Shop ${c.name}${parentName ? ` in ${parentName}` : ""} from local stores near you on ${SITE.name}.`;
 }
 
-// Category pages have no products yet, so they'd be thin pages for Google.
-// Keep them out of the index (links are still followed) until products exist;
-// then switch this on and add them to app/sitemap.ts.
+// Master switch for category pages in Google (off while the site is in preview).
+// Even when on, a page is only indexed once it has products: an empty category
+// would be a thin page. Add them to app/sitemap.ts when this goes on.
 export const CATEGORY_PAGES_INDEXABLE = false;
 
 /** schema.org ItemList of the subcategories on a category page. */
@@ -38,14 +40,24 @@ export function categoryListJsonLd(name: string, items: { name: string; path: st
   };
 }
 
-/** Metadata of a shared subcategory page (null = not found: keep it out of Google). */
-export function subcategoryMetadata(data: { category: Category; subcategory: Category } | null): Metadata {
+/** Metadata of a category or subcategory page from the page API (null = not found: keep it out of Google). */
+export function categoryPageMetadata(data: CategoryPage | null): Metadata {
   if (!data) return { robots: { index: false, follow: true } };
-  const { category, subcategory } = data;
-  const title = categoryTitle(subcategory, category.name);
-  const description = categoryDescription(subcategory, category.name);
-  const url = categoryPath(subcategory, category);
-  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, robots: { index: CATEGORY_PAGES_INDEXABLE, follow: true } };
+  const { category, parent, page, summary } = data;
+  const title = categoryTitle(category, parent?.name);
+  // The SEO description, else the page's intro (the admin's words for this page), else the category's.
+  const intro = page.hero.intro && richTextToPlain(page.hero.intro);
+  const fromIntro = intro && (intro.length > 160 ? `${intro.slice(0, 157).trimEnd()}…` : intro);
+  const description = category.seoDescription || fromIntro || categoryDescription(category, parent?.name);
+  const url = parent ? categoryPath(category, parent) : categoryPath(category);
+  const images = page.hero.imageUrl ? [{ url: page.hero.imageUrl, alt: page.hero.imageAlt }] : undefined;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, images },
+    robots: { index: CATEGORY_PAGES_INDEXABLE && summary.productCount > 0, follow: true },
+  };
 }
 
 /** The product page title before the site's " | 360mart" suffix. */
@@ -55,7 +67,8 @@ export function productTitle(p: Pick<Product, "name" | "seoTitle">, subcategoryN
 
 export function productDescription(p: Pick<Product, "name" | "seoDescription" | "shortDescription" | "description">, subcategoryName?: string): string {
   if (p.seoDescription) return p.seoDescription;
-  const fromText = (p.shortDescription || p.description)?.replace(/\s+/g, " ").trim();
+  // The description may carry **bold** / list marks: Google gets the words only.
+  const fromText = (p.shortDescription?.replace(/\s+/g, " ").trim() || (p.description && richTextToPlain(p.description)));
   if (fromText) return fromText.length > 160 ? `${fromText.slice(0, 157).trimEnd()}…` : fromText;
   return `Buy ${p.name}${subcategoryName ? ` (${subcategoryName})` : ""} from local stores near you on ${SITE.name}.`;
 }

@@ -19,7 +19,7 @@ const NOTICE_MS = 6000;
 // line however big the catalogue gets), then see, search and open its products.
 type Selected = { category: Category; subcategory: Category };
 
-export function ProductList({ start, selected, products, saved }: { start: PickerStart; selected: Selected | null; products: Product[]; saved: keyof typeof SAVED_TEXT | null }) {
+export function ProductList({ start, selected, products, total, saved }: { start: PickerStart; selected: Selected | null; products: Product[]; total: number; saved: keyof typeof SAVED_TEXT | null }) {
   const router = useRouter();
   const [notice, setNotice] = useState<string | null>(saved && SAVED_TEXT[saved]);
   // Another category picked, its subcategory not yet: the list waits for it.
@@ -74,6 +74,12 @@ export function ProductList({ start, selected, products, saved }: { start: Picke
         <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
         Only products shown in the shop are listed. A hidden product drops out of this list until the backend can list hidden ones.
       </p>
+      {total > products.length && (
+        <p className="flex gap-2 px-1 text-sm text-muted">
+          <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
+          Showing the first {products.length} of {total}. The admin list needs a search endpoint for bigger subcategories.
+        </p>
+      )}
     </div>
   );
 }

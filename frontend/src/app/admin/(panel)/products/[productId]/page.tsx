@@ -46,7 +46,7 @@ async function EditProduct({ params, searchParams }: Pick<Props, "params" | "sea
   const id = parseCategoryId(raw);
   const list = category && subcategory && id !== null ? await loadProducts(subcategory.categoryId) : null;
   if (list && !list.ok) return <>{header}<AdminLoadFailed message={list.error.message} /></>;
-  const product = list?.ok ? list.data.find((p) => p.productId === id) : undefined;
+  const product = list?.ok ? list.data.items.find((p) => p.productId === id) : undefined;
   if (!product || !category || !subcategory) {
     return (
       <>

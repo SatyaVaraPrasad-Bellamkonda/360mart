@@ -5,6 +5,7 @@ import { useRef, useState, useTransition, type FormEvent, type ReactNode } from 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { SelectField, SubmitButton, TextAreaField, TextField } from "@/components/auth/AuthFields";
+import { RichTextField } from "@/components/RichTextField";
 import { saveCategoryAction } from "@/lib/catalog/actions";
 import { categoryDescription, categoryTitle } from "@/lib/catalog/seo";
 import type { CategoryDraft, CategoryErrors, CategoryField } from "@/lib/catalog/types";
@@ -153,10 +154,11 @@ export function CategoryForm({ categoryId, initial, parents, currentImageUrl, ch
           error={errors.slug}
           hint={slugHint}
         />
-        <TextAreaField
+        <RichTextField
           label="Description"
           name="description"
           optional
+          rows={4}
           maxLength={CATEGORY_LIMITS.description}
           placeholder={kind === "category" ? "Farm fresh fruits from shops near you" : "Alphonso, Banganapalli and more, in season"}
           value={draft.description}

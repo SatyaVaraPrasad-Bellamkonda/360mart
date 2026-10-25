@@ -41,6 +41,10 @@ export type Listing = {
   isAvailable: boolean;
   tracksBatches: boolean;
   storeSku: string | null;
+  /** The store's own shelf life text, or null when it uses the catalog's. */
+  shelfLife: string | null;
+  /** The catalog product's text (what customers see when shelfLife is null). */
+  catalogShelfLife: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -56,6 +60,8 @@ export type ListingInput = {
   isAvailable: boolean;
   tracksBatches: boolean;
   storeSku: string | null;
+  /** null / absent = use the catalog's (the update replaces the whole form, so null clears the store's text). */
+  shelfLife: string | null;
 };
 
 /** The add / edit form's values (text as typed). */
@@ -68,6 +74,9 @@ export type ListingDraft = {
   isAvailable: boolean;
   tracksBatches: boolean;
   storeSku: string;
+  /** On = customers see the catalog's shelf life (nothing is sent). */
+  useCatalogShelfLife: boolean;
+  shelfLife: string;
 };
 export type ListingErrors = Partial<Record<keyof ListingDraft, string>>;
 

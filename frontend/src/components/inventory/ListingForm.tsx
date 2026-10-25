@@ -6,14 +6,17 @@ import { Toggle } from "@/components/admin/FormParts";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { SubmitButton, TextField } from "@/components/auth/AuthFields";
+import { RichText } from "@/components/RichText";
+import { RichTextField } from "@/components/RichTextField";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { createListingAction, updateListingAction } from "@/lib/inventory/actions";
+import { PRODUCT_LIMITS } from "@/lib/catalog/product-validation";
 import type { Listing, ListingDraft, ListingErrors } from "@/lib/inventory/types";
 import { discountPercent, listingErrors, MAX_PER_ORDER, money } from "@/lib/inventory/validation";
 
 type Props =
   | { mode: "create"; variantId: number; initial: ListingDraft; onCancel: () => void; onCreated: (listingId: string) => void }
-  | { mode: "edit"; listingId: string; stock: number; initial: ListingDraft; onCancel: () => void; onSaved: (listing: Listing) => void };
+  | { mode: "edit"; listingId: string; stock: number; catalogShelfLife: string | null; initial: ListingDraft; onCancel: () => void; onSaved: (listing: Listing) => void };
 
 // Price, MRP and the selling settings of one size. Create = API 2 (with opening
 // stock); edit = API 5, which replaces every field, so the whole form is sent.
@@ -39,6 +42,8 @@ export function ListingForm(props: Props) {
   const mrp = Number(draft.mrp);
   const previewOk = price > 0 && mrp > 0 && price <= mrp;
   const off = previewOk ? discountPercent(price, mrp) : 0;
+  // Only the edit screen knows the catalogue's text (the catalogue list doesn't send it).
+  const catalogShelfLife = props.mode === "edit" ? props.catalogShelfLife : null;
 
   function save(event: FormEvent) {
     event.preventDefault();
@@ -120,6 +125,35 @@ export function ListingForm(props: Props) {
       )}
 
       <Toggle label="Show to customers" hint={draft.isAvailable ? "Customers can buy this once your store is live." : "Hidden: customers won't see it. Turn on when you're ready."} checked={draft.isAvailable} onChange={(v) => set("isAvailable", v)} warn={!draft.isAvailable} />
+
+      {/* Shelf life: the catalogue's text, or the store's own (e.g. it keeps fish frozen). */}
+      <div className="space-y-3">
+        <Toggle
+          label="Use catalogue shelf life"
+          hint={draft.useCatalogShelfLife ? (catalogShelfLife ? "Customers see the catalogue's text below." : "Customers see the catalogue's shelf life, if it has one.") : "Customers see your text instead. Switch on to go back to the catalogue's."}
+          checked={draft.useCatalogShelfLife}
+          onChange={(v) => {
+            set("useCatalogShelfLife", v);
+            if (errors.shelfLife) setErrors((e) => ({ ...e, shelfLife: undefined }));
+          }}
+        />
+        {draft.useCatalogShelfLife
+          ? catalogShelfLife && <RichText text={catalogShelfLife} className="rounded-2xl bg-surface px-4 py-3 text-sm text-ink ring-1 ring-line" />
+          : (
+            <RichTextField
+              label="Your shelf life"
+              rows={3}
+              name="shelfLife"
+              maxLength={PRODUCT_LIMITS.shelfLife}
+              placeholder={"**Refrigerated:** 2 to 3 days\n**Frozen:** Up to 6 months (at -18°C)"}
+              previewClassName="text-sm font-medium leading-relaxed text-ink"
+              value={draft.shelfLife}
+              onChange={(v) => set("shelfLife", v)}
+              error={errors.shelfLife}
+              hint="One line per storage condition, e.g. Refrigerated: 2 to 3 days"
+            />
+          )}
+      </div>
 
       <div className="rounded-2xl ring-1 ring-line">
         <button type="button" onClick={() => setAdvanced((a) => !a)} aria-expanded={advanced} className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-sm font-semibold text-ink">

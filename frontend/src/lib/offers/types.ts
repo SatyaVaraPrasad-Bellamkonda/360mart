@@ -24,6 +24,8 @@ export type StoreOffer = {
   deliveryFee: number;
   minOrderAmount: number;
   isOpenNow: boolean;
+  /** Already resolved: the store's own text if it set one, else the catalog's; null when neither has any. One line per storage condition. */
+  shelfLife: string | null;
 };
 
 export type ProductStoreOffers = {

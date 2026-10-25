@@ -1,5 +1,6 @@
 import "server-only";
 import { callApi } from "@/lib/backend/client";
+import type { Page } from "@/lib/inventory/types";
 import type { Product, ProductInput, ProductVariant, VariantInput } from "./types";
 
 // One function per product / size endpoint. The shop list is public (no
@@ -9,9 +10,9 @@ import type { Product, ProductInput, ProductVariant, VariantInput } from "./type
 // The shop list is cached (lib/catalog/data.ts), so it's sent without the visitor's headers.
 const NO_VISITOR = { incoming: new Headers() };
 
-/** Active products of a subcategory, each with its active sizes. */
-export function listProducts(subcategoryId: number) {
-  return callApi<Product[]>(`/categories/${subcategoryId}/products`, NO_VISITOR);
+/** One page of a subcategory's active products, each with its active sizes (page from 0, size up to 100). */
+export function listProducts(subcategoryId: number, page = 0, size = 24) {
+  return callApi<Page<Product>>(`/categories/${subcategoryId}/products?page=${page}&size=${size}`, NO_VISITOR);
 }
 
 export function createProduct(token: string, input: ProductInput, image: File | null) {
@@ -27,8 +28,9 @@ export function listVariants(token: string, productId: number) {
   return callApi<ProductVariant[]>(`/admin/products/${productId}/variants`, { sessionToken: token });
 }
 
-export function createVariant(token: string, productId: number, input: VariantInput) {
-  return callApi<ProductVariant>(`/admin/products/${productId}/variants`, { method: "POST", body: input, sessionToken: token });
+/** 1–20 new sizes in one request, saved all or nothing. Returns only the new ids: re-read the list. */
+export function addVariants(token: string, productId: number, inputs: VariantInput[]) {
+  return callApi<{ success: boolean; message: string; ids: string[] }>(`/admin/products/${productId}/variants`, { method: "POST", body: { variants: inputs }, sessionToken: token });
 }
 
 export function updateVariant(token: string, productId: number, variantId: number, input: VariantInput) {

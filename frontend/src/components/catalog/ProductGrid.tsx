@@ -12,16 +12,18 @@ type Sort = "popular" | "az";
 // The products of a subcategory with quick filters (only the ones that would
 // change the list are offered) and a sort. Works on the list already on the
 // page: no extra requests.
-export function ProductGrid({ products, basePath }: { products: Product[]; basePath: string }) {
+export function ProductGrid({ products, basePath, showFilters = true, total }: { products: Product[]; basePath: string; showFilters?: boolean; total?: number }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("popular");
 
   const count = (f: Filter) => products.filter(PICK[f]).length;
-  const offered = (["season", "veg", "featured"] as const).filter((f) => {
+  const offered = (showFilters ? (["season", "veg", "featured"] as const) : []).filter((f) => {
     const n = count(f);
     return n > 0 && n < products.length;
   });
   const shown = products.filter(PICK[filter]);
+  // While more pages are still to load, counts of the loaded part would mislead: leave them off.
+  const partial = total !== undefined && total > products.length;
   if (sort === "az") shown.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -30,17 +32,17 @@ export function ProductGrid({ products, basePath }: { products: Product[]; baseP
         {offered.length > 0 ? (
           <div role="group" aria-label="Filter products" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
             <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-              All <span className="tabular-nums opacity-70">{products.length}</span>
+              All {!partial && <span className="tabular-nums opacity-70">{products.length}</span>}
             </Chip>
             {offered.map((f) => (
               <Chip key={f} active={filter === f} onClick={() => setFilter(f)}>
-                {LABEL[f]} <span className="tabular-nums opacity-70">{count(f)}</span>
+                {LABEL[f]} {!partial && <span className="tabular-nums opacity-70">{count(f)}</span>}
               </Chip>
             ))}
           </div>
         ) : (
           <p className="text-sm font-semibold text-muted">
-            {products.length} {products.length === 1 ? "product" : "products"}
+            {(total ?? products.length).toLocaleString("en-IN")} {(total ?? products.length) === 1 ? "product" : "products"}
           </p>
         )}
         {products.length > 1 && (
@@ -61,7 +63,7 @@ export function ProductGrid({ products, basePath }: { products: Product[]; baseP
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {shown.map((product, i) => (
           <li key={product.productId} className="motion-safe:animate-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-            <ShopProductCard product={product} href={`${basePath}/${product.slug}`} />
+            <ShopProductCard product={product} href={`${basePath}/${product.slug}`} eager={i < 4} />
           </li>
         ))}
       </ul>

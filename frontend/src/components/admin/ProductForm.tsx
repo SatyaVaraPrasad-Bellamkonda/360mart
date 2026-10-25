@@ -5,15 +5,15 @@ import { useRef, useState, useTransition, type FormEvent, type ReactNode } from 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { SubmitButton, TextAreaField, TextField } from "@/components/auth/AuthFields";
-import { FoodMark } from "@/components/catalog/FoodMark";
 import { ShopProductCard } from "@/components/catalog/ShopProductCard";
+import { RichTextField } from "@/components/RichTextField";
 import { saveProductAction } from "@/lib/catalog/product-actions";
-import { FOOD_TYPES, PRODUCT_LIMITS, productErrors, productSlug, shopProductPath, toProductInput } from "@/lib/catalog/product-validation";
+import { PRODUCT_LIMITS, productErrors, productSlug, shopProductPath, toProductInput } from "@/lib/catalog/product-validation";
 import { productDescription, productTitle } from "@/lib/catalog/seo";
-import type { FoodType, Product, ProductDraft, ProductErrors, ProductField, ProductVariant } from "@/lib/catalog/types";
+import type { Product, ProductDraft, ProductErrors, ProductField, ProductVariant } from "@/lib/catalog/types";
 import { categoryImageError, slugFromName } from "@/lib/catalog/validation";
 import { SITE } from "@/lib/site";
-import { GooglePreview, ImagePicker, Section, Toggle } from "./FormParts";
+import { FoodTypePicker, GooglePreview, ImagePicker, Section, Toggle } from "./FormParts";
 import { SubcategoryPicker, type PickerPlace, type PickerStart } from "./SubcategoryPicker";
 
 
@@ -173,16 +173,17 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
             error={errors.shortDescription}
             hint="One line on the product card."
           />
-          <TextAreaField
+          <RichTextField
             label="Description"
             name="description"
             optional
+            rows={6}
             maxLength={PRODUCT_LIMITS.description}
-            placeholder="Hand-picked from Ratnagiri orchards…"
+            placeholder={"Hand-picked from **Ratnagiri** orchards…\n- Naturally ripened\n- No carbide"}
             value={draft.description}
             onChange={set("description")}
             error={errors.description}
-            hint="Shown on the product page. Line breaks are kept."
+            hint="Shown on the product page."
           />
         </Section>
 
@@ -204,27 +205,29 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Origin" name="origin" autoComplete="off" optional maxLength={PRODUCT_LIMITS.origin} placeholder="Ratnagiri, Maharashtra" value={draft.origin} onChange={set("origin")} error={errors.origin} />
             <TextField label="Best season" name="bestSeason" autoComplete="off" optional maxLength={PRODUCT_LIMITS.bestSeason} placeholder="April - June" value={draft.bestSeason} onChange={set("bestSeason")} error={errors.bestSeason} />
-            <TextField
-              label="Shelf life (days)"
-              name="shelfLifeDays"
-              inputMode="numeric"
-              autoComplete="off"
-              optional
-              maxLength={4}
-              placeholder="7"
-              value={draft.shelfLifeDays}
-              onChange={(v) => set("shelfLifeDays")(v.replace(/\D/g, ""))}
-              error={errors.shelfLifeDays}
-              hint="1 to 3650 days."
-            />
           </div>
-          <TextAreaField
+          <RichTextField
+            label="Shelf life"
+            name="shelfLife"
+            optional
+            rows={3}
+            maxLength={PRODUCT_LIMITS.shelfLife}
+            placeholder={"**Refrigerated:** 2 to 3 days\n**Frozen:** Up to 6 months (at -18°C)"}
+            previewClassName="text-sm font-medium leading-relaxed text-ink"
+            value={draft.shelfLife}
+            onChange={set("shelfLife")}
+            error={errors.shelfLife}
+            hint="One line per storage condition, e.g. Refrigerated: 2 to 3 days. Stores can set their own."
+          />
+          <RichTextField
             label="Storage tip"
             name="storageTip"
             optional
+            rows={3}
             maxLength={PRODUCT_LIMITS.storageTip}
-            placeholder="Keep at room temperature until ripe."
+            placeholder="Keep at room temperature until ripe, then **refrigerate**."
             value={draft.storageTip}
+            previewClassName="leading-relaxed text-ink/75"
             onChange={set("storageTip")}
             error={errors.storageTip}
           />
@@ -360,28 +363,5 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
 
 const FIELDS = new Set<ProductField>([
   "categoryId", "name", "slug", "brand", "shortDescription", "description", "foodType", "origin", "bestSeason", "storageTip",
-  "shelfLifeDays", "isInSeason", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder", "isFeatured", "isActive", "image",
+  "shelfLife", "isInSeason", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder", "isFeatured", "isActive", "image",
 ]);
-
-// Veg / non-veg / egg as big tap targets with the familiar mark (or not a food item).
-function FoodTypePicker({ value, onChange, error }: { value: FoodType | ""; onChange: (value: FoodType | "") => void; error?: string }) {
-  const options: { value: FoodType | ""; label: string }[] = [...FOOD_TYPES, { value: "", label: "Not food" }];
-  return (
-    <fieldset>
-      <legend className="mb-1.5 text-sm font-semibold text-ink">Food type</legend>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {options.map((o) => (
-          <label
-            key={o.value || "none"}
-            className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40"
-          >
-            <input type="radio" name="foodType" value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="sr-only" />
-            {o.value ? <FoodMark type={o.value} decorative /> : <span aria-hidden className="size-4 rounded-[3px] border-[1.5px] border-dashed border-current opacity-50" />}
-            {o.label}
-          </label>
-        ))}
-      </div>
-      {error && <p className="mt-1.5 text-sm text-red-700">{error}</p>}
-    </fieldset>
-  );
-}

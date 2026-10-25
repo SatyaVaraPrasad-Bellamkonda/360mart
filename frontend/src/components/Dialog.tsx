@@ -8,13 +8,15 @@ type Props = {
   onClose: () => void;
   title: string;
   description?: string;
+  /** "wide" = a big panel (previews) on larger screens. */
+  size?: "normal" | "wide";
   children: ReactNode;
 };
 
 // A modal on the browser's own <dialog> (showModal): it keeps focus inside,
 // closes on Esc, and dims the page. Phones get a sheet from the bottom; larger
 // screens a centred card. A tap on the dimmed area closes it too.
-export function Dialog({ open, onClose, title, description, children }: Props) {
+export function Dialog({ open, onClose, title, description, size = "normal", children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -32,7 +34,7 @@ export function Dialog({ open, onClose, title, description, children }: Props) {
       onClose={onClose}
       // The <dialog> itself is only hit outside the panel (the backdrop).
       onClick={(e) => e.target === ref.current && onClose()}
-      className="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-3xl bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/50 backdrop:backdrop-blur-sm sm:m-auto sm:max-w-2xl sm:rounded-3xl"
+      className={`m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-3xl bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/50 backdrop:backdrop-blur-sm sm:m-auto sm:rounded-3xl ${size === "wide" ? "sm:max-w-6xl" : "sm:max-w-2xl"}`}
     >
       {open && (
         <div className="flex max-h-[92dvh] flex-col">

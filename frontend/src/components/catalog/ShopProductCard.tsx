@@ -1,6 +1,6 @@
 import { ArrowRight, Leaf } from "lucide-react";
 import Link from "next/link";
-import { sortVariants } from "@/lib/catalog/product-validation";
+import { foodTheme } from "@/lib/catalog/food-theme";
 import type { Product } from "@/lib/catalog/types";
 import { CategoryBadge } from "./CategoryBadge";
 import { CategoryImage } from "./CategoryImage";
@@ -8,23 +8,29 @@ import { FoodMark } from "./FoodMark";
 
 const SIZES_SHOWN = 3;
 
+/** What a card needs: a full product, or a rail item from the category page API. */
+export type CardProduct = Pick<Product, "name" | "imageUrl" | "badgeLabel" | "foodType" | "isInSeason" | "brand" | "shortDescription"> & {
+  variants: { variantId: number; label: string; displayOrder?: number }[];
+};
+
 // A product from the backend as a card: picture, marks, name and its sizes.
-// No prices yet (each store sets its own later), so the card never shows one.
-export function ShopProductCard({ product, href, context }: { product: Product; href: string; context?: string }) {
-  const sizes = sortVariants(product.variants);
+// No prices (each store sets its own, by location), so the card never shows one.
+export function ShopProductCard({ product, href, context, eager }: { product: CardProduct; href: string; context?: string; eager?: boolean }) {
+  // Rail items come already in order; full products carry displayOrder.
+  const sizes = product.variants.some((v) => v.displayOrder !== undefined) ? [...product.variants].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0) || a.variantId - b.variantId) : product.variants;
   return (
     <Link
       href={href}
       className="group flex h-full w-full flex-col overflow-hidden rounded-3xl bg-white ring-1 ring-line transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-ink/10 hover:ring-ink/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
     >
       <div className="relative aspect-square overflow-hidden bg-surface">
-        <CategoryImage src={product.imageUrl} alt="" className="size-full transition duration-700 ease-out group-hover:scale-105" iconClassName="size-12" />
+        <CategoryImage src={product.imageUrl} alt="" priority={eager} className="size-full transition duration-700 ease-out group-hover:scale-105" iconClassName="size-12" />
         <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-2">
           {product.badgeLabel ? <CategoryBadge label={product.badgeLabel} tone="onPhoto" className="max-w-[75%]" /> : <span />}
           <FoodMark type={product.foodType} className="shadow-sm" />
         </div>
         {product.isInSeason && (
-          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-bold text-fresh shadow-sm">
+          <span className={`absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-bold shadow-sm ${foodTheme(product.foodType).text}`}>
             <Leaf aria-hidden className="size-3" />
             In season
           </span>
