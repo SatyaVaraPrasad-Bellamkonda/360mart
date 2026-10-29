@@ -14,6 +14,7 @@ import type { Product, ProductDraft, ProductErrors, ProductField, ProductVariant
 import { categoryImageError, slugFromName } from "@/lib/catalog/validation";
 import { SITE } from "@/lib/site";
 import { FoodTypePicker, GooglePreview, ImagePicker, Section, Toggle } from "./FormParts";
+import { SeasonPicker } from "./SeasonPicker";
 import { SubcategoryPicker, type PickerPlace, type PickerStart } from "./SubcategoryPicker";
 
 
@@ -116,6 +117,8 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
     name: draft.name.trim() || "Product name",
     imageUrl: preview ?? currentImageUrl,
     variants: variants.filter((v) => v.isActive),
+    // Today's In season is the server's to say; the card preview shows it only for "all year".
+    isInSeason: draft.alwaysInSeason,
     createdAt: "",
     updatedAt: "",
   };
@@ -202,10 +205,15 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
 
         <Section title="Food and freshness">
           <FoodTypePicker value={draft.foodType} onChange={set("foodType")} error={errors.foodType} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Origin" name="origin" autoComplete="off" optional maxLength={PRODUCT_LIMITS.origin} placeholder="Ratnagiri, Maharashtra" value={draft.origin} onChange={set("origin")} error={errors.origin} />
-            <TextField label="Best season" name="bestSeason" autoComplete="off" optional maxLength={PRODUCT_LIMITS.bestSeason} placeholder="April - June" value={draft.bestSeason} onChange={set("bestSeason")} error={errors.bestSeason} />
-          </div>
+          <TextField label="Origin" name="origin" autoComplete="off" optional maxLength={PRODUCT_LIMITS.origin} placeholder="Ratnagiri, Maharashtra" value={draft.origin} onChange={set("origin")} error={errors.origin} />
+          <SeasonPicker
+            value={{ seasonStart: draft.seasonStart, seasonEnd: draft.seasonEnd, alwaysInSeason: draft.alwaysInSeason }}
+            onChange={(patch) => {
+              setDraft((d) => ({ ...d, ...patch }));
+              setErrors((e) => ({ ...e, seasonStart: undefined, seasonEnd: undefined, seasonComplete: undefined }));
+            }}
+            errors={{ seasonStart: errors.seasonStart, seasonEnd: errors.seasonEnd, seasonComplete: errors.seasonComplete }}
+          />
           <RichTextField
             label="Shelf life"
             name="shelfLife"
@@ -231,7 +239,6 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
             onChange={set("storageTip")}
             error={errors.storageTip}
           />
-          <Toggle label="In season now" hint="Shows an In season tag in the shop." checked={draft.isInSeason} onChange={set("isInSeason")} />
         </Section>
 
         <Section title="Display">
@@ -362,6 +369,6 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
 }
 
 const FIELDS = new Set<ProductField>([
-  "categoryId", "name", "slug", "brand", "shortDescription", "description", "foodType", "origin", "bestSeason", "storageTip",
-  "shelfLife", "isInSeason", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder", "isFeatured", "isActive", "image",
+  "categoryId", "name", "slug", "brand", "shortDescription", "description", "foodType", "origin", "seasonStart", "seasonEnd", "alwaysInSeason", "seasonComplete", "storageTip",
+  "shelfLife", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder", "isFeatured", "isActive", "image",
 ]);

@@ -194,3 +194,18 @@ body {
   }
 }
 
+
+/* Printing (invoices): only the page's own content, no site frame or buttons. */
+@media print {
+  body > header,
+  body header.sticky,
+  body > footer,
+  body footer,
+  [data-print-hide],
+  [popover] {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+  }
+}

@@ -3,6 +3,7 @@ import { isIP } from "node:net";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import type { ApiProblem } from "@/lib/auth/api-types";
+import { apiLogMode, describeBody, describeOrigin, logApiCall, mask, maskPath } from "./api-log";
 import { SESSION_COOKIE } from "@/lib/auth/roles";
 import { apiBaseUrl } from "./config";
 
@@ -53,7 +54,7 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
   forwardClientDetails(source, requestHeaders);
   const requestId = source.get(REQUEST_ID_HEADER) ?? "-";
   if (requestId !== "-") requestHeaders.set("X-Request-Id", requestId);
-  const label = `[api] ${requestId} ${method} ${path}`;
+  const label = `[api] ${requestId} ${method} ${maskPath(path)}`;
 
   const started = performance.now(); // not Date.now(): Next.js rejects it while prerendering
   let response: Response;
@@ -71,7 +72,10 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
     // Next.js cancels in-flight requests on purpose while prerendering; let it.
     unstable_rethrow(error);
     // Log the reason only, never the body (it may hold a password or code).
-    console.error(`${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+    const reason = error instanceof Error ? error.message : String(error);
+    const mode = apiLogMode();
+    if (mode === "off") console.error(`${label} failed: ${reason}`);
+    else logApiCall({ requestId, origin: describeOrigin(source, requestId), method, path: maskPath(path), status: 0, ms: Math.round(performance.now() - started), failed: reason, request: mode === "full" ? await describeBody(body) : undefined }, mode);
     return failure(0, "API_UNAVAILABLE", UNREACHABLE);
   }
 
@@ -81,12 +85,55 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
     : { ok: false, error: toFailure(response.status, payload) };
 
   // The browser only sees calls to our own site (the BFF design), so show each
-  // backend call here: in development always, in production only failures.
-  // Status and error code only, never a body (it can hold a password or code).
-  const line = `${label} → ${response.status}${result.ok ? "" : ` ${result.error.code}`} in ${Math.round(performance.now() - started)}ms`;
-  if (response.status >= 500) console.error(line);
-  else if (process.env.NODE_ENV === "development") console.log(line);
+  // backend call here. Development: api-log.ts (masked request + response).
+  // Production: only failures, status and error code, never a body.
+  const ms = Math.round(performance.now() - started);
+  const mode = apiLogMode();
+  if (mode !== "off") {
+    const full = mode === "full";
+    logApiCall({ requestId, origin: describeOrigin(source, requestId), method, path: maskPath(path), status: response.status, ms, errorCode: result.ok ? undefined : result.error.code, request: full ? await describeBody(body) : undefined, response: full ? mask(payload) : undefined }, mode);
+  } else if (response.status >= 500) console.error(`${label} → ${response.status}${result.ok ? "" : ` ${result.error.code}`} in ${ms}ms`);
   return result;
+}
+
+/**
+ * A file from the API (e.g. the price sheet), for a route handler to pass on
+ * to the browser as it streams. Errors still come back as ApiFailure (the API
+ * answers them in JSON). Same headers, request id and logging as callApi.
+ */
+export async function callApiFile(path: string, { sessionToken }: { sessionToken: string }): Promise<{ ok: true; response: Response } | { ok: false; error: ApiFailure }> {
+  const base = apiBaseUrl();
+  if (!base) return failure(0, "API_UNAVAILABLE", UNREACHABLE);
+  const requestHeaders = new Headers({ Accept: "*/*", Cookie: `${SESSION_COOKIE}=${sessionToken}` });
+  const source = await headers();
+  forwardClientDetails(source, requestHeaders);
+  const requestId = source.get(REQUEST_ID_HEADER) ?? "-";
+  if (requestId !== "-") requestHeaders.set("X-Request-Id", requestId);
+  const label = `[api] ${requestId} GET ${maskPath(path)}`;
+  const started = performance.now();
+  let response: Response;
+  try {
+    // A big sheet takes a while to build: the upload timeout, not the short one.
+    response = await fetch(`${base}${path}`, { headers: requestHeaders, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) });
+  } catch (error) {
+    unstable_rethrow(error);
+    const reason = error instanceof Error ? error.message : String(error);
+    const mode = apiLogMode();
+    if (mode === "off") console.error(`${label} failed: ${reason}`);
+    else logApiCall({ requestId, origin: describeOrigin(source, requestId), method: "GET", path: maskPath(path), status: 0, ms: Math.round(performance.now() - started), failed: reason }, mode);
+    return failure(0, "API_UNAVAILABLE", UNREACHABLE);
+  }
+  const ms = Math.round(performance.now() - started);
+  const payload = response.ok ? null : await readJson(response);
+  const error = response.ok ? null : toFailure(response.status, payload);
+  const mode = apiLogMode();
+  if (mode !== "off") {
+    // The file itself streams on to the browser untouched: log what it is, not its bytes.
+    const file = { type: response.headers.get("content-type"), name: response.headers.get("content-disposition"), size: response.headers.get("content-length") };
+    logApiCall({ requestId, origin: describeOrigin(source, requestId), method: "GET", path: maskPath(path), status: response.status, ms, errorCode: error?.code, response: mode === "full" ? (error ? mask(payload) : { file }) : undefined }, mode);
+  } else if (response.status >= 500) console.error(`${label} → ${response.status} in ${ms}ms`);
+  if (error) return { ok: false, error };
+  return { ok: true, response };
 }
 
 // The API rate-limits per IP and lists each session's device, so it needs the

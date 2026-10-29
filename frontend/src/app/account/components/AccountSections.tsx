@@ -4,10 +4,13 @@ import type { ReactNode } from "react";
 import { loadAddresses } from "@/lib/addresses/data";
 import { addressSummary } from "@/lib/addresses/format";
 import { ADDRESS_TYPE_LABEL } from "@/lib/addresses/types";
+import { OrderRow } from "@/components/orders/OrderParts";
 import { logoutAction } from "@/lib/auth/actions";
+import { loadMyOrders } from "@/lib/orders/data";
 
 // The body of /account. Features the backend doesn't support yet are shown as
 // honest "Coming soon" rows/states, never with made-up data.
+// Each card that loads data has its own Suspense boundary in the page.
 
 function Card({ title, id, action, children }: { title: string; id: string; action?: ReactNode; children: ReactNode }) {
   return (
@@ -40,20 +43,52 @@ function EmptyState({ icon: Icon, title, text, children }: { icon: LucideIcon; t
   );
 }
 
-export function OrdersCard() {
+export async function OrdersCard() {
+  const list = await loadMyOrders(0, "/account", 3);
+  const orders = list.ok ? list.data.items : [];
+  const all = (
+    <Link href="/account/orders" className="flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold text-ink transition hover:bg-surface">
+      View all
+      <ChevronRight aria-hidden className="size-4" />
+    </Link>
+  );
+  if (!list.ok) {
+    return (
+      <Card title="Your orders" id="orders-title" action={all}>
+        <p className="mt-4 rounded-2xl bg-surface px-4 py-3 text-sm text-muted">{list.error.message}</p>
+      </Card>
+    );
+  }
+  if (!orders.length) {
+    return (
+      <Card title="Your orders" id="orders-title">
+        <EmptyState icon={ShoppingBag} title="No orders yet" text="When you order from neighbourhood stores, you can track it here.">
+          <Link
+            href="/categories"
+            className="mt-5 flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/85"
+          >
+            Start shopping
+            <ChevronRight aria-hidden className="size-4" />
+          </Link>
+        </EmptyState>
+      </Card>
+    );
+  }
   return (
-    <Card title="Your orders" id="orders-title">
-      <EmptyState icon={ShoppingBag} title="No orders yet" text="When you order from neighbourhood stores, you can track it here.">
-        <Link
-          href="/#categories"
-          className="mt-5 flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/85"
-        >
-          Start shopping
-          <ChevronRight aria-hidden className="size-4" />
-        </Link>
-      </EmptyState>
+    <Card title="Your orders" id="orders-title" action={all}>
+      <ul className="mt-4 space-y-2">
+        {orders.map((o) => (
+          <li key={o.orderId}>
+            <OrderRow order={o} href={`/account/orders/${o.orderId}`} who="store" />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
+}
+
+export function OrdersCardSkeleton() {
+  return <div aria-hidden className="h-64 animate-pulse rounded-3xl bg-line/60" />;
 }
 
 export async function AddressesCard() {

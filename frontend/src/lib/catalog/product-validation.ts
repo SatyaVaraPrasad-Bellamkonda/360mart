@@ -6,6 +6,7 @@
 import { collapse } from "@/lib/addresses/validation";
 import type { FoodType, Product, ProductDraft, ProductErrors, ProductInput, ProductUnit, ProductVariant, VariantDraft, VariantErrors, VariantInput } from "./types";
 import { CATALOG_NAME, SAFE_LINE, SAFE_MULTILINE, SLUG, slugFromName } from "./validation";
+import { seasonErrors } from "./season";
 
 export const PRODUCT_LIMITS = {
   name: 150,
@@ -14,7 +15,6 @@ export const PRODUCT_LIMITS = {
   shortDescription: 300,
   description: 5000,
   origin: 100,
-  bestSeason: 100,
   storageTip: 500,
   shelfLife: 500,
   badgeLabel: 30,
@@ -137,7 +137,7 @@ export function productErrors(draft: ProductDraft): ProductErrors {
   if (brand.length > PRODUCT_LIMITS.brand) errors.brand = `Brand must be at most ${PRODUCT_LIMITS.brand} characters`;
   else if (brand && !CATALOG_NAME.test(brand)) errors.brand = "Enter a valid brand name";
 
-  const line = (key: "shortDescription" | "origin" | "bestSeason" | "badgeLabel" | "seoTitle" | "seoDescription", label: string) => {
+  const line = (key: "shortDescription" | "origin" | "badgeLabel" | "seoTitle" | "seoDescription", label: string) => {
     const value = collapse(draft[key]);
     if (value.length > PRODUCT_LIMITS[key]) errors[key] = `${label} must be at most ${PRODUCT_LIMITS[key]} characters`;
     else if (!SAFE_LINE.test(value)) errors[key] = `${label} contains characters that are not allowed`;
@@ -150,13 +150,14 @@ export function productErrors(draft: ProductDraft): ProductErrors {
   line("shortDescription", "Short description");
   block("description", "Description");
   line("origin", "Origin");
-  line("bestSeason", "Best season");
   block("storageTip", "Storage tip");
   line("badgeLabel", "Badge label");
   line("seoTitle", "SEO title");
   line("seoDescription", "SEO description");
 
   if (draft.foodType && !isFoodType(draft.foodType)) errors.foodType = "Choose veg, non-veg or egg.";
+
+  Object.assign(errors, seasonErrors(draft.seasonStart, draft.seasonEnd));
 
   const shelf = shelfLifeError(draft.shelfLife);
   if (shelf) errors.shelfLife = shelf;
@@ -187,10 +188,12 @@ export function toProductInput(draft: ProductDraft): ProductInput {
     description: draft.description.trim() || null,
     foodType: draft.foodType || null,
     origin: optional(draft.origin),
-    bestSeason: optional(draft.bestSeason),
+    // Both or neither (the form clears the pair together).
+    seasonStart: draft.seasonStart && draft.seasonEnd ? draft.seasonStart : null,
+    seasonEnd: draft.seasonStart && draft.seasonEnd ? draft.seasonEnd : null,
+    alwaysInSeason: draft.alwaysInSeason,
     storageTip: draft.storageTip.trim() || null,
     shelfLife: cleanShelfLife(draft.shelfLife),
-    isInSeason: draft.isInSeason,
     badgeLabel: optional(draft.badgeLabel),
     hsnCode: draft.hsnCode.trim() || null,
     gstRate: number(draft.gstRate),
@@ -212,10 +215,12 @@ export function toProductDraft(product: Product): ProductDraft {
     description: product.description ?? "",
     foodType: product.foodType ?? "",
     origin: product.origin ?? "",
-    bestSeason: product.bestSeason ?? "",
+    // From the stored dates and switch, never from today's isInSeason.
+    seasonStart: product.seasonStart ?? "",
+    seasonEnd: product.seasonEnd ?? "",
+    alwaysInSeason: product.alwaysInSeason ?? false,
     storageTip: product.storageTip ?? "",
     shelfLife: product.shelfLife ?? "",
-    isInSeason: product.isInSeason,
     badgeLabel: product.badgeLabel ?? "",
     hsnCode: product.hsnCode ?? "",
     gstRate: product.gstRate === null ? "" : formatNumber(product.gstRate),
@@ -237,10 +242,11 @@ export function emptyProductDraft(categoryId = 0): ProductDraft {
     description: "",
     foodType: "",
     origin: "",
-    bestSeason: "",
+    seasonStart: "",
+    seasonEnd: "",
+    alwaysInSeason: false,
     storageTip: "",
     shelfLife: "",
-    isInSeason: false,
     badgeLabel: "",
     hsnCode: "",
     gstRate: "",
@@ -253,7 +259,7 @@ export function emptyProductDraft(categoryId = 0): ProductDraft {
 }
 
 const PRODUCT_TEXT_FIELDS = [
-  "name", "slug", "brand", "shortDescription", "description", "origin", "bestSeason", "storageTip",
+  "name", "slug", "brand", "shortDescription", "description", "origin", "seasonStart", "seasonEnd", "storageTip",
   "shelfLife", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder",
 ] as const;
 
@@ -264,9 +270,9 @@ export function readProductDraft(input: unknown): ProductDraft | null {
   if (typeof raw.categoryId !== "number") return null;
   if (raw.foodType !== "" && !isFoodType(raw.foodType)) return null;
   if (PRODUCT_TEXT_FIELDS.some((key) => typeof raw[key] !== "string")) return null;
-  if (typeof raw.isInSeason !== "boolean" || typeof raw.isFeatured !== "boolean" || typeof raw.isActive !== "boolean") return null;
+  if (typeof raw.alwaysInSeason !== "boolean" || typeof raw.isFeatured !== "boolean" || typeof raw.isActive !== "boolean") return null;
   const text = Object.fromEntries(PRODUCT_TEXT_FIELDS.map((key) => [key, raw[key] as string])) as Record<(typeof PRODUCT_TEXT_FIELDS)[number], string>;
-  return { ...text, categoryId: raw.categoryId, foodType: raw.foodType as FoodType | "", isInSeason: raw.isInSeason, isFeatured: raw.isFeatured, isActive: raw.isActive };
+  return { ...text, categoryId: raw.categoryId, foodType: raw.foodType as FoodType | "", alwaysInSeason: raw.alwaysInSeason, isFeatured: raw.isFeatured, isActive: raw.isActive };
 }
 
 // ---- Size form ----

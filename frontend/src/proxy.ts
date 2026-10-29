@@ -3,6 +3,7 @@ import type { UserResponse } from "@/lib/auth/api-types";
 import { toCurrentUser } from "@/lib/auth/current-user";
 import { PROTECTED_AREAS, ROLE_LOGIN, SESSION_COOKIE } from "@/lib/auth/roles";
 import { isSessionToken, openUser, sealUser, secureCookies, USER_COOKIE, USER_COOKIE_OPTIONS } from "@/lib/auth/user-cookie";
+import { apiLogMode, logIncoming, ORIGIN_HEADER } from "@/lib/backend/api-log";
 import { callApi, REQUEST_ID_HEADER } from "@/lib/backend/client";
 
 // Runs before every page and server action (not images/scripts). Three jobs:
@@ -15,12 +16,16 @@ import { callApi, REQUEST_ID_HEADER } from "@/lib/backend/client";
 //    show up). So /users/me runs at most once per 15 minutes per user, not
 //    on every page view. A session the backend has ended is cleared here.
 export async function proxy(request: NextRequest) {
+  // Browser/tool probes like Chrome DevTools' /.well-known/appspecific/… would
+  // otherwise render as a product page (3 segments) and call the backend.
+  if (request.nextUrl.pathname.startsWith("/.well-known/")) return new NextResponse(null, { status: 404 });
   // Keep an ID already on the request: after a server action calls redirect(),
   // Next renders the target page with a second internal request that would
   // otherwise get a new ID. It's only a log label (not a permission), and the
   // strict format keeps anything else out of the logs.
   const existing = request.headers.get(REQUEST_ID_HEADER);
   const requestId = existing && /^[0-9a-f]{12}$/.test(existing) ? existing : crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+  logIncoming(requestId, { method: request.method, pathname: request.nextUrl.pathname, headers: request.headers });
   const response = await handle(request, requestId);
   response.headers.set("X-Request-Id", requestId);
   return response;
@@ -28,12 +33,16 @@ export async function proxy(request: NextRequest) {
 
 async function handle(request: NextRequest, requestId: string): Promise<NextResponse> {
   // Continue to the page, passing the (possibly updated) request headers + the ID.
+  const { pathname, search } = request.nextUrl;
+  // Development: what started this request, for the backend call log (api-log.ts).
+  const origin = apiLogMode() === "off" ? null : `${request.method} ${pathname}`;
   const next = () => {
     const forwarded = new Headers(request.headers);
     forwarded.set(REQUEST_ID_HEADER, requestId);
+    if (origin) forwarded.set(ORIGIN_HEADER, origin);
+    else forwarded.delete(ORIGIN_HEADER);
     return NextResponse.next({ request: { headers: forwarded } });
   };
-  const { pathname, search } = request.nextUrl;
   const area = PROTECTED_AREAS.find((a) => pathname === a.prefix || pathname.startsWith(`${a.prefix}/`));
   const protectedPage = !!area && pathname !== ROLE_LOGIN[area.role];
   const token = request.cookies.get(SESSION_COOKIE)?.value;
@@ -58,6 +67,7 @@ async function handle(request: NextRequest, requestId: string): Promise<NextResp
 
   const incoming = new Headers(request.headers);
   incoming.set(REQUEST_ID_HEADER, requestId);
+  if (origin) incoming.set(ORIGIN_HEADER, `session refresh before ${origin}`);
   const me = await callApi<UserResponse>("/users/me", { sessionToken: token, incoming });
   if (me.ok) {
     const user = toCurrentUser(me.data);

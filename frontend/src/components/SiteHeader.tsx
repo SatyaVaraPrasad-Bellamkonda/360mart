@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AccountLink, AccountLinkFallback } from "./auth/AccountLink";
+import { CartLink, CartLinkFallback } from "./cart/CartLink";
 import { DesktopCategoryNav, DesktopCategoryNavFallback, PhoneCategoryStrip, PhoneCategoryStripFallback } from "./HeaderCategories";
 import { Logo } from "./Logo";
 
@@ -13,9 +14,14 @@ export function SiteHeader() {
             <DesktopCategoryNav />
           </Suspense>
         </nav>
-        <Suspense fallback={<AccountLinkFallback />}>
-          <AccountLink />
-        </Suspense>
+        <div className="flex shrink-0 items-center gap-2">
+          <Suspense fallback={<CartLinkFallback />}>
+            <CartLink />
+          </Suspense>
+          <Suspense fallback={<AccountLinkFallback />}>
+            <AccountLink />
+          </Suspense>
+        </div>
       </div>
 
       {/* Phones: the menu above is hidden, so show categories as a swipeable row */}

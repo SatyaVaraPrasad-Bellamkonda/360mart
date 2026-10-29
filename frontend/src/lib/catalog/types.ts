@@ -94,10 +94,15 @@ export type Product = {
   description: string | null;
   foodType: FoodType | null;
   origin: string | null;
-  bestSeason: string | null;
+  /** The yearly season, "MM-DD" (an end before the start crosses the new year); both null = no season. */
+  seasonStart: string | null;
+  seasonEnd: string | null;
+  /** The admin's "Available all year" switch (admin form only). */
+  alwaysInSeason: boolean;
   storageTip: string | null;
   /** How long it keeps, one line per storage condition ("Refrigerated: 2 to 3 days"); null = not given. */
   shelfLife: string | null;
+  /** In season today (India time), worked out by the server: use it for badges and filters, never compute it here. */
   isInSeason: boolean;
   /** Signed link, valid about 1 hour (like category pictures). */
   imageUrl: string | null;
@@ -125,11 +130,13 @@ export type ProductInput = {
   description: string | null;
   foodType: FoodType | null;
   origin: string | null;
-  bestSeason: string | null;
+  /** Both "MM-DD" or both null. */
+  seasonStart: string | null;
+  seasonEnd: string | null;
+  alwaysInSeason: boolean;
   storageTip: string | null;
   /** How long it keeps, one line per storage condition ("Refrigerated: 2 to 3 days"); null = not given. */
   shelfLife: string | null;
-  isInSeason: boolean;
   badgeLabel: string | null;
   hsnCode: string | null;
   gstRate: number | null;
@@ -150,10 +157,12 @@ export type ProductDraft = {
   description: string;
   foodType: FoodType | "";
   origin: string;
-  bestSeason: string;
+  /** "MM-DD" or "" (no season). */
+  seasonStart: string;
+  seasonEnd: string;
+  alwaysInSeason: boolean;
   storageTip: string;
   shelfLife: string;
-  isInSeason: boolean;
   badgeLabel: string;
   hsnCode: string;
   gstRate: string;
@@ -164,7 +173,7 @@ export type ProductDraft = {
   isActive: boolean;
 };
 
-export type ProductField = keyof ProductDraft | "image";
+export type ProductField = keyof ProductDraft | "image" | "seasonComplete";
 export type ProductErrors = Partial<Record<ProductField, string>>;
 
 /** The JSON body of a size create/update (plain JSON, no multipart). */

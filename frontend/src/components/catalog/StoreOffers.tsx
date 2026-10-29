@@ -1,14 +1,15 @@
 "use client";
 
-import { ChevronDown, Clock, Info, MapPin, ShoppingBag } from "lucide-react";
+import { ChevronDown, Clock, Info, MapPin } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { setDeliveryLocation, useDeliveryLocation } from "@/components/location/delivery-location";
 import { DeliverToDialog } from "@/components/location/DeliverToDialog";
+import { AddToCart, type CartProduct } from "@/components/cart/AddToCart";
 import { RichText } from "@/components/RichText";
 import { toastError } from "@/components/Toaster";
 import type { FoodTheme } from "@/lib/catalog/food-theme";
-import type { ProductUnit } from "@/lib/catalog/types";
+import type { FoodType, ProductUnit } from "@/lib/catalog/types";
 import { money } from "@/lib/inventory/validation";
 import { loadAddressChoicesAction } from "@/lib/location/actions";
 import type { MapConfig } from "@/lib/maps/config";
@@ -31,7 +32,7 @@ function unitPrice(price: number, quantity: number, unit: ProductUnit): string |
 // "Stores that deliver this to me": pick a size, see every store that delivers
 // it to the chosen location, best offer first (the backend's order). One call
 // per size + location (+1 per "Show more"), never cached: prices and stock are live.
-export function StoreOffers({ productId, productName, sizes, catalogShelfLife, theme, map }: { productId: number; productName: string; sizes: Size[]; catalogShelfLife: string | null; theme: FoodTheme; map: MapConfig }) {
+export function StoreOffers({ productId, productName, imageUrl, foodType, href, sizes, catalogShelfLife, theme, map }: { productId: number; productName: string; imageUrl: string | null; foodType: FoodType | null; href: string; sizes: Size[]; catalogShelfLife: string | null; theme: FoodTheme; map: MapConfig }) {
   const { status } = useAuth();
   const location = useDeliveryLocation();
   const [variantId, setVariantId] = useState(sizes[0]?.variantId ?? 0);
@@ -41,6 +42,7 @@ export function StoreOffers({ productId, productName, sizes, catalogShelfLife, t
   const triedDefault = useRef(false);
 
   const size = sizes.find((s) => s.variantId === variantId);
+  const product: CartProduct = { productId, productName, imageUrl, foodType, href, variantId, variantLabel: size?.label ?? "" };
   const key = location ? `${variantId}|${location.latitude},${location.longitude}` : null;
   const current = loaded && loaded.key === key ? loaded : null;
   const loading = !!key && !current;
@@ -136,6 +138,7 @@ export function StoreOffers({ productId, productName, sizes, catalogShelfLife, t
           deliverTo={deliverTo}
           catalogShelfLife={catalogShelfLife}
           theme={theme}
+          product={product}
         />
       ) : (
         <div className="space-y-6">
@@ -161,7 +164,8 @@ export function StoreOffers({ productId, productName, sizes, catalogShelfLife, t
             </div>
           )}
           <ShelfLife text={catalogShelfLife} theme={theme} />
-          <CartButton />
+          <AddToCart offer={null} product={product} />
+          <PriceNote />
         </div>
       )}
       <DeliverToDialog open={picking} onClose={() => setPicking(false)} map={map} />
@@ -196,6 +200,7 @@ function Offers({
   deliverTo,
   catalogShelfLife,
   theme,
+  product,
 }: {
   items: StoreOffer[];
   total: number;
@@ -207,6 +212,7 @@ function Offers({
   deliverTo: ReactNode;
   catalogShelfLife: string | null;
   theme: FoodTheme;
+  product: CartProduct;
 }) {
   const inStock = items.filter((o) => o.isInStock);
   const best = inStock[0] ?? null;
@@ -306,7 +312,8 @@ function Offers({
       </fieldset>
 
       <ShelfLife text={selected ? selected.shelfLife : catalogShelfLife} store={selected && selected.shelfLife !== catalogShelfLife ? selected.storeName : undefined} theme={theme} />
-      <CartButton />
+      <AddToCart offer={selected} product={product} />
+      <PriceNote />
     </div>
   );
 }
@@ -328,19 +335,12 @@ function ShelfLife({ text, store, theme }: { text: string | null; store?: string
   );
 }
 
-/** "Add to cart" waits for the cart API; until then it says so (like the Fruits sample pages). */
-function CartButton() {
+function PriceNote() {
   return (
-    <div className="space-y-3">
-      <button type="button" disabled className="flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-ink/40 px-6 font-semibold text-white">
-        <ShoppingBag aria-hidden className="size-5" />
-        Add to cart · coming soon
-      </button>
-      <p className="flex items-start gap-2 text-xs text-muted">
-        <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-        Each store sets its own price and stock. Pick the store you&apos;d like to buy from. Prices include GST.
-      </p>
-    </div>
+    <p className="flex items-start gap-2 text-xs text-muted">
+      <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+      Each store sets its own price and stock. Pick the store you&apos;d like to buy from. Prices include GST.
+    </p>
   );
 }
 

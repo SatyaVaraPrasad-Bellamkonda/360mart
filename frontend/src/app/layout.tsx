@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { BackendCallConsole } from "@/components/dev/BackendCallConsole";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/Toaster";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="flex-1">{children}</main>
           <SiteFooter />
           <Toaster />
+          {process.env.NODE_ENV === "development" && <BackendCallConsole />}
         </AuthProvider>
       </body>
     </html>

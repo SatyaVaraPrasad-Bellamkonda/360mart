@@ -1,4 +1,4 @@
-import { ClipboardList, FolderTree, Package, Store, UserRound, Users, type LucideIcon } from "lucide-react";
+import { ClipboardList, FolderTree, Package, Store, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type AdminSection = {
   href: string;
@@ -18,6 +18,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { href: "/admin/profile", title: "Your profile", text: "Your name, email and photo.", icon: UserRound, tone: "bg-sky-100 text-sky-700", ready: true },
   { href: "/admin/products", title: "Products", text: "Products in each subcategory, with their sizes.", icon: Package, tone: "bg-green-100 text-green-700", ready: true },
   { href: "/admin/stores", title: "Stores", text: "Review store applications: documents, approval and live stores.", icon: Store, tone: "bg-violet-100 text-violet-700", ready: true },
-  { href: "/admin/orders", title: "Orders", text: "Orders across stores, refunds and payouts.", icon: ClipboardList, tone: "bg-rose-100 text-rose-700", ready: false },
+  { href: "/admin/orders", title: "Orders", text: "Every order across stores; cancel when needed.", icon: ClipboardList, tone: "bg-rose-100 text-rose-700", ready: true },
+  { href: "/admin/ledger", title: "Ledger", text: "What stores owe and settlements received.", icon: Wallet, tone: "bg-emerald-100 text-emerald-700", ready: true },
   { href: "/admin/customers", title: "Customers", text: "Look up customers and help with accounts.", icon: Users, tone: "bg-slate-200 text-slate-700", ready: false },
 ];

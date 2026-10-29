@@ -10,6 +10,7 @@ import { foodTheme } from "@/lib/catalog/food-theme";
 import { productJsonLdFrom } from "@/lib/catalog/seo";
 import type { Product } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
+import { seasonLabel } from "@/lib/catalog/season";
 import { mapConfig } from "@/lib/maps/config";
 import { CategoryBadge } from "./CategoryBadge";
 import { CategoryImage } from "./CategoryImage";
@@ -30,7 +31,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
   const more = products.filter((p) => p.productId !== product.productId).slice(0, MORE_SHOWN);
   const facts = [
     product.origin && { icon: MapPin, label: "Origin", value: product.origin },
-    product.bestSeason && { icon: CalendarRange, label: "Best season", value: product.bestSeason },
+    seasonLabel(product) && { icon: CalendarRange, label: product.alwaysInSeason ? "Season" : "Best season", value: seasonLabel(product)! },
   ].filter((f) => !!f);
 
   return (
@@ -77,7 +78,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
             {product.shortDescription && <p className="mt-4 break-words text-lg text-ink/80">{product.shortDescription}</p>}
 
             {/* Sizes, and the stores that deliver the chosen size to the shopper (live prices, never cached). */}
-            <StoreOffers productId={product.productId} productName={product.name} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} catalogShelfLife={product.shelfLife} theme={theme} map={mapConfig()} />
+            <StoreOffers productId={product.productId} productName={product.name} imageUrl={product.imageUrl} foodType={product.foodType} href={shopProductPath(category, subcategory, product)} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} catalogShelfLife={product.shelfLife} theme={theme} map={mapConfig()} />
 
             {facts.length > 0 && (
               <dl className="mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">

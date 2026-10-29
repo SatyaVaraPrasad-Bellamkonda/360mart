@@ -1,11 +1,12 @@
-import { ArrowRight, Radius, Scooter, ShoppingCart, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
+import { ArrowRight, Wallet, Radius, Scooter, ShoppingCart, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { HoursCard } from "@/components/seller/HoursCard";
 import { placeText, StatusPill, StoreLogo } from "@/components/stores/StoreParts";
 import { requireRole } from "@/lib/auth/dal";
+import { loadStoreOrders } from "@/lib/orders/data";
 import { loadMyStore } from "@/lib/stores/data";
 import { doneCount, firstOpenStep, isDone, STEPS, type Step } from "@/lib/stores/progress";
 import type { StoreApplication } from "@/lib/stores/types";
@@ -30,6 +31,8 @@ async function SellerDashboard() {
   const user = await requireRole("seller");
   const res = await loadMyStore("/seller");
   const app = res.ok ? res.data : null;
+  // Orders only exist for a live store.
+  const live = app?.store.status === "ACTIVE";
   return (
     <>
       <header className="flex items-center justify-between gap-4">
@@ -54,10 +57,23 @@ async function SellerDashboard() {
         <h2 id="next-title" className="text-lg font-bold text-ink">
           {app?.store.status === "ACTIVE" ? "Run your store" : "After you go live"}
         </h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-          <Tile icon={ReceiptText} title="Orders" text="Accept orders and mark them packed and delivered." />
+        <ul className={`mt-3 grid gap-3 ${live ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
+          <Tile
+            icon={ReceiptText}
+            title="Orders"
+            text="Accept orders and mark them packed and delivered."
+            href={live ? "/seller/orders" : undefined}
+            badge={
+              live && (
+                <Suspense fallback={null}>
+                  <NewOrdersBadge />
+                </Suspense>
+              )
+            }
+          />
           {/* Products can be set up from the moment a store is started (customers see them once it's live). */}
           <Tile icon={Package} title="Products and prices" text="Pick products from the catalogue, set prices and stock." href={app ? "/seller/products" : undefined} />
+          {live && <Tile icon={Wallet} title="Payments & dues" text="Commission on cash orders and settlements with 360mart." href="/seller/ledger" />}
           <Tile icon={ShoppingBag} title="Shop on 360mart" text="Your own shopping account: addresses, profile, orders." href="/account" />
         </ul>
       </section>
@@ -414,7 +430,15 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   );
 }
 
-function Tile({ icon: Icon, title, text, href }: { icon: LucideIcon; title: string; text: string; href?: string }) {
+// New orders waiting for an answer (one call, size 1: only the count is used).
+async function NewOrdersBadge() {
+  const res = await loadStoreOrders("new", 0, "/seller", 1);
+  const count = res.ok ? res.data.totalItems : 0;
+  if (!count) return null;
+  return <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white motion-safe:animate-pop-in">{count} new</span>;
+}
+
+function Tile({ icon: Icon, title, text, href, badge }: { icon: LucideIcon; title: string; text: string; href?: string; badge?: ReactNode }) {
   const body = (
     <>
       <span className="flex size-10 items-center justify-center rounded-2xl bg-surface text-ink ring-1 ring-line">
@@ -424,6 +448,7 @@ function Tile({ icon: Icon, title, text, href }: { icon: LucideIcon; title: stri
         <span className="flex items-center gap-2 font-bold text-ink">
           {title}
           {!href && <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-muted ring-1 ring-line">Soon</span>}
+          {badge}
         </span>
         <span className="mt-0.5 block text-sm text-muted">{text}</span>
       </span>

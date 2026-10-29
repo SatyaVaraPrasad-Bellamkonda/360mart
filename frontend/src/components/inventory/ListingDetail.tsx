@@ -1,6 +1,7 @@
 "use client";
 
 import { ArchiveRestore, CalendarClock, CalendarPlus, Lock, PackageMinus, PackagePlus, Pencil, RotateCcw, Scale, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
@@ -184,7 +185,14 @@ export function ListingDetail({ initial, initialMovements }: { initial: Listing;
               </button>
             ))}
           </div>
-          {listing.tracksBatches && <p className="mt-3 text-xs text-muted">This item tracks expiry: new stock comes in as batches, and changes are made to a batch.</p>}
+          {listing.tracksBatches && (
+            <p className="mt-3 text-xs text-muted">
+              This item tracks expiry: new stock comes in as batches, and changes are made to a batch. Many deliveries at once?{" "}
+              <Link href="/seller/products/batch-sheet" className="font-semibold text-ink underline underline-offset-2">
+                Use the deliveries sheet
+              </Link>
+            </p>
+          )}
         </section>
       </div>
 

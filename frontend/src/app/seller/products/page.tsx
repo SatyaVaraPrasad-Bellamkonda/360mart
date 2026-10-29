@@ -1,4 +1,4 @@
-import { ChevronRight, PackagePlus, PackageSearch, Search, X } from "lucide-react";
+import { CalendarClock, ChevronRight, FileSpreadsheet, PackagePlus, PackageSearch, Search, X } from "lucide-react";
 import type { Metadata } from "next";
 import Form from "next/form";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { LISTING_TABS, type Listing, type ListingTab } from "@/lib/inventory/typ
 
 export const metadata: Metadata = { title: "Products & prices", robots: { index: false, follow: false } };
 
+const SHEET_BUTTON = "flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-ink shadow-sm ring-1 ring-line transition hover:ring-ink";
 const ADD_BUTTON = "flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/85";
 
 // /seller/products?tab=low&q=mango&page=2: one backend call (API 3), filters in the URL.
@@ -22,10 +23,21 @@ export default function SellerProductsPage({ searchParams }: PageProps<"/seller/
           title="Products & prices"
           subtitle="What you sell, at what price, and how many you have."
           action={
-            <Link href="/seller/products/add" className={ADD_BUTTON}>
-              <PackagePlus aria-hidden className="size-4" />
-              Add products
-            </Link>
+            <>
+              {/* The two sheets side by side: prices & stock, and deliveries of items with expiry dates. */}
+              <Link href="/seller/products/price-sheet" className={SHEET_BUTTON}>
+                <FileSpreadsheet aria-hidden className="size-4" />
+                Prices &amp; stock sheet
+              </Link>
+              <Link href="/seller/products/batch-sheet" className={SHEET_BUTTON}>
+                <CalendarClock aria-hidden className="size-4" />
+                Deliveries sheet
+              </Link>
+              <Link href="/seller/products/add" className={ADD_BUTTON}>
+                <PackagePlus aria-hidden className="size-4" />
+                Add products
+              </Link>
+            </>
           }
         />
         <Suspense fallback={<ListSkeleton />}>
