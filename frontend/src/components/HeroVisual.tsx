@@ -1,12 +1,14 @@
 import Image from "next/image";
 
-// Floating labels around the cart. Positions are % of the square visual.
-const CHIPS = [
-  { text: "Fresh & Fast", className: "left-[0%] top-[24%]", delay: "0s" },
-  { text: "Everything you need", className: "right-[0%] top-[8%]", delay: "1.2s" },
-  { text: "Quick delivery", className: "right-[-2%] top-[44%]", delay: "2.4s" },
-  { text: "Your local favourites", className: "right-[2%] bottom-[18%]", delay: "0.6s" },
+// Where the floating labels sit around the cart (% of the square visual), in
+// the order the admin lists them; the texts come from the home page design.
+const CHIP_SPOTS = [
+  { className: "left-[0%] top-[24%]", delay: "0s" },
+  { className: "right-[0%] top-[8%]", delay: "1.2s" },
+  { className: "right-[-2%] top-[44%]", delay: "2.4s" },
+  { className: "right-[2%] bottom-[18%]", delay: "0.6s" },
 ];
+const STANDARD_LABELS = ["Fresh & Fast", "Everything you need", "Quick delivery", "Your local favourites"];
 
 // Speed streaks behind the cart: vertical position, length, thickness,
 // colour, speed and start offset, so they don't move in lockstep.
@@ -31,7 +33,7 @@ const SPARKLES = [
 // Home page hero art: the 360mart cart inside a soft glow with orbit rings,
 // sparkles and floating labels. Labels are decorative, so screen readers
 // only get the image description.
-export function HeroVisual() {
+export function HeroVisual({ labels = STANDARD_LABELS, alt = "Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores" }: { labels?: string[]; alt?: string }) {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-xs sm:max-w-lg">
       <div aria-hidden className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(187,247,208,0.9),rgba(254,243,199,0.7)_45%,rgba(253,230,138,0.25)_62%,transparent_72%)] blur-md" />
@@ -56,7 +58,7 @@ export function HeroVisual() {
           <div className="absolute inset-0 origin-bottom motion-safe:animate-cart-rumble">
             <Image
               src="/hero-cart.png"
-              alt="Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores"
+              alt={alt}
               fill
               preload
               sizes="(min-width: 640px) 512px, 320px"
@@ -72,14 +74,14 @@ export function HeroVisual() {
         </span>
       ))}
 
-      {CHIPS.map((chip) => (
+      {labels.slice(0, CHIP_SPOTS.length).map((text, i) => (
         <span
-          key={chip.text}
+          key={i}
           aria-hidden
-          style={{ animationDelay: chip.delay }}
-          className={`absolute whitespace-nowrap rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-ink shadow-md ring-1 ring-line backdrop-blur sm:text-xs motion-safe:animate-float ${chip.className}`}
+          style={{ animationDelay: CHIP_SPOTS[i].delay }}
+          className={`absolute max-w-[60%] truncate whitespace-nowrap rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-ink shadow-md ring-1 ring-line backdrop-blur sm:text-xs motion-safe:animate-float ${CHIP_SPOTS[i].className}`}
         >
-          {chip.text}
+          {text}
         </span>
       ))}
     </div>

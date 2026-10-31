@@ -35,9 +35,10 @@ export const RESERVED_SLUGS = new Set([
   "stores", "vendor",
 ]);
 
-// Categories that have their own designed page (a folder in src/app, e.g. app/fruits).
-// Every other category uses the shared page in app/[category].
-export const CUSTOM_CATEGORY_PAGES = new Set(["fruits"]);
+// Categories that have their own hand-made page (a folder in src/app named after the slug).
+// Every other category uses the shared, editor-designed page in app/[category]. Empty
+// now: the old Fruits design lives at /fruits-old and /fruits is the shared page.
+export const CUSTOM_CATEGORY_PAGES = new Set<string>();
 
 /** Same as the backend's SlugUtil: "Fruits & Veggies" → "fruits-and-veggies"; null when nothing usable is left. */
 export function slugFromName(name: string, maxLength: number = CATEGORY_LIMITS.slug): string | null {
@@ -185,4 +186,10 @@ export function parseCategoryId(value: unknown): number | null {
 /** Shop URL of a category: /fresh-fruits, or /fresh-fruits/apples for a subcategory. */
 export function categoryPath(category: Pick<Category, "slug">, parent?: Pick<Category, "slug"> | null): string {
   return parent ? `/${parent.slug}/${category.slug}` : `/${category.slug}`;
+}
+
+/** The shop link of a category of either level; a subcategory finds its parent's slug in `parents` (the top-level list). */
+export function categoryHref(c: Pick<Category, "slug" | "parentCategoryId">, parents: Pick<Category, "categoryId" | "slug">[]): string {
+  const parent = c.parentCategoryId == null ? null : parents.find((p) => p.categoryId === c.parentCategoryId);
+  return categoryPath(c, parent ?? null);
 }

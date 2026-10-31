@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CircleDot, ExternalLink, Eye, History, LoaderCircle, Monitor, RotateCcw, Smartphone, Undo2, UploadCloud } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHero, type HeroContent, type HeroStat } from "@/components/category-page/PageHero";
 import { Dialog } from "@/components/Dialog";
@@ -9,10 +9,11 @@ import { toastError, toastSuccess } from "@/components/Toaster";
 import { BACKEND_ACCEPTS_CUSTOM_COLOUR, colourLabel, colourSwatch, contrastWithWhite, HEX_COLOUR, MIN_CONTRAST, PAGE_THEMES, pageTheme, readableShade, themeColour, themeStyle } from "@/lib/catalog/food-theme";
 import type { PageTheme } from "@/lib/catalog/types";
 import { discardDraftAction, historyAction, loadAdminPageAction, publishAction, restoreAction, saveDraftAction, uploadPageImageAction } from "@/lib/category-page/actions";
-import type { AdminCategoryPage, CategoryPage, HeroDoc, PageDocument, PageHistoryItem, PageImagePurpose, PageSection, PageStat } from "@/lib/category-page/types";
+import { heroDisplay, type AdminCategoryPage, type CategoryPage, type HeroDisplay, type HeroDoc, type PageDocument, type PageHistoryItem, type PageImagePurpose, type PageSection, type PageStat } from "@/lib/category-page/types";
 import { cleanDocument, pageErrors, sameDocument, toEditable, type PageErrors } from "@/lib/category-page/validation";
 import { dateTimeText } from "@/lib/stores/validation";
 import { HeroFields } from "./HeroFields";
+import { ActionButton, HistoryDialog, Panel, PreviewDialog } from "./shell";
 import { defaultTitle, SectionsEditor } from "./SectionsEditor";
 
 type CategoryInfo = { categoryId: number; name: string; slug: string; description: string | null; imageUrl: string | null; badgeLabel: string | null };
@@ -35,7 +36,8 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
   const [images, setImages] = useState(initial.images);
   const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<PageErrors>({});
-  const [uploading, setUploading] = useState<PageImagePurpose | null>(null);
+  /** The picture slot being uploaded: "HERO", "HERO_MOBILE", "banner:<sectionId>", "banner-mobile:<sectionId>". */
+  const [uploading, setUploading] = useState<string | null>(null);
   const [busy, setBusy] = useState<"save" | "publish" | "preview" | "discard" | "load" | null>(null);
   const [, startTransition] = useTransition();
   const [conflict, setConflict] = useState(false);
@@ -183,8 +185,9 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
       if (next !== null) toastSuccess("Your changes are saved over the latest version.");
     });
 
-  function upload(purpose: PageImagePurpose, file: File) {
-    setUploading(purpose);
+  /** Uploads a picture, then `apply` puts its id where it belongs (read from the latest state, the upload takes a while). */
+  function upload(purpose: PageImagePurpose, slot: string, file: File, apply: (imageId: string) => void) {
+    setUploading(slot);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = typeof reader.result === "string" ? reader.result : null;
@@ -198,7 +201,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
         const imageId = res.data.imageId;
         if (dataUrl) setLocalUrls((m) => ({ ...m, [imageId]: dataUrl }));
         setImages((list) => [{ imageId, url: dataUrl ?? "", purpose }, ...list]);
-        setHero(purpose === "HERO_MOBILE" ? { mobileImageId: imageId } : { imageId });
+        apply(imageId);
         toastSuccess("Picture uploaded. Save the draft to keep it on the page.");
       });
     };
@@ -208,6 +211,26 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
     };
     reader.readAsDataURL(file);
   }
+
+  const uploadHero = (slot: "HERO" | "HERO_MOBILE", file: File) => upload(slot, slot, file, (imageId) => setHero(slot === "HERO_MOBILE" ? { mobileImageId: imageId } : { imageId }));
+  const uploadBanner = (sectionId: string, mobile: boolean, file: File) =>
+    upload("BANNER", `${mobile ? "banner-mobile" : "banner"}:${sectionId}`, file, (imageId) => {
+      const field = mobile ? "mobileImageId" : "imageId";
+      setDoc((d) => ({ ...d, sections: d.sections.map((x) => (x.id === sectionId && x.type === "PROMO_BANNER" ? { ...x, [field]: imageId } : x)) }));
+      const at = doc.sections.findIndex((x) => x.id === sectionId);
+      setErrors((e) => {
+        const rest = { ...e };
+        delete rest[`sections[${at}].${field}`];
+        return rest;
+      });
+    });
+
+  // Where an offer banner can send shoppers: this category's own pages.
+  const top = parent ? { name: parent.name, slug: parent.slug } : { name: category.name, slug: category.slug };
+  const links = [
+    { label: top.name, path: `/${top.slug}` },
+    ...(live?.subcategories ?? []).map((sub) => ({ label: sub.name, path: `/${top.slug}/${sub.slug}` })),
+  ].slice(0, 12);
 
   const counts: Partial<Record<PageStat, number>> | null = live
     ? { PRODUCTS: live.summary.productCount, TYPES: live.summary.subcategoryCount, IN_SEASON: live.summary.inSeasonCount }
@@ -288,11 +311,20 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
               images={images}
               urlOf={urlOf}
               uploading={uploading}
-              onUpload={upload}
+              onUpload={uploadHero}
             />
           </Panel>
           <Panel title="Sections" text="Shown under the banner in this order. Switch one off to hide it without losing its settings.">
-            <SectionsEditor sections={doc.sections} onChange={setSections} errors={errors} isSubcategory={isSub} categoryName={category.name} railCounts={railCounts} />
+            <SectionsEditor
+              sections={doc.sections}
+              onChange={setSections}
+              errors={errors}
+              isSubcategory={isSub}
+              categoryName={category.name}
+              railCounts={railCounts}
+              pictures={{ gallery: images.map((img) => ({ imageId: img.imageId, url: urlOf(img.imageId) ?? img.url })), urlOf, uploading, onUpload: uploadBanner }}
+              links={links}
+            />
           </Panel>
         </div>
 
@@ -301,6 +333,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
             theme={theme}
             customColour={isSub ? (live?.customColour ?? null) : (doc.customColour ?? null)}
             hero={heroContent(doc.hero, category, urlOf)}
+            display={{ ...heroDisplay(doc.hero), ...(isSub ? { size: "COMPACT" as const } : {}) }}
             stats={statsFor(doc.hero.stats ?? [], counts, isSub)}
             parent={parent}
             sections={doc.sections}
@@ -354,7 +387,14 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
       <HistoryDialog
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        categoryId={id}
+        load={(page) => historyAction(id, page)}
+        swatch={(h: PageHistoryItem) =>
+          h.customColour ? (
+            <span className="size-3 rounded-full" style={{ background: h.customColour }} title={`Custom ${h.customColour.toUpperCase()}`} />
+          ) : (
+            <span className={`size-3 rounded-full ${colourSwatch(h.theme)}`} title={colourLabel(h.theme)} />
+          )
+        }
         liveVersion={meta.publishedVersion}
         hasDraftChanges={dirty || unpublished}
         onPreview={(v) => preview(v)}
@@ -397,18 +437,6 @@ function statsFor(stats: PageStat[], counts: Partial<Record<PageStat, number>> |
     .filter((s) => label[s] && !(s === "TYPES" && isSub))
     .map((s) => ({ label: label[s]!, value: counts?.[s] ?? 0 }))
     .filter((s) => s.value > 0);
-}
-
-function Panel({ title, text, children }: { title: string; text: string; children: ReactNode }) {
-  return (
-    <section className="space-y-4 rounded-3xl border border-line bg-white p-4 sm:p-6">
-      <div>
-        <h2 className="font-bold text-ink">{title}</h2>
-        <p className="text-sm text-muted">{text}</p>
-      </div>
-      {children}
-    </section>
-  );
 }
 
 // Colour swatches with their names, plus "Custom" for any colour (checked for
@@ -531,27 +559,6 @@ function ThemePicker({ value, custom, error, onPreset, onCustom }: { value: Page
   );
 }
 
-function ActionButton({ onClick, busy, disabled, icon, label, shortLabel, primary }: { onClick: () => void; busy: boolean; disabled: boolean; icon: ReactNode; label: string; shortLabel?: string; primary?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5 ${primary ? "bg-ink text-white hover:bg-ink/85" : "bg-white text-ink ring-1 ring-line hover:ring-ink"}`}
-    >
-      {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : icon}
-      {shortLabel ? (
-        <>
-          <span className="whitespace-nowrap sm:hidden">{shortLabel}</span>
-          <span className="hidden whitespace-nowrap sm:inline">{label}</span>
-        </>
-      ) : (
-        <span className="whitespace-nowrap">{label}</span>
-      )}
-    </button>
-  );
-}
-
 // ---- live preview ----
 
 const DESKTOP_WIDTH = 1120;
@@ -570,6 +577,7 @@ function LivePreview({
   theme,
   customColour,
   hero,
+  display,
   stats,
   parent,
   sections,
@@ -581,6 +589,7 @@ function LivePreview({
   theme: PageTheme;
   customColour: string | null;
   hero: HeroContent;
+  display: HeroDisplay;
   stats: HeroStat[];
   parent: { name: string; slug: string } | null;
   sections: PageSection[];
@@ -601,7 +610,8 @@ function LivePreview({
   }, [isWide]);
 
   const th = useMemo(() => pageTheme(theme, customColour), [theme, customColour]);
-  const banner = <PageHero hero={hero} theme={th} stats={stats} parent={parent ? { name: parent.name, href: "#" } : null} compact={!!parent} />;
+  // Keyed by the look, so choosing another layout or animation plays it again.
+  const banner = <PageHero key={`${display.layout}-${display.animation}-${display.size}-${display.enabled}`} hero={hero} display={display} theme={th} stats={stats} parent={parent ? { name: parent.name, href: "#" } : null} />;
 
   return (
     <div className="space-y-3 rounded-3xl bg-surface p-3 ring-1 ring-line sm:p-4">
@@ -620,7 +630,7 @@ function LivePreview({
       </div>
       <ol className="space-y-1.5">
         {sections.map((s) => {
-          const items = s.type === "PRODUCT_RAIL" ? live?.rails[s.id]?.length : s.type === "SUBCATEGORIES" ? live?.subcategories.length : live?.summary.productCount;
+          const items = s.type === "PRODUCT_RAIL" ? live?.rails[s.id]?.length : s.type === "SUBCATEGORIES" ? live?.subcategories.length : s.type === "PRODUCT_GRID" ? live?.summary.productCount : undefined;
           const off = s.enabled === false;
           return (
             <li key={s.id} className={`flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-line ${off ? "opacity-50" : ""}`}>
@@ -635,144 +645,3 @@ function LivePreview({
   );
 }
 
-// ---- full preview (the real page in a frame) ----
-
-function PreviewDialog({ src, onClose }: { src: string | null; onClose: () => void }) {
-  const [device, setDevice] = useState<"phone" | "desktop">("phone");
-  return (
-    <Dialog open={!!src} onClose={onClose} title="Page preview" description="The real page built from your draft. Shoppers don't see it until you publish." size="wide">
-      <div className="space-y-3 pb-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div role="group" aria-label="Screen size" className="inline-flex gap-1 rounded-2xl bg-surface p-1 ring-1 ring-line">
-            {(["phone", "desktop"] as const).map((d) => (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={device === d}
-                onClick={() => setDevice(d)}
-                className="flex min-h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-muted aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-sm"
-              >
-                {d === "phone" ? <Smartphone aria-hidden className="size-4" /> : <Monitor aria-hidden className="size-4" />}
-                {d === "phone" ? "Phone" : "Desktop"}
-              </button>
-            ))}
-          </div>
-          {src && (
-            <a href={src} target="_blank" rel="noopener" className="flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
-              <ExternalLink aria-hidden className="size-4" />
-              Open in a new tab
-            </a>
-          )}
-        </div>
-        {src && (
-          <div className="flex justify-center overflow-hidden rounded-2xl bg-surface p-2 ring-1 ring-line">
-            <iframe key={src} title="Page preview" src={src} className={`h-[70dvh] rounded-xl bg-white ring-1 ring-line ${device === "phone" ? "w-[390px] max-w-full" : "w-full"}`} />
-          </div>
-        )}
-      </div>
-    </Dialog>
-  );
-}
-
-// ---- published versions ----
-
-function HistoryDialog({
-  open,
-  onClose,
-  categoryId,
-  liveVersion,
-  hasDraftChanges,
-  onPreview,
-  onRestore,
-  onError,
-}: {
-  open: boolean;
-  onClose: () => void;
-  categoryId: number;
-  liveVersion: number | null;
-  hasDraftChanges: boolean;
-  onPreview: (version: number) => void;
-  onRestore: (fromVersion: number) => Promise<void>;
-  onError: (error: Error) => void;
-}) {
-  const [items, setItems] = useState<PageHistoryItem[] | null>(null);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, startLoading] = useTransition();
-  const [restoring, setRestoring] = useState<number | null>(null);
-  const [asked, setAsked] = useState<number | null>(null);
-
-  function load(next: number) {
-    startLoading(async () => {
-      const res = await historyAction(categoryId, next);
-      if (!res.ok) return onError(res.error);
-      setItems((now) => (next === 0 ? res.data.items : [...(now ?? []), ...res.data.items]));
-      if (next === 0) setAsked(null);
-      setPage(next);
-      setHasMore(next + 1 < res.data.totalPages);
-    });
-  }
-
-  // Opening the dialog loads the first page (fresh every time: publishes add versions).
-  useEffect(() => {
-    if (open) load(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when it opens
-  }, [open]);
-
-  return (
-    <Dialog open={open} onClose={onClose} title="Published versions" description="Preview an older design, or bring it back into the draft.">
-      <div className="space-y-3 pb-5">
-        {(items === null || (loading && page === 0)) && <p className="py-6 text-center text-sm text-muted">Loading…</p>}
-        {items?.length === 0 && <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">Nothing published yet. Each publish adds a version here.</p>}
-        <ul className="space-y-2">
-          {items?.map((h) => (
-            <li key={h.version} className="rounded-2xl bg-white p-3 ring-1 ring-line">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
-                    Version {h.version}
-                    {h.version === liveVersion && <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-800 ring-1 ring-green-200">Live</span>}
-                    {h.customColour ? (
-                      <span className="size-3 rounded-full" style={{ background: h.customColour }} title={`Custom ${h.customColour.toUpperCase()}`} />
-                    ) : (
-                      <span className={`size-3 rounded-full ${colourSwatch(h.theme)}`} title={colourLabel(h.theme)} />
-                    )}
-                  </p>
-                  <p className="text-xs text-muted">Published {dateTimeText(h.publishedAt)}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => onPreview(h.version)} className="flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
-                    <Eye aria-hidden className="size-4" />
-                    Preview
-                  </button>
-                  {h.version !== liveVersion && (
-                    <button
-                      type="button"
-                      disabled={restoring !== null}
-                      onClick={async () => {
-                        if (hasDraftChanges && asked !== h.version) return setAsked(h.version);
-                        setRestoring(h.version);
-                        await onRestore(h.version);
-                        setRestoring(null);
-                      }}
-                      className="flex min-h-10 items-center gap-1.5 rounded-full bg-ink px-3 text-sm font-semibold text-white hover:bg-ink/85 disabled:opacity-60"
-                    >
-                      {restoring === h.version ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <RotateCcw aria-hidden className="size-4" />}
-                      {asked === h.version ? "Yes, replace my draft" : "Restore"}
-                    </button>
-                  )}
-                </div>
-              </div>
-              {asked === h.version && <p className="mt-2 text-sm text-amber-800">Your current draft will be replaced by version {h.version}. Tap again to confirm.</p>}
-            </li>
-          ))}
-        </ul>
-        {hasMore && (
-          <button type="button" onClick={() => load(page + 1)} disabled={loading} className="flex min-h-11 w-full items-center justify-center rounded-full text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink disabled:opacity-60">
-            {loading ? "Loading…" : "Show older versions"}
-          </button>
-        )}
-      </div>
-    </Dialog>
-  );
-}

@@ -3,16 +3,17 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
-import { ShopProductCard } from "@/components/catalog/ShopProductCard";
 import { ComingSoonProducts } from "@/components/catalog/ShopStates";
 import { JsonLd } from "@/components/JsonLd";
 import { SectionHeading } from "@/components/SectionHeading";
 import { pageTheme, themeStyle, type FoodTheme } from "@/lib/catalog/food-theme";
-import { categoryListJsonLd } from "@/lib/catalog/seo";
+import { categoryListJsonLd, faqJsonLd } from "@/lib/catalog/seo";
 import type { Category } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
-import type { CategoryPage, PageSection, ProductCard } from "@/lib/category-page/types";
+import { heroDisplay, revealOf, type CategoryPage, type PageSection, type RevealAnimation } from "@/lib/category-page/types";
+import { FaqBlock, PromoBanner, TextBlock, TrustStrip } from "./ContentBlocks";
 import { PageHero, type HeroStat } from "./PageHero";
+import { ProductRow } from "./ProductRow";
 import { ProductGridBlock } from "./ProductGridBlock";
 
 // A whole category page from the one API response: hero, then the admin's
@@ -26,6 +27,9 @@ export function CategoryPageView({ data, preview }: { data: CategoryPage; previe
   const stats = heroStats(data);
   const sections = page.sections.filter((s) => s.enabled !== false && rendersSomething(s, data));
   const products = data.products?.items ?? [];
+  // Subcategory pages keep the compact banner, so their products come into view sooner.
+  const display = { ...heroDisplay(page.hero), ...(isSub ? { size: "COMPACT" as const } : {}) };
+  const faq = sections.find((s) => s.type === "FAQ");
 
   return (
     <div style={themeStyle(data.customColour)} className={`mx-auto max-w-6xl space-y-10 px-4 py-5 sm:space-y-14 sm:py-6 ${preview ? "[&_a]:pointer-events-none" : ""}`}>
@@ -33,10 +37,11 @@ export function CategoryPageView({ data, preview }: { data: CategoryPage; previe
         (isSub
           ? products.length > 0 && <JsonLd data={categoryListJsonLd(category.name, products.map((p) => ({ name: p.name, path: `${path}/${p.slug}` })))} />
           : subcategories.length > 0 && <JsonLd data={categoryListJsonLd(category.name, subcategories.map((s) => ({ name: s.name, path: categoryPath(s, category) })))} />)}
+      {!preview && faq?.type === "FAQ" && <JsonLd data={faqJsonLd(faq.items)} />}
 
       <div className="space-y-4">
         <Breadcrumbs items={isSub ? [{ name: parent.name, href: categoryPath(parent) }, { name: category.name, href: path }] : [{ name: category.name, href: path }]} />
-        <PageHero hero={page.hero} theme={theme} stats={stats} parent={isSub ? { name: parent.name, href: categoryPath(parent) } : null} compact={isSub} />
+        <PageHero hero={page.hero} display={display} theme={theme} stats={stats} parent={isSub ? { name: parent.name, href: categoryPath(parent) } : null} />
         {isSub && subcategories.length > 1 && <SiblingChips parent={parent} siblings={subcategories} current={category.categoryId} theme={theme} />}
       </div>
 
@@ -70,17 +75,49 @@ function rendersSomething(s: PageSection, data: CategoryPage): boolean {
   if (s.type === "SUBCATEGORIES") return !data.parent && data.subcategories.length > 0;
   if (s.type === "PRODUCT_RAIL") return (data.rails[s.id]?.length ?? 0) > 0;
   if (s.type === "PRODUCT_GRID") return !!data.parent;
+  if (s.type === "PROMO_BANNER") return !!s.headline?.trim();
+  if (s.type === "TEXT_BLOCK") return !!s.body?.trim();
+  if (s.type === "TRUST_STRIP") return (s.points?.length ?? 0) > 0;
+  if (s.type === "FAQ") return (s.items?.length ?? 0) > 0;
   return false; // a type this site doesn't know yet
 }
+
+// Scroll-in effect the admin chose; CSS only (globals.css), off with reduced motion or in older browsers.
+const REVEAL: Record<RevealAnimation, string> = { NONE: "", FADE: "reveal-fade", RISE: "reveal" };
 
 function Section({ section: s, data, theme, path, preview }: { section: PageSection; data: CategoryPage; theme: FoodTheme; path: string; preview?: boolean }) {
   const { category } = data;
   const id = `section-${s.id}`;
+  const reveal = REVEAL[revealOf(s)];
+  if (s.type === "PROMO_BANNER")
+    return (
+      <section aria-labelledby={id} className={reveal}>
+        <PromoBanner section={s} image={data.sectionImages?.[s.id] ?? null} id={id} />
+      </section>
+    );
+  if (s.type === "TEXT_BLOCK")
+    return (
+      <section aria-labelledby={id} className={reveal}>
+        <TextBlock section={s} theme={theme} id={id} />
+      </section>
+    );
+  if (s.type === "TRUST_STRIP")
+    return (
+      <section aria-labelledby={id} className={reveal}>
+        <TrustStrip section={s} theme={theme} id={id} />
+      </section>
+    );
+  if (s.type === "FAQ")
+    return (
+      <section aria-labelledby={id} className={reveal}>
+        <FaqBlock section={s} theme={theme} id={id} />
+      </section>
+    );
   if (s.type === "SUBCATEGORIES") {
     const title = s.title || "Shop by type";
     const subtitle = s.subtitle || "Pick a type to see what local stores offer";
     return (
-      <section aria-labelledby={id} className="reveal">
+      <section aria-labelledby={id} className={reveal}>
         <SectionHeading id={id} title={title} subtitle={subtitle} />
         {s.layout === "CHIPS" ? (
           <ul className="flex flex-wrap gap-2 sm:gap-3">
@@ -114,7 +151,7 @@ function Section({ section: s, data, theme, path, preview }: { section: PageSect
     const items = data.rails[s.id] ?? [];
     const title = s.title || (s.source === "IN_SEASON" ? "In season now" : "Featured picks");
     return (
-      <section aria-labelledby={id} className="reveal">
+      <section aria-labelledby={id} className={reveal}>
         <SectionHeading id={id} title={title} subtitle={s.subtitle || undefined} />
         <ProductRow items={items} />
       </section>
@@ -123,7 +160,7 @@ function Section({ section: s, data, theme, path, preview }: { section: PageSect
   if (s.type === "PRODUCT_GRID" && data.parent) {
     const first = data.products ?? { items: [], page: 0, size: 24, totalItems: 0, totalPages: 0 };
     return (
-      <section aria-labelledby={id}>
+      <section aria-labelledby={id} className={reveal}>
         <h2 id={id} className="sr-only">
           {s.title || `All ${category.name}`}
         </h2>
@@ -137,19 +174,6 @@ function Section({ section: s, data, theme, path, preview }: { section: PageSect
     );
   }
   return null;
-}
-
-// A swipeable row on phones, four across on large screens.
-function ProductRow({ items }: { items: ProductCard[] }) {
-  return (
-    <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-      {items.map((p) => (
-        <li key={p.productId} className="w-[46%] shrink-0 snap-start sm:w-[31%] lg:w-auto">
-          <ShopProductCard product={p} href={`/${p.categorySlug}/${p.subcategorySlug}/${p.slug}`} />
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 // Jump between subcategories of the same category; the current one is marked.

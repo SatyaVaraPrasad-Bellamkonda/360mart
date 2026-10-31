@@ -1,24 +1,22 @@
-import { ArrowRight, Bike, Leaf, Store } from "lucide-react";
+import { Store } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { CategoryCard, CategoryCardSkeleton } from "@/components/CategoryCard";
-import { HeroVisual } from "@/components/HeroVisual";
+import { HomeHero } from "@/components/home/HomeHero";
+import { HomeView } from "@/components/home/HomeView";
 import { JsonLd } from "@/components/JsonLd";
-import { getShopCategoriesNow } from "@/lib/catalog/data";
+import { SectionHeading } from "@/components/SectionHeading";
+import { getHomePageNow, getShopCategoriesNow } from "@/lib/catalog/data";
 import { categoryListJsonLd } from "@/lib/catalog/seo";
+import type { Category } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
+import { HOME_DEFAULTS, STANDARD_FLOATING_LABELS, type HomeHeroView } from "@/lib/home-page/types";
+import { indiaMinutes } from "@/lib/home-page/validation";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
-
-const HIGHLIGHTS = [
-  { icon: Store, title: "Local stores", text: "Buy from trusted shops in your own neighbourhood." },
-  { icon: Leaf, title: "Fresh and genuine", text: "Products come from nearby sellers, not distant warehouses." },
-  { icon: Bike, title: "Quick delivery", text: "Short distances mean your order reaches you faster." },
-];
 
 const homeJsonLd = {
   "@context": "https://schema.org",
@@ -37,117 +35,100 @@ const homeJsonLd = {
       url: SITE.url,
       inLanguage: "en-IN",
       publisher: { "@id": `${SITE.url}/#organization` },
+      // The site search box in Google results.
+      potentialAction: { "@type": "SearchAction", target: { "@type": "EntryPoint", urlTemplate: `${SITE.url}/search?q={search_term_string}` }, "query-input": "required name=search_term_string" },
     },
   ],
 };
 
+/** The standard hero: shown while the page loads and when the design can't be loaded. */
+const STANDARD_HERO: HomeHeroView = {
+  headline: HOME_DEFAULTS.headline,
+  accentLine: HOME_DEFAULTS.accentLine,
+  intro: HOME_DEFAULTS.intro,
+  badge: HOME_DEFAULTS.badge,
+  buttonLabel: HOME_DEFAULTS.buttonLabel,
+  buttonLink: HOME_DEFAULTS.buttonLink,
+  visual: "CART_ANIMATION",
+  imageId: null,
+  imageUrl: null,
+  mobileImageId: null,
+  mobileImageUrl: null,
+  imageAlt: null,
+  floatingLabels: STANDARD_FLOATING_LABELS,
+  enabled: true,
+  layout: "IMAGE_RIGHT",
+  size: "LARGE",
+  showBadge: true,
+  animation: "NONE",
+};
+
+// The home page as the admin designed it (/admin/home), from one cached call.
 export default function HomePage() {
   return (
     <>
       <JsonLd data={homeJsonLd} />
-
-      <section className="overflow-hidden bg-gradient-to-b from-[#fdf1dc] via-[#fdf8f0] to-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
-          <div>
-            <p className="mb-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-deep ring-1 ring-brand/30">
-              Your neighbourhood, online
-            </p>
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-ink sm:text-5xl">
-              Your local stores, <span className="text-brand-deep">delivered to your door</span>
-            </h1>
-            <p className="mt-4 max-w-md text-lg text-muted">
-              360mart brings the shops around you online. Fresh fruits, meat and fish, groceries and fashion from sellers you can trust.
-            </p>
-            <a
-              href="#categories"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-white shadow-lg shadow-ink/25 hover:bg-ink/85"
-            >
-              Start shopping →
-            </a>
-          </div>
-
-          <HeroVisual />
-        </div>
-      </section>
-
-      <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-6xl scroll-mt-32 px-4 py-12 md:scroll-mt-20">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="categories-heading" className="text-2xl font-bold text-ink">
-            Shop by category
-          </h2>
-          <Link href="/categories" className="-my-2 flex min-h-10 shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep hover:underline">
-            All categories <ArrowRight aria-hidden className="size-4" />
-          </Link>
-        </div>
-        <Suspense fallback={<CategoryGridSkeleton />}>
-          <HomeCategories />
-        </Suspense>
-      </section>
-
-
-      <section aria-labelledby="why-heading" className="bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-12">
-          <h2 id="why-heading" className="text-2xl font-bold text-ink">
-            Why shop on 360mart?
-          </h2>
-          <ul className="mt-6 grid gap-5 sm:grid-cols-3">
-            {HIGHLIGHTS.map((item) => (
-              <li key={item.title} className="rounded-2xl bg-white p-6 ring-1 ring-line">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand-deep">
-                  <item.icon aria-hidden className="size-5" />
-                </span>
-                <h3 className="mt-3 font-bold text-ink">{item.title}</h3>
-                <p className="mt-1 text-sm text-muted">{item.text}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <Suspense fallback={<HomeSkeleton />}>
+        <DesignedHome />
+      </Suspense>
     </>
   );
 }
 
-// The categories come only from the backend (GET /categories), in the order the
-// admin set. A category with its own designed folder (fruits) links there.
-async function HomeCategories() {
-  const loaded = await getShopCategoriesNow();
-  if (!loaded.ok) {
-    return (
-      <p role="alert" className="mt-6 rounded-2xl bg-surface px-5 py-6 text-sm text-muted ring-1 ring-line">
-        We couldn&apos;t load the categories right now. Please refresh the page in a moment.
-      </p>
-    );
-  }
-  const categories = loaded.data;
-  if (!categories.length) {
-    return (
-      <div className="mt-6 flex flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
-        <Store aria-hidden className="size-8 text-brand-deep" />
-        <p className="mt-3 font-bold text-ink">Categories are on their way</p>
-        <p className="mt-1 max-w-sm text-sm text-muted">Local stores are getting ready. Check back soon.</p>
-      </div>
-    );
-  }
+async function DesignedHome() {
+  const [page, categories] = await Promise.all([getHomePageNow(), getShopCategoriesNow()]);
+  if (!page.ok) return <StandardHome categories={categories.ok ? categories.data : null} />;
+  // Read after the data (the request has started), so this is the time of this visit.
+  const minute = indiaMinutes(new Date());
+  return <HomeView data={page.data} minute={minute} parents={categories.ok ? categories.data : []} />;
+}
+
+/** The design couldn't be loaded: the standard hero and every category, so shoppers can still start. */
+function StandardHome({ categories }: { categories: Category[] | null }) {
   return (
     <>
-      <JsonLd data={categoryListJsonLd("Shop by category", categories.map((c) => ({ name: c.name, path: categoryPath(c) })))} />
-      <ul className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-        {categories.map((category, i) => (
-          <li key={category.categoryId}>
-            <CategoryCard category={category} priority={i < 2} />
-          </li>
-        ))}
-      </ul>
+      <HomeHero hero={STANDARD_HERO} />
+      <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-6xl scroll-mt-32 px-4 py-12 md:scroll-mt-24">
+        <SectionHeading id="categories-heading" title="Shop by category" />
+        {!categories ? (
+          <p role="alert" className="rounded-2xl bg-surface px-5 py-6 text-sm text-muted ring-1 ring-line">
+            We couldn&apos;t load the categories right now. Please refresh the page in a moment.
+          </p>
+        ) : categories.length === 0 ? (
+          <div className="flex flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+            <Store aria-hidden className="size-8 text-brand-deep" />
+            <p className="mt-3 font-bold text-ink">Categories are on their way</p>
+            <p className="mt-1 max-w-sm text-sm text-muted">Local stores are getting ready. Check back soon.</p>
+          </div>
+        ) : (
+          <>
+            <JsonLd data={categoryListJsonLd("Shop by category", categories.map((c) => ({ name: c.name, path: categoryPath(c) })))} />
+            <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+              {categories.map((category, i) => (
+                <li key={category.categoryId}>
+                  <CategoryCard category={category} priority={i < 2} />
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
     </>
   );
 }
 
-function CategoryGridSkeleton() {
+function HomeSkeleton() {
   return (
-    <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-      {Array.from({ length: 4 }, (_, i) => (
-        <CategoryCardSkeleton key={i} />
-      ))}
-    </div>
+    <>
+      <HomeHero hero={STANDARD_HERO} />
+      <div aria-hidden className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mb-6 h-7 w-48 animate-pulse rounded-lg bg-surface" />
+        <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <CategoryCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

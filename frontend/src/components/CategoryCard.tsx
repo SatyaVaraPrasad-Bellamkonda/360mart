@@ -10,10 +10,10 @@ import { CategoryImage } from "./catalog/CategoryImage";
 // Home page card for a top-level category from the backend: picture (uploaded,
 // else our photo for that slug, else a placeholder), the admin's badge, name and
 // description. The link goes to its designed page (app/fruits) or the shared one.
-export function CategoryCard({ category, priority }: { category: Category; priority?: boolean }) {
+export function CategoryCard({ category, priority, href }: { category: Category; priority?: boolean; href?: string }) {
   return (
     <Link
-      href={categoryPath(category)}
+      href={href ?? categoryPath(category)}
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-surface">

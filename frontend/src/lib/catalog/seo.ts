@@ -40,6 +40,15 @@ export function categoryListJsonLd(name: string, items: { name: string; path: st
   };
 }
 
+/** schema.org FAQPage of a page's questions (answers as plain text, without the formatting marks). */
+export function faqJsonLd(items: { question: string; answer: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((q) => ({ "@type": "Question", name: q.question, acceptedAnswer: { "@type": "Answer", text: richTextToPlain(q.answer) } })),
+  };
+}
+
 /** Metadata of a category or subcategory page from the page API (null = not found: keep it out of Google). */
 export function categoryPageMetadata(data: CategoryPage | null): Metadata {
   if (!data) return { robots: { index: false, follow: true } };

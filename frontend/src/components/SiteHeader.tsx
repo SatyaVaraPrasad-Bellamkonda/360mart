@@ -3,6 +3,7 @@ import { AccountLink, AccountLinkFallback } from "./auth/AccountLink";
 import { CartLink, CartLinkFallback } from "./cart/CartLink";
 import { DesktopCategoryNav, DesktopCategoryNavFallback, PhoneCategoryStrip, PhoneCategoryStripFallback } from "./HeaderCategories";
 import { Logo } from "./Logo";
+import { SearchLauncher } from "./search/SearchLauncher";
 
 export function SiteHeader() {
   return (
@@ -15,6 +16,7 @@ export function SiteHeader() {
           </Suspense>
         </nav>
         <div className="flex shrink-0 items-center gap-2">
+          <SearchLauncher />
           <Suspense fallback={<CartLinkFallback />}>
             <CartLink />
           </Suspense>

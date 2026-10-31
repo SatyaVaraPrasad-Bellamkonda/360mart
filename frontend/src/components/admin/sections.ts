@@ -1,4 +1,4 @@
-import { ClipboardList, FolderTree, Package, Store, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
+import { ClipboardList, FolderTree, House, Package, Search, Store, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type AdminSection = {
   href: string;
@@ -14,6 +14,8 @@ export type AdminSection = {
 // menu). A new section = one entry here + a folder in app/admin/(panel)/.
 // ready: false = shown as "Coming soon", not a link.
 export const ADMIN_SECTIONS: AdminSection[] = [
+  { href: "/admin/home", title: "Home page", text: "Design the home page: banner, times of day, product rows.", icon: House, tone: "bg-orange-100 text-orange-700", ready: true },
+  { href: "/admin/search", title: "Search report", text: "What shoppers search for, and what they didn't find.", icon: Search, tone: "bg-cyan-100 text-cyan-700", ready: true },
   { href: "/admin/categories", title: "Categories", text: "Categories and subcategories shoppers browse.", icon: FolderTree, tone: "bg-amber-100 text-amber-700", ready: true },
   { href: "/admin/profile", title: "Your profile", text: "Your name, email and photo.", icon: UserRound, tone: "bg-sky-100 text-sky-700", ready: true },
   { href: "/admin/products", title: "Products", text: "Products in each subcategory, with their sizes.", icon: Package, tone: "bg-green-100 text-green-700", ready: true },

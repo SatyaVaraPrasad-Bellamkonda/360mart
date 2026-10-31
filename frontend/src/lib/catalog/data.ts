@@ -4,6 +4,8 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import type { ApiFailure } from "@/lib/backend/client";
 import * as pageApi from "@/lib/category-page/service";
+import * as homeApi from "@/lib/home-page/service";
+import type { HomePage } from "@/lib/home-page/types";
 import type { CategoryPage } from "@/lib/category-page/types";
 import type { Page } from "@/lib/inventory/types";
 import * as api from "./category-service";
@@ -28,6 +30,7 @@ export const PRODUCTS_TAG = "products";
 /** Every category page; plus "category-page:<id>" on the pages of one category (and its subcategories). */
 export const CATEGORY_PAGES_TAG = "category-pages";
 export const categoryPageTag = (categoryId: number) => `category-page:${categoryId}`;
+export const HOME_PAGE_TAG = "home-page";
 
 type Loaded<T> = { ok: true; data: T } | { ok: false; error: ApiFailure };
 
@@ -92,6 +95,26 @@ async function cachedCategoryPage(categoryId: number): Promise<CategoryPage | nu
   const { category, parent } = res.data;
   cacheTag(categoryPageTag(category.categoryId), ...(parent ? [categoryPageTag(parent.categoryId)] : []));
   return res.data;
+}
+
+// The home page in one call: hero, sections, every time slot's row, rankings
+// and trending searches. The same for every visitor (the current time slot is
+// picked when rendering), so one cached copy serves everyone. The backend
+// refreshes rankings hourly and caches 5 minutes, so we keep it 5 minutes too;
+// a publish clears it at once.
+async function cachedHomePage(): Promise<HomePage> {
+  "use cache";
+  cacheTag(HOME_PAGE_TAG, CATEGORIES_TAG, PRODUCTS_TAG);
+  cacheLife({ stale: 300, revalidate: 300, expire: 2700 });
+  const res = await homeApi.getHomePage();
+  if (!res.ok) throw new LoadError(res.error);
+  return res.data;
+}
+
+/** The home page, read at request time (never baked into a build without the backend). */
+export async function getHomePageNow(): Promise<Loaded<HomePage>> {
+  await connection();
+  return attempt(cachedHomePage);
 }
 
 async function attempt<T>(load: () => Promise<T>): Promise<Loaded<T>> {
