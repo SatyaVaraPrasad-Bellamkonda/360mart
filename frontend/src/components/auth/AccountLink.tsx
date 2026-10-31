@@ -48,10 +48,10 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
 
 function AccountChip({ user, href }: { user: CurrentUser; href: string }) {
   return (
-    <NavPill href={href} area={href} label="My account" className="py-1 pl-1 pr-4">
+    <NavPill href={href} area={href} label="My account" className="py-1 pl-1 pr-1 sm:pr-4">
       <Avatar user={user} size="sm" />
-      {/* First name only, never the phone number: the header is visible to anyone near the screen. */}
-      <span className="max-w-28 truncate">{user.firstName ?? "My account"}</span>
+      {/* First name only, never the phone number: the header is visible to anyone near the screen. On phones only the avatar, like "Your store". */}
+      <span className="hidden max-w-28 truncate sm:inline">{user.firstName ?? "My account"}</span>
     </NavPill>
   );
 }

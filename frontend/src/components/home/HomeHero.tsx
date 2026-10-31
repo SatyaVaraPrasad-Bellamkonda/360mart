@@ -7,6 +7,9 @@ import { HOME_THEME } from "./theme";
 // (with the admin's floating labels) or an uploaded photo. A full-width band.
 // Shared by the shop and the designer's live preview.
 export function HomeHero({ hero }: { hero: HomeHeroView }) {
+  // Banner off: the page starts with its sections. The headline stays as the
+  // page's one H1 for Google and screen readers, but isn't shown.
+  if (!hero.enabled) return <h1 className="sr-only">{hero.headline}</h1>;
   const cart = hero.visual === "CART_ANIMATION";
   // The cart is drawn art, not a backdrop: "Full picture" falls back to picture right.
   const layout = cart && hero.layout === "IMAGE_BACKGROUND" ? "IMAGE_RIGHT" : hero.layout;

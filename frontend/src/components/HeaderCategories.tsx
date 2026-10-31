@@ -4,41 +4,25 @@ import { categoryPicture } from "@/lib/categories";
 import { getShopCategoriesNow } from "@/lib/catalog/data";
 import { categoryPath } from "@/lib/catalog/validation";
 import { CategoryImage } from "./catalog/CategoryImage";
+import { CategoryMenu } from "./CategoryMenu";
 
-// Header menu: the categories the admin marked Featured, in their display order
-// (names only: badges show on the category cards). Everything else is one tap away under "All categories".
-// Desktop shows up to DESKTOP_MAX in the bar; the phone strip scrolls, so it shows all.
+// Header categories. Not the Featured ones: the list grows, so the desktop
+// header has one "Categories" button opening every category (CategoryMenu),
+// and the phone strip under the header scrolls through all of them. Order =
+// the admin's display order; names only (badges show on the category cards).
 
-const DESKTOP_MAX = 5;
-
-async function featured() {
+async function all() {
   const loaded = await getShopCategoriesNow();
-  return loaded.ok ? loaded.data.filter((c) => c.isFeatured) : [];
+  return loaded.ok ? loaded.data : [];
 }
 
 export async function DesktopCategoryNav() {
-  const items = (await featured()).slice(0, DESKTOP_MAX);
-  return (
-    <ul className="flex items-center gap-1">
-      {items.map((category) => (
-        <li key={category.categoryId}>
-          <Link href={categoryPath(category)} className="flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink hover:bg-surface lg:px-4">
-            <span className="max-w-40 truncate">{category.name}</span>
-          </Link>
-        </li>
-      ))}
-      <li>
-        <Link href="/categories" className="flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted hover:bg-surface hover:text-ink lg:px-4">
-          <LayoutGrid aria-hidden className="size-4" />
-          All categories
-        </Link>
-      </li>
-    </ul>
-  );
+  const items = await all();
+  return <CategoryMenu categories={items.map((c) => ({ id: c.categoryId, name: c.name, href: categoryPath(c), image: categoryPicture(c) }))} />;
 }
 
 export async function PhoneCategoryStrip() {
-  const items = await featured();
+  const items = await all();
   return (
     <ul className="flex gap-2 overflow-x-auto px-4 py-2 [scrollbar-width:none]">
       {items.map((category) => (
@@ -62,13 +46,7 @@ export async function PhoneCategoryStrip() {
 }
 
 export function DesktopCategoryNavFallback() {
-  return (
-    <div aria-hidden className="flex gap-2">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className="h-8 w-20 animate-pulse rounded-full bg-surface" />
-      ))}
-    </div>
-  );
+  return <span aria-hidden className="block h-10 w-32 animate-pulse rounded-full bg-surface" />;
 }
 
 export function PhoneCategoryStripFallback() {

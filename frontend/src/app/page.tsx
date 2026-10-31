@@ -41,7 +41,7 @@ const homeJsonLd = {
   ],
 };
 
-/** The standard hero: shown while the page loads and when the design can't be loaded. */
+/** The standard hero: shown when the design can't be loaded. */
 const STANDARD_HERO: HomeHeroView = {
   headline: HOME_DEFAULTS.headline,
   accentLine: HOME_DEFAULTS.accentLine,
@@ -117,11 +117,17 @@ function StandardHome({ categories }: { categories: Category[] | null }) {
   );
 }
 
+// While the design loads: neutral shapes only. Never the standard hero, which
+// would flash a banner the admin may have changed or switched off.
 function HomeSkeleton() {
   return (
-    <>
-      <HomeHero hero={STANDARD_HERO} />
-      <div aria-hidden className="mx-auto max-w-6xl px-4 py-12">
+    <div role="status" aria-label="Loading">
+      <div aria-hidden className="mx-auto max-w-6xl px-4 pt-8">
+        <div className="h-4 w-40 animate-pulse rounded-full bg-surface" />
+        <div className="mt-4 h-9 w-full max-w-md animate-pulse rounded-xl bg-surface sm:h-11" />
+        <div className="mt-3 h-4 w-full max-w-lg animate-pulse rounded-full bg-surface" />
+      </div>
+      <div aria-hidden className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-6 h-7 w-48 animate-pulse rounded-lg bg-surface" />
         <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
@@ -129,6 +135,6 @@ function HomeSkeleton() {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

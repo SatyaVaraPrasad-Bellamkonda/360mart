@@ -8,7 +8,7 @@ import { SearchLauncher } from "./search/SearchLauncher";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:gap-4">
         <Logo />
         <nav aria-label="Categories" className="ml-auto hidden md:block">
           <Suspense fallback={<DesktopCategoryNavFallback />}>

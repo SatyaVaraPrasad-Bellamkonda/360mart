@@ -58,7 +58,7 @@ export function HomeHeroFields({
         <Switch checked={false} onChange={(v) => onChange({ enabled: v })} label="Show the banner" />
         <p className="flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 text-sm text-muted ring-1 ring-line">
           <EyeOff aria-hidden className="mt-0.5 size-4 shrink-0" />
-          The home page starts with just its title, then your sections. Everything below is kept, so switching the banner back on brings it all back.
+          The home page starts straight with your sections. The headline below isn&apos;t shown, but Google and screen readers still read it as the page&apos;s title, so make it describe the site. Your other banner settings are kept for when you switch it back on.
         </p>
         {headline}
       </div>

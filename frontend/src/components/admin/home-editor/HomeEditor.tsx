@@ -474,7 +474,13 @@ function LivePreview({ hero, doc, live, onFullPreview, previewBusy }: { hero: Ho
         </button>
       </div>
       <div ref={boxRef} aria-hidden className="pointer-events-none overflow-hidden rounded-2xl bg-white">
-        {isWide ? <div style={{ width: DESKTOP_WIDTH, zoom: scale }}>{banner}</div> : banner}
+        {!hero.enabled ? (
+          <p className="px-4 py-6 text-center text-sm text-muted">Banner off: the page starts with your sections.</p>
+        ) : isWide ? (
+          <div style={{ width: DESKTOP_WIDTH, zoom: scale }}>{banner}</div>
+        ) : (
+          banner
+        )}
       </div>
       {slot && (
         <p className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs text-muted ring-1 ring-line">
