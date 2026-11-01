@@ -3,6 +3,7 @@ import { AccountLink, AccountLinkFallback } from "./auth/AccountLink";
 import { CartLink, CartLinkFallback } from "./cart/CartLink";
 import { DesktopCategoryNav, DesktopCategoryNavFallback, PhoneCategoryStrip, PhoneCategoryStripFallback } from "./HeaderCategories";
 import { Logo } from "./Logo";
+import { NotificationBell } from "./notifications/NotificationBell";
 import { SearchLauncher } from "./search/SearchLauncher";
 
 export function SiteHeader() {
@@ -17,6 +18,10 @@ export function SiteHeader() {
         </nav>
         <div className="flex shrink-0 items-center gap-2">
           <SearchLauncher />
+          {/* Reads the URL (usePathname), so it needs its own boundary; nothing shows until the user is known anyway. */}
+          <Suspense fallback={null}>
+            <NotificationBell />
+          </Suspense>
           <Suspense fallback={<CartLinkFallback />}>
             <CartLink />
           </Suspense>

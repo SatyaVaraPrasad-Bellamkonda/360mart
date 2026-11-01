@@ -16,6 +16,8 @@ export type ApiFailure = {
   code: string; // stable code to branch on, e.g. "OTP_INVALID"
   message: string; // safe to show to the user
   fieldErrors: Record<string, string>; // VALIDATION_FAILED: field → message
+  /** Every errors[] item in order, also when several share a field (a sheet's "header" problems). */
+  issues?: { field: string; message: string }[];
 };
 
 export type ApiResult<T> =
@@ -163,11 +165,14 @@ function toFailure(status: number, payload: unknown): ApiFailure {
   if (typeof problem.code !== "string") return failure(status, "UNKNOWN", GENERIC).error;
 
   const fieldErrors: Record<string, string> = {};
+  const issues: { field: string; message: string }[] = [];
   for (const item of Array.isArray(problem.errors) ? problem.errors : []) {
-    if (typeof item?.field === "string" && typeof item.message === "string") fieldErrors[item.field] ??= item.message;
+    if (typeof item?.field !== "string" || typeof item.message !== "string") continue;
+    fieldErrors[item.field] ??= item.message;
+    issues.push({ field: item.field, message: item.message });
   }
   const message = typeof problem.detail === "string" && problem.detail ? problem.detail : GENERIC;
-  return { status, code: problem.code, message, fieldErrors };
+  return { status, code: problem.code, message, fieldErrors, issues };
 }
 
 function failure(status: number, code: string, message: string): { ok: false; error: ApiFailure } {

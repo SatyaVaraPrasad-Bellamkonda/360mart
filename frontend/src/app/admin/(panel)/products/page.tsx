@@ -1,8 +1,8 @@
-import { FolderTree } from "lucide-react";
+import { FileSpreadsheet, FolderTree } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AdminLoadFailed, AdminPageHeader, PRIMARY_BUTTON } from "@/components/admin/AdminShell";
+import { AdminLoadFailed, AdminPageHeader, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/admin/AdminShell";
 import { ProductList } from "@/components/admin/ProductList";
 import { requireRole } from "@/lib/auth/dal";
 import { loadProducts } from "@/lib/catalog/data";
@@ -14,7 +14,16 @@ export const metadata: Metadata = { title: "Products" };
 export default function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
   return (
     <>
-      <AdminPageHeader title="Products" subtitle="Products live in subcategories (Alphonso Mango in Fruits › Mangoes). Each has its sizes; stores set prices later." />
+      <AdminPageHeader
+        title="Products"
+        subtitle="Products live in subcategories (Alphonso Mango in Fruits › Mangoes). Each has its sizes; stores set prices later."
+        action={
+          <Link href="/admin/products/sheet" className={SECONDARY_BUTTON}>
+            <FileSpreadsheet aria-hidden className="size-4" />
+            Bulk edit in Excel
+          </Link>
+        }
+      />
       <Suspense fallback={<ListSkeleton />}>
         <Products searchParams={searchParams} />
       </Suspense>
