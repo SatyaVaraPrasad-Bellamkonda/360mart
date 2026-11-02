@@ -12,6 +12,7 @@ import {
   type ActionError,
 } from "@/lib/auth/actions";
 import type { AccountType, OtpInfo } from "@/lib/auth/api-types";
+import type { Acceptance } from "@/lib/legal/types";
 import { formatMobile, mobileError, newPasswordError, normalizeMobile, otpError } from "@/lib/auth/validation";
 import { FormMessage } from "./AuthCard";
 import { CodeField, MobileField, PasswordField, SubmitButton } from "./AuthFields";
@@ -29,14 +30,18 @@ type Code = { otpId: string; expiresAt: number; resendAt: number };
 
 type Alert = { kind: "error" | "notice"; content: ReactNode };
 
-type FieldErrors = { mobile?: string; otp?: string; password?: string };
+type FieldErrors = { mobile?: string; otp?: string; password?: string; agree?: string };
 
 const COPY = {
   signup: { purpose: "SIGNUP", sendLabel: "Send code", passwordLabel: "Create a password", finishLabel: "Create account", finishing: "Creating your account…" },
   reset: { purpose: "PASSWORD_RESET", sendLabel: "Send code", passwordLabel: "New password", finishLabel: "Save new password", finishing: "Saving…" },
 } as const;
 
-export function OtpPasswordForm({ mode }: { mode: Mode }) {
+/**
+ * signupPolicies: the Terms and Privacy versions shown next to the signup
+ * checkbox; accepted right after the account is created and logged in.
+ */
+export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; signupPolicies?: Acceptance[] }) {
   const copy = COPY[mode];
   const params = useSearchParams();
   const next = params.get("next") ?? "";
@@ -50,6 +55,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
   const [code, setCode] = useState<Code | null>(null);
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [alert, setAlert] = useState<Alert | null>(null);
 
@@ -77,8 +83,9 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
   function handleSend(event: FormEvent) {
     event.preventDefault();
     const problem = mobileError(mobileInput);
-    setErrors({ mobile: problem });
-    if (problem) return;
+    const agree = mode === "signup" && !agreed ? "Tick the box to agree to the Terms and Privacy Policy." : undefined;
+    setErrors({ mobile: problem, agree });
+    if (problem || agree) return;
 
     setAlert(null);
     startTransition(async () => {
@@ -128,7 +135,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
 
     setAlert(null);
     startTransition(async () => {
-      const input = { mobileNumber: mobile, otpId: code.otpId, otp, password, next };
+      const input = { mobileNumber: mobile, otpId: code.otpId, otp, password, next, consents: mode === "signup" ? signupPolicies : [] };
       // On success the action logs in and redirects, so nothing comes back.
       const res = mode === "signup" ? await completeSignupAction(input) : await resetPasswordAction(input);
       if (!res || res.ok) return;
@@ -158,6 +165,7 @@ export function OtpPasswordForm({ mode }: { mode: Mode }) {
         {mode === "signup" && <AccountTypePicker value={accountType} onChange={setAccountType} />}
         <AlertMessage alert={alert} />
         <MobileField value={mobileInput} onChange={setMobileInput} error={errors.mobile} autoFocus />
+        {mode === "signup" && <AgreeBox checked={agreed} onChange={setAgreed} error={errors.agree} />}
         <SubmitButton pending={pending} label={copy.sendLabel} pendingLabel="Sending code…" />
       </form>
     );
@@ -241,6 +249,40 @@ function AccountTypePicker({ value, onChange }: { value: AccountType; onChange: 
         })}
       </div>
     </fieldset>
+  );
+}
+
+// Signup: Terms + Privacy must be agreed to before a code is sent (the links open in a new tab).
+function AgreeBox({ checked, onChange, error }: { checked: boolean; onChange: (v: boolean) => void; error?: string }) {
+  return (
+    <div>
+      <label className={`flex cursor-pointer items-start gap-3 rounded-2xl p-3 text-sm ring-1 transition ${error ? "bg-red-50/60 ring-red-300" : checked ? "bg-fresh-soft/50 ring-fresh/30" : "bg-surface ring-line"}`}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-invalid={!!error}
+          aria-describedby={error ? "agree-error" : undefined}
+          className="mt-0.5 size-5 shrink-0 accent-ink"
+        />
+        <span className="text-ink/85">
+          I agree to the{" "}
+          <a href="/terms" target="_blank" rel="noopener" className="font-semibold text-brand-deep underline underline-offset-2">
+            Terms of Use
+          </a>{" "}
+          and the{" "}
+          <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-brand-deep underline underline-offset-2">
+            Privacy Policy
+          </a>
+          .
+        </span>
+      </label>
+      {error && (
+        <p id="agree-error" className="mt-1.5 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

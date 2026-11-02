@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { ConsentDialog } from "@/components/legal/ConsentDialog";
 import { FoodMark } from "@/components/catalog/FoodMark";
 import { ProductThumb } from "@/components/inventory/ListingParts";
 import { toastSuccess } from "@/components/Toaster";
+import { loadConsentsAction, type ConsentPrompt } from "@/lib/legal/actions";
 import type { AddressChoice } from "@/lib/orders/address-choice";
 import { placeOrderAction } from "@/lib/orders/actions";
 import { loadCartAction } from "@/lib/orders/cart-actions";
@@ -64,6 +66,8 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
   const [banner, setBanner] = useState<Banner | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
+  // CONSENT_REQUIRED: the policies to accept before the same checkout is tried again.
+  const [consent, setConsent] = useState<ConsentPrompt["pending"] | null>(null);
   const [moving, startMoving] = useTransition();
 
   // The stores ticked in the cart (all orderable ones when none were passed).
@@ -124,6 +128,13 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
     switch (code) {
       case "UNAUTHENTICATED":
         return sessionExpired();
+      case "CONSENT_REQUIRED": {
+        // errors[].field = policies.TERMS / policies.PRIVACY; the dialog shows the current versions to accept.
+        setFieldErrors({});
+        const prompt = await loadConsentsAction();
+        if (prompt.ok && prompt.data.pending.length) return setConsent(prompt.data.pending);
+        return setBanner({ tone: "error", title: "Please accept the latest terms", text: message, link: { href: "/terms", label: "Read the terms" } });
+      }
       case "PRICE_CHANGED":
         // Same key: confirming again with the new total places the same checkout once.
         await reloadCart();
@@ -221,6 +232,20 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
         </aside>
       </div>
 
+      {consent && (
+        <ConsentDialog
+          open
+          reason="checkout"
+          pending={consent}
+          onClose={() => setConsent(null)}
+          onAccepted={() => {
+            setConsent(null);
+            // Same idempotency key: this is the same checkout, tried once more.
+            void place();
+          }}
+        />
+      )}
+
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
         <div className="mx-auto max-w-6xl space-y-2">
           <div className="flex items-baseline justify-between text-sm">
@@ -230,6 +255,7 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
             {savings > 0 && <span className="font-semibold text-fresh">Saving {money(savings)}</span>}
           </div>
           <PlaceButton label={placeLabel} placing={placing} disabled={!ready} onClick={place} />
+          <PolicyLinks />
         </div>
       </div>
     </div>
@@ -360,5 +386,25 @@ function PlaceButton({ label, placing, disabled, onClick, className = "" }: { la
 }
 
 function SafeNote() {
-  return <p className="mt-3 text-center text-xs text-muted">By placing the order you agree to pay the amount above when it&apos;s delivered.</p>;
+  return (
+    <>
+      <p className="mt-3 text-center text-xs text-muted">By placing the order you agree to pay the amount above when it&apos;s delivered.</p>
+      <PolicyLinks />
+    </>
+  );
+}
+
+// Next to "Place order": what happens if something's wrong, and the terms.
+function PolicyLinks() {
+  return (
+    <p className="mt-1 text-center text-xs text-muted">
+      <Link href="/refund-policy" target="_blank" className="inline-flex min-h-8 items-center font-semibold text-ink underline decoration-line underline-offset-2 hover:decoration-ink">
+        Refund policy
+      </Link>
+      <span aria-hidden className="mx-1.5">·</span>
+      <Link href="/terms" target="_blank" className="inline-flex min-h-8 items-center font-semibold text-ink underline decoration-line underline-offset-2 hover:decoration-ink">
+        Terms of Use
+      </Link>
+    </p>
+  );
 }

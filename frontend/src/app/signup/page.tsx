@@ -5,6 +5,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { FormSkeleton } from "@/components/auth/FormSkeleton";
 import { OtpPasswordForm } from "@/components/auth/OtpPasswordForm";
 import { RedirectIfSignedIn } from "@/components/auth/RedirectIfSignedIn";
+import { getPolicies } from "@/lib/legal/data";
 
 export const metadata: Metadata = { title: "Create account", robots: { index: false, follow: false } };
 
@@ -27,9 +28,15 @@ export default function SignupPage() {
         <RedirectIfSignedIn />
       </Suspense>
       <Suspense fallback={<FormSkeleton />}>
-        <OtpPasswordForm mode="signup" />
+        <SignupForm />
       </Suspense>
     </AuthCard>
   );
 }
 
+// The current Terms and Privacy versions (cached list), so the ones agreed to are the ones recorded.
+async function SignupForm() {
+  const policies = await getPolicies();
+  const shown = (policies.ok ? policies.data : []).filter((p) => p.policyType === "TERMS" || p.policyType === "PRIVACY").map((p) => ({ policyType: p.policyType, version: p.version }));
+  return <OtpPasswordForm mode="signup" signupPolicies={shown} />;
+}

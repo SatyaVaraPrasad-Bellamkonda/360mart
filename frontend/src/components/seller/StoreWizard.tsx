@@ -1,13 +1,15 @@
 "use client";
 
 import { ArrowRight, Check, CircleAlert, Clock, FileText, MapPin, PartyPopper, Pencil, Send, Store as StoreIcon, Truck } from "lucide-react";
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { Dialog } from "@/components/Dialog";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { Card, DocumentRow, StatusPill, StoreDetailsList, StoreHoursList } from "@/components/stores/StoreParts";
+import { acceptPoliciesAction, loadStoreConsentsAction } from "@/lib/legal/actions";
+import { POLICY_PAGES, type ConsentPolicy, type PolicyType } from "@/lib/legal/types";
 import type { MapConfig } from "@/lib/maps/config";
 import { submitStoreAction, withdrawStoreAction } from "@/lib/stores/actions";
 import { doneCount, firstOpenStep, isDone, STEPS, type Step } from "@/lib/stores/progress";
@@ -273,20 +275,63 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const { readyToSubmit, missingSteps } = app.checklist;
+  // Terms, Privacy and the Seller Agreement (published ones only), accepted together right before submitting.
+  const [policies, setPolicies] = useState<ConsentPolicy[] | null>(null);
+  const [agreed, setAgreed] = useState(false);
+  const [agreeError, setAgreeError] = useState<string | null>(null);
+
+  const loadPolicies = useCallback(async () => {
+    const res = await loadStoreConsentsAction();
+    if (!res.ok && res.error.code === "UNAUTHENTICATED") return sessionExpired();
+    setPolicies(res.ok ? res.data : []);
+  }, [sessionExpired]);
+
+  useEffect(() => {
+    let live = true;
+    loadStoreConsentsAction().then((res) => {
+      if (live) setPolicies(res.ok ? res.data : []);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   function submit() {
     setMessage(null);
+    if (policies?.length && !agreed) return setAgreeError("Tick the box to agree before you submit.");
+    setAgreeError(null);
     startTransition(async () => {
+      if (policies?.length) {
+        const accepted = await acceptPoliciesAction(policies.map((p) => ({ policyType: p.policyType, version: p.currentVersion })));
+        if (!accepted.ok) {
+          if (accepted.error.code === "UNAUTHENTICATED") return sessionExpired();
+          if (accepted.error.code === "POLICY_VERSION_OUTDATED") {
+            // A newer version was published while this page was open: show it and ask again.
+            setAgreed(false);
+            await loadPolicies();
+            return setAgreeError("A newer version was just published. Please read it and tick the box again.");
+          }
+          return setMessage(accepted.error.message);
+        }
+      }
       const res = await submitStoreAction();
       if (res.ok) {
         toastSuccess("Submitted for review. We'll check your details and documents.");
         return onSubmitted(res.data);
       }
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
+      if (res.error.code === "CONSENT_REQUIRED") {
+        setAgreed(false);
+        await loadPolicies();
+        return setAgreeError("Please agree to the latest versions below, then submit again.");
+      }
       setMessage(res.error.message);
       toastError(`Couldn't submit. ${res.error.message}`);
     });
   }
+
+  const seller = policies?.find((p) => p.policyType === "SELLER_AGREEMENT");
+  const others = policies?.filter((p) => p.policyType !== "SELLER_AGREEMENT") ?? [];
 
   return (
     <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
@@ -315,6 +360,41 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
           </ul>
         </>
       )}
+      {readyToSubmit && policies === null && <div aria-hidden className="mt-5 h-16 animate-pulse rounded-2xl bg-line/60" />}
+      {readyToSubmit && !!policies?.length && (
+        <div className="mt-5">
+          <label className={`flex cursor-pointer items-start gap-3 rounded-2xl p-4 text-sm ring-1 transition ${agreeError ? "bg-red-50/60 ring-red-300" : agreed ? "bg-fresh-soft/50 ring-fresh/30" : "bg-surface ring-line"}`}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => {
+                setAgreed(e.target.checked);
+                setAgreeError(null);
+              }}
+              aria-invalid={!!agreeError}
+              aria-describedby={agreeError ? "seller-agree-error" : undefined}
+              className="mt-0.5 size-5 shrink-0 accent-ink"
+            />
+            <span className="text-ink/85">
+              {seller ? (
+                <>
+                  I agree to the <PolicyLink type="SELLER_AGREEMENT" version={seller.currentVersion} />
+                  {others.length > 0 && <> and the {others.map((p, i) => <span key={p.policyType}>{i > 0 && " and the "}<PolicyLink type={p.policyType} version={p.currentVersion} /></span>)}</>}.
+                </>
+              ) : (
+                <>
+                  I agree to the {others.map((p, i) => <span key={p.policyType}>{i > 0 && " and the "}<PolicyLink type={p.policyType} version={p.currentVersion} /></span>)}.
+                </>
+              )}
+            </span>
+          </label>
+          {agreeError && (
+            <p id="seller-agree-error" role="alert" className="mt-1.5 text-sm text-red-700">
+              {agreeError}
+            </p>
+          )}
+        </div>
+      )}
       {message && (
         <div className="mt-4">
           <FormMessage error={message} />
@@ -323,7 +403,7 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
       <button
         type="button"
         onClick={submit}
-        disabled={!readyToSubmit || pending}
+        disabled={!readyToSubmit || pending || policies === null}
         aria-busy={pending}
         className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-6 font-semibold text-white transition hover:bg-ink/85 disabled:cursor-not-allowed disabled:bg-ink/40 sm:w-64"
       >
@@ -331,6 +411,15 @@ function SubmitStep({ app, onStep, onSubmitted }: { app: StoreApplication; onSte
         {pending ? "Submitting…" : "Submit for approval"}
       </button>
     </section>
+  );
+}
+
+function PolicyLink({ type, version }: { type: PolicyType; version: number }) {
+  return (
+    <a href={POLICY_PAGES[type].path} target="_blank" rel="noopener" className="font-semibold text-brand-deep underline underline-offset-2">
+      {POLICY_PAGES[type].name}
+      <span className="font-normal text-muted"> (version {version})</span>
+    </a>
   );
 }
 

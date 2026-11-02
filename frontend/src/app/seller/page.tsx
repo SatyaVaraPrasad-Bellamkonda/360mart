@@ -1,4 +1,4 @@
-import { ArrowRight, Wallet, Radius, Scooter, ShoppingCart, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
+import { ArrowRight, MessageSquareWarning, Wallet, Radius, Scooter, ShoppingCart, BadgeCheck, Check, CircleAlert, Clock, FileText, IdCard, MapPin, Package, PartyPopper, ReceiptText, Send, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
@@ -57,7 +57,7 @@ async function SellerDashboard() {
         <h2 id="next-title" className="text-lg font-bold text-ink">
           {app?.store.status === "ACTIVE" ? "Run your store" : "After you go live"}
         </h2>
-        <ul className={`mt-3 grid gap-3 ${live ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
+        <ul className={`mt-3 grid gap-3 ${live ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-3"}`}>
           <Tile
             icon={ReceiptText}
             title="Orders"
@@ -74,6 +74,7 @@ async function SellerDashboard() {
           {/* Products can be set up from the moment a store is started (customers see them once it's live). */}
           <Tile icon={Package} title="Products and prices" text="Pick products from the catalogue, set prices and stock." href={app ? "/seller/products" : undefined} />
           {live && <Tile icon={Wallet} title="Payments & dues" text="Commission on cash orders and settlements with 360mart." href="/seller/ledger" />}
+          {live && <Tile icon={MessageSquareWarning} title="Complaints" text="Customers' problems with your orders. Reply with your side." href="/seller/complaints" />}
           <Tile icon={ShoppingBag} title="Shop on 360mart" text="Your own shopping account: addresses, profile, orders." href="/account" />
         </ul>
       </section>

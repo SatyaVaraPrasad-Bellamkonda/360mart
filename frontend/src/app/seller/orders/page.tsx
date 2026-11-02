@@ -1,4 +1,4 @@
-import { Wallet } from "lucide-react";
+import { MessageSquareWarning, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -27,10 +27,16 @@ export default function SellerOrdersPage({ searchParams }: PageProps<"/seller/or
           title="Orders"
           subtitle="Accept new orders quickly: an order nobody answers is cancelled automatically after 10 minutes."
           action={
-            <Link href="/seller/ledger" className="flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-ink shadow-sm ring-1 ring-line transition hover:ring-ink">
-              <Wallet aria-hidden className="size-4" />
-              Payments & dues
-            </Link>
+            <>
+              <Link href="/seller/complaints" className="flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-ink shadow-sm ring-1 ring-line transition hover:ring-ink">
+                <MessageSquareWarning aria-hidden className="size-4" />
+                Complaints
+              </Link>
+              <Link href="/seller/ledger" className="flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-ink shadow-sm ring-1 ring-line transition hover:ring-ink">
+                <Wallet aria-hidden className="size-4" />
+                Payments & dues
+              </Link>
+            </>
           }
         />
         <Suspense fallback={<ListSkeleton />}>

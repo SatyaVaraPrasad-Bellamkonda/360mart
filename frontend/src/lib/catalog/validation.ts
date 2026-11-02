@@ -32,7 +32,7 @@ export const CATEGORY_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const RESERVED_SLUGS = new Set([
   "account", "admin", "api", "cart", "category", "categories", "checkout", "forgot-password", "help",
   "images", "login", "logout", "orders", "register", "search", "seller", "sellers", "signup", "store",
-  "stores", "vendor",
+  "stores", "vendor", "terms", "privacy", "refund-policy", "seller-agreement", "contact", "support", "goodbye",
 ]);
 
 // Categories that have their own hand-made page (a folder in src/app named after the slug).

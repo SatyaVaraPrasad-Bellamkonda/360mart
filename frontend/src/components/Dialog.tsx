@@ -10,13 +10,15 @@ type Props = {
   description?: string;
   /** "wide" = a big panel (previews) on larger screens. */
   size?: "normal" | "wide";
+  /** false = it can't be closed by Esc, the backdrop or an X (a choice must be made inside). */
+  dismissible?: boolean;
   children: ReactNode;
 };
 
 // A modal on the browser's own <dialog> (showModal): it keeps focus inside,
 // closes on Esc, and dims the page. Phones get a sheet from the bottom; larger
 // screens a centred card. A tap on the dimmed area closes it too.
-export function Dialog({ open, onClose, title, description, size = "normal", children }: Props) {
+export function Dialog({ open, onClose, title, description, size = "normal", dismissible = true, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -32,8 +34,11 @@ export function Dialog({ open, onClose, title, description, size = "normal", chi
       ref={ref}
       aria-labelledby={titleId}
       onClose={onClose}
+      onCancel={(e) => {
+        if (!dismissible) e.preventDefault(); // Esc
+      }}
       // The <dialog> itself is only hit outside the panel (the backdrop).
-      onClick={(e) => e.target === ref.current && onClose()}
+      onClick={(e) => dismissible && e.target === ref.current && onClose()}
       className={`m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-3xl bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/50 backdrop:backdrop-blur-sm sm:m-auto sm:rounded-3xl ${size === "wide" ? "sm:max-w-6xl" : "sm:max-w-2xl"}`}
     >
       {open && (
@@ -45,9 +50,11 @@ export function Dialog({ open, onClose, title, description, size = "normal", chi
               </h2>
               {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
             </div>
-            <button type="button" onClick={onClose} aria-label="Close" className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink">
-              <X aria-hidden className="size-5" />
-            </button>
+            {dismissible && (
+              <button type="button" onClick={onClose} aria-label="Close" className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink">
+                <X aria-hidden className="size-5" />
+              </button>
+            )}
           </div>
           <div className="overflow-y-auto px-5 pt-4 sm:pb-5">{children}</div>
         </div>

@@ -8,7 +8,11 @@ import { SITE } from "@/lib/site";
 const CATALOG_CATEGORIES = ["fruits"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const entries: MetadataRoute.Sitemap = [{ url: SITE.url, changeFrequency: "daily", priority: 1 }];
+  const entries: MetadataRoute.Sitemap = [
+    { url: SITE.url, changeFrequency: "daily", priority: 1 },
+    // Real pages from the backend (not sample data); old versions stay out (noindex).
+    ...["/contact", "/terms", "/privacy", "/refund-policy", "/seller-agreement"].map((path) => ({ url: `${SITE.url}${path}`, changeFrequency: "monthly" as const, priority: 0.3 })),
+  ];
 
   // Sample data must never be submitted to Google.
   if (USES_SAMPLE_DATA) return entries;

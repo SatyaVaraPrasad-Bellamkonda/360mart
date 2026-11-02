@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { acceptPolicies } from "@/lib/legal/service";
+import { readAcceptances } from "@/lib/legal/types";
 import type { ApiFailure } from "@/lib/backend/client";
 import type { AccountType, OtpInfo } from "./api-types";
 import * as api from "./auth-service";
@@ -16,7 +18,7 @@ import { isUuid, loginPasswordError, newPasswordError, normalizeMobile, otpError
 export type ActionError = Pick<ApiFailure, "code" | "message" | "fieldErrors">;
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: ActionError };
 
-type CodeAndPassword = { mobileNumber: unknown; otpId: unknown; otp: unknown; password: unknown; next?: unknown };
+type CodeAndPassword = { mobileNumber: unknown; otpId: unknown; otp: unknown; password: unknown; next?: unknown; consents?: unknown };
 
 // Step 1 of signup: create the account (or resume an unfinished one) and text a code.
 // A shopkeeper account (STORE_OWNER) can shop too, and also register a store.
@@ -49,7 +51,8 @@ export async function completeSignupAction(input: CodeAndPassword): Promise<Acti
   const res = await api.setPassword({ mobileNumber, otpId, otp, password });
   if (!res.ok) return fail(res.error);
   // Setting a password doesn't log in; do it now so the user needn't retype anything.
-  return loginAndRedirect(mobileNumber, password, input.next, "password-set");
+  // The Terms + Privacy versions ticked on the form are accepted once logged in.
+  return loginAndRedirect(mobileNumber, password, input.next, "password-set", readAcceptances(input.consents));
 }
 
 export async function resetPasswordAction(input: CodeAndPassword): Promise<ActionResult> {
@@ -102,7 +105,7 @@ export async function logoutAction(): Promise<void> {
   redirect("/");
 }
 
-async function loginAndRedirect(mobileNumber: string, password: string, next: unknown, status: string): Promise<ActionResult> {
+async function loginAndRedirect(mobileNumber: string, password: string, next: unknown, status: string, consents: ReturnType<typeof readAcceptances> = null): Promise<ActionResult> {
   const res = await api.login(mobileNumber, password);
   const session = res.ok ? readSessionCookie(res.setCookies) : null;
   const role = res.ok ? ROLE_FROM_API[res.data?.role] : undefined;
@@ -110,6 +113,8 @@ async function loginAndRedirect(mobileNumber: string, password: string, next: un
   if (!session || !role) redirect(`/login?status=${status}`);
 
   const user = await startSession(session);
+  // If this fails (e.g. a version published a second ago), the "We've updated our terms" dialog asks again.
+  if (consents?.length) await acceptPolicies(session.token, consents);
   redirect(safeNextPath(next, user?.role ?? role));
 }
 

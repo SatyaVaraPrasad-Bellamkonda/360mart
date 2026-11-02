@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CircleCheckBig, FileText, KeyRound, Loader2, Phone, RefreshCw, XCircle } from "lucide-react";
+import { ArrowLeft, CircleCheckBig, FileText, KeyRound, LifeBuoy, Loader2, Phone, RefreshCw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -10,6 +10,8 @@ import { toastError, toastSuccess } from "@/components/Toaster";
 import { cancelOrderAction, loadOrderAction } from "@/lib/orders/actions";
 import { endedReason, STATUS, when } from "@/lib/orders/format";
 import { isOpen, REASON_MAX, REASON_MIN, type CustomerOrder } from "@/lib/orders/types";
+import { useNow } from "@/components/support/Deadline";
+import { categoriesFor } from "@/lib/support/types";
 import { AddressBlock, OrderItems, OrderTotals, Panel, ProgressTracker, StatusPill, Timeline } from "./OrderParts";
 
 const POLL_MS = 25_000;
@@ -27,6 +29,9 @@ const NEXT_STEP: Partial<Record<CustomerOrder["status"], string>> = {
 export function CustomerOrderView({ initial, justPlaced }: { initial: CustomerOrder; justPlaced: boolean }) {
   const { sessionExpired } = useAuth();
   const [order, setOrder] = useState(initial);
+  // The browser's clock (null while rendering on the server): which problems can still be reported.
+  const now = useNow();
+  const helpable = now !== null && categoriesFor(order, now).length > 0;
   const [refreshing, setRefreshing] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const open = isOpen(order.status);
@@ -176,6 +181,12 @@ export function CustomerOrderView({ initial, justPlaced }: { initial: CustomerOr
             </div>
           )}
           {open && !order.canCancel && <p className="px-1 text-xs text-muted">The store has started on this order. To change or cancel it now, please call the store.</p>}
+          {helpable && (
+            <Link href={`/account/support/new?orderId=${order.orderId}`} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-ink ring-1 ring-line hover:ring-ink">
+              <LifeBuoy aria-hidden className="size-4" />
+              {order.status === "DELIVERED" ? "Report a problem" : "Get help with this order"}
+            </Link>
+          )}
 
           <details className="group rounded-3xl bg-white p-5 ring-1 ring-line">
             <summary className="flex min-h-6 cursor-pointer list-none items-center justify-between text-base font-bold text-ink">

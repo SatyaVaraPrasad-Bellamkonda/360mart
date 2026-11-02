@@ -134,6 +134,12 @@ export function replaceCartLines(lines: CartLines) {
   saveLines(lines);
 }
 
+/** The account is gone: drop the browser's cart copies (guest cart + cached lines). */
+export function forgetCart() {
+  writeGuest([]);
+  saveLines(null);
+}
+
 /** Forget the cached lines (next sync loads them again). */
 export function invalidateCartLines() {
   saveLines(null);

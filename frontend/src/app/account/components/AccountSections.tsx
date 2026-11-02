@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, LogOut, MapPin, Plus, ShieldCheck, ShoppingBag, UserRound, type LucideIcon } from "lucide-react";
+import { Bell, ChevronRight, LifeBuoy, LogOut, MapPin, Plus, ShieldCheck, ShoppingBag, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { loadAddresses } from "@/lib/addresses/data";
@@ -162,6 +162,7 @@ const SETTINGS: Row[] = [
   { icon: UserRound, title: "Profile details", text: "Name, email and photo", href: "/account/profile" },
   { icon: MapPin, title: "Saved addresses", text: "Home, work and others", href: "/account/addresses" },
   { icon: Bell, title: "Notifications", text: "Offers you got, offers on or off", href: "/account/notifications" },
+  { icon: LifeBuoy, title: "Help & support", text: "Ask a question or report a problem", href: "/account/support" },
   { icon: ShieldCheck, title: "Login & security", text: "Password and signed-in devices" },
 ];
 

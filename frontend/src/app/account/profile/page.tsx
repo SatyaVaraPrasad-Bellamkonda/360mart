@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -23,6 +23,18 @@ export default function ProfilePage() {
       <Suspense fallback={<DashboardSkeleton />}>
         <Editor />
       </Suspense>
+      {/* Quiet on purpose: easy to find, hard to tap by accident (the next page explains and asks for a code). */}
+      <section aria-labelledby="danger-title" className="rounded-3xl border border-line bg-white p-5 sm:p-6">
+        <h2 id="danger-title" className="font-bold text-ink">
+          Delete account
+        </h2>
+        <p className="mt-1 text-sm text-muted">Remove your account and personal details from 360mart. You&apos;ll see what is deleted and what the law makes us keep before anything happens.</p>
+        <Link href="/account/delete" className="group mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-red-700 ring-1 ring-red-200 transition hover:bg-red-50">
+          <Trash2 aria-hidden className="size-4" />
+          Delete my account
+          <ChevronRight aria-hidden className="size-4 transition group-hover:translate-x-0.5" />
+        </Link>
+      </section>
     </div>
   );
 }
