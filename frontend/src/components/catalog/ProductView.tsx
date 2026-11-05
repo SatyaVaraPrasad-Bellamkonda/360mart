@@ -122,9 +122,9 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
       {more.length > 0 && (
         <section aria-labelledby="more-heading">
           <SectionHeading id="more-heading" title={`More ${subcategory.name}`} subtitle="From the same aisle" />
-          <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+          <ul className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 xl:grid-cols-6">
             {more.map((p) => (
-              <li key={p.productId} className="w-[46%] shrink-0 snap-start sm:w-auto">
+              <li key={p.productId} className="w-[40%] shrink-0 snap-start min-[420px]:w-[31%] sm:w-auto">
                 <ShopProductCard product={p} href={shopProductPath(category, subcategory, p)} />
               </li>
             ))}

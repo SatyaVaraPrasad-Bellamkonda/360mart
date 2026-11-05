@@ -67,11 +67,36 @@ type Base = { id: string; enabled?: boolean; title?: string | null; subtitle?: s
 export type CategoryGridSection = Base & { type: "CATEGORY_GRID"; mode: "ALL" | "FEATURED" | "PICKED"; categoryIds?: number[] | null; limit?: number; layout?: "TILES" | "CHIPS" };
 export type HomeRailSection = Base & { type: "PRODUCT_RAIL"; source: RailSource; limit?: number; productIds?: number[] | null; windowDays?: 7 | 30 | null };
 export type TrendingSearchesSection = Base & { type: "TRENDING_SEARCHES"; limit?: number };
-export type HomeSection = CategoryGridSection | HomeRailSection | TrendingSearchesSection | PromoBannerSection | TextBlockSection | TrustStripSection | FaqPageSection;
+/**
+ * Where "Buy again" sits (one per page). Settings only: the products are each
+ * shopper's own, fetched in the browser (GET /users/me/buy-again?limit=), never
+ * part of the shared, cached page. Empty title/subtitle = the standard texts.
+ */
+export type BuyAgainSection = Base & { type: "BUY_AGAIN"; limit?: number };
+/**
+ * The admin's own HTML with inline CSS (announcements, offers), cleaned by the
+ * backend. mobileHtml = a separate design for phones; linkPath makes the whole
+ * block one link (then the HTML has no links of its own); startsAt / endsAt (UTC)
+ * = shown only in that window.
+ */
+export type HtmlBlockSection = Base & {
+  type: "HTML_BLOCK";
+  html: string;
+  mobileHtml?: string | null;
+  linkPath?: string | null;
+  linkLabel?: string | null;
+  width?: "CONTAINED" | "FULL";
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+export type HomeSection = CategoryGridSection | HomeRailSection | TrendingSearchesSection | BuyAgainSection | HtmlBlockSection | PromoBannerSection | TextBlockSection | TrustStripSection | FaqPageSection;
 export type HomeSectionType = HomeSection["type"];
 
+/** 2 = the sections are saved exactly as sent (1 put a missing "Buy again" back at the top). */
+export const HOME_SCHEMA_VERSION = 2;
+
 export type HomePageDocument = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   hero: HomeHeroDoc;
   timeSlots: TimeSlot[];
   sections: HomeSection[];

@@ -83,12 +83,12 @@ export function PageHero({
   const text = (dark: boolean, inline = false) => <HeroText hero={content} theme={theme} stats={shown} parent={parent ?? null} button={button ?? null} compact={compact} dark={dark} inlinePoints={inline} rise={m.text} />;
   // A card in the page, or a band across the whole width with the content in the page column.
   const shell = band ? "" : "rounded-3xl ring-1 ring-line";
-  const column = band ? `mx-auto w-full max-w-6xl px-4 ${compact ? "py-8 md:py-10" : "py-10 md:py-16"}` : "";
+  const column = band ? `mx-auto w-full max-w-6xl px-4 ${compact ? "py-6 md:py-6" : "py-10 md:py-16"}` : "";
 
   if (layout === "IMAGE_BACKGROUND") {
     const hasPicture = !!(hero.imageUrl || hero.mobileImageUrl);
     return (
-      <section className={`relative isolate flex overflow-hidden ${shell} ${hasPicture ? "bg-ink" : theme.solid} ${compact ? "min-h-[320px] md:min-h-[340px]" : "min-h-[460px] md:min-h-[500px]"}`}>
+      <section className={`relative isolate flex overflow-hidden ${shell} ${hasPicture ? "bg-ink" : theme.solid} ${compact ? "min-h-[240px] md:min-h-[280px]" : "min-h-[460px] md:min-h-[500px]"}`}>
         {hasPicture && (
           // The photo itself never slides here (it would bare an edge): only the text does.
           <div className="absolute inset-0 -z-10 overflow-hidden">
@@ -124,7 +124,7 @@ export function PageHero({
   return (
     <section className={`overflow-hidden bg-gradient-to-br ${shell} ${theme.banner}`}>
       <div
-        className={`grid items-center gap-6 md:gap-10 ${left ? "md:grid-cols-[1fr_1.05fr]" : "md:grid-cols-[1.05fr_1fr]"} ${band ? column : `p-4 ${compact ? "sm:p-6 lg:p-8" : "sm:p-8 lg:p-12"}`}`}
+        className={`grid items-center ${compact ? "gap-4 md:gap-8" : "gap-6 md:gap-10"} ${left ? "md:grid-cols-[1fr_1.05fr]" : "md:grid-cols-[1.05fr_1fr]"} ${band ? column : `p-4 ${compact ? "sm:p-6 lg:p-8" : "sm:p-8 lg:p-12"}`}`}
       >
         {/* Phones: a photo leads; the art (the cart) comes after the words. */}
         <div className={`min-w-0 ${art ? "order-1" : "order-2"} ${left ? "md:order-2" : "md:order-1"} ${m.textBox}`}>{text(false)}</div>
@@ -132,7 +132,7 @@ export function PageHero({
           <div className={`relative order-2 ${left ? "md:order-1" : "md:order-2"} ${m.emptyFrame}`}>{art}</div>
         ) : (
         <div className={`relative order-1 ${left ? "md:order-1" : "md:order-2"} ${hero.imageUrl || hero.mobileImageUrl ? m.frame : m.emptyFrame}`}>
-          <div className={`relative overflow-hidden rounded-2xl shadow-xl ${compact ? "aspect-[2/1] md:aspect-[16/10]" : "aspect-[16/10] md:aspect-[4/3]"} ${theme.shadow} ${theme.placeholder}`}>
+          <div className={`relative overflow-hidden rounded-2xl shadow-xl ${compact ? "aspect-[2/1] md:aspect-[21/10]" : "aspect-[16/10] md:aspect-[4/3]"} ${theme.shadow} ${theme.placeholder}`}>
             {hero.imageUrl || hero.mobileImageUrl ? (
               <HeroPicture hero={hero} className={m.image} />
             ) : (
@@ -187,7 +187,7 @@ function HeroText({
         {hero.headline}
         {hero.accentLine && <span className={`block ${dark ? "text-white/80" : theme.text}`}>{hero.accentLine}</span>}
       </h1>
-      {hero.intro && <RichText text={hero.intro} className={`mt-3 max-w-lg sm:text-lg ${dark ? "text-white/85 [&_strong]:text-white" : "text-muted"} ${rise(2)}`} />}
+      {hero.intro && <RichText text={hero.intro} className={`mt-3 max-w-lg ${compact ? "line-clamp-2" : "sm:text-lg"} ${dark ? "text-white/85 [&_strong]:text-white" : "text-muted"} ${rise(2)}`} />}
 
       {hero.trustPoints.length > 0 && (
         <ul className={`mt-5 ${inlinePoints ? "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-6" : "space-y-2"} ${rise(3)}`}>
@@ -222,7 +222,7 @@ function HeroText({
       {button && (
         <Link
           href={button.href}
-          className={`mt-7 inline-flex min-h-12 items-center gap-2 rounded-full px-6 font-semibold shadow-lg transition hover:gap-3 ${dark ? "bg-white text-ink shadow-black/20 hover:bg-white/90" : "bg-ink text-white shadow-ink/25 hover:bg-ink/85"} ${rise(4)}`}
+          className={`${compact ? "mt-5 min-h-11 px-5" : "mt-7 min-h-12 px-6"} inline-flex items-center gap-2 rounded-full font-semibold shadow-lg transition hover:gap-3 ${dark ? "bg-white text-ink shadow-black/20 hover:bg-white/90" : "bg-ink text-white shadow-ink/25 hover:bg-ink/85"} ${rise(4)}`}
         >
           {button.label}
           <ArrowRight aria-hidden className="size-4" />

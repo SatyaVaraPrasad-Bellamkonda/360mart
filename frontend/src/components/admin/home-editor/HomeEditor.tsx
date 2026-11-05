@@ -10,6 +10,7 @@ import { toastError, toastSuccess } from "@/components/Toaster";
 import type { ActionError } from "@/lib/auth/actions";
 import type { Category } from "@/lib/catalog/types";
 import { heroDisplay, type PageImagePurpose } from "@/lib/category-page/types";
+import { htmlBlockState } from "@/lib/home-page/html-block";
 import { discardHomeDraftAction, homeHistoryAction, loadHomeAdminAction, publishHomeAction, restoreHomeAction, saveHomeDraftAction, uploadHomeImageAction } from "@/lib/home-page/actions";
 import { HOME_DEFAULTS, isSlotSource, type AdminHomePage, type HomeHeroDoc, type HomeHeroView, type HomePage, type HomePageDocument, type HomeSection, type TimeSlot } from "@/lib/home-page/types";
 import { cleanHomeDocument, floatingLabelsOf, homeErrors, indiaMinutes, sameHome, slotAt, timeLabel, toEditableHome } from "@/lib/home-page/validation";
@@ -221,6 +222,24 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
       dropErrors("sections");
     });
 
+  /** A picture for an HTML block: uploaded, then its permanent link goes into the HTML. */
+  function uploadHtmlPicture(file: File, done: (url: string) => void) {
+    setUploading("html");
+    const form = new FormData();
+    form.append("purpose", "HTML");
+    form.append("image", file);
+    startTransition(async () => {
+      const res = await uploadHomeImageAction(form);
+      setUploading(null);
+      if (!res.ok) return failed(res.error);
+      const url = res.data.url;
+      if (!url) return toastError("The picture was uploaded, but its link didn't come back. Reload the page to find it in the list.");
+      setImages((list) => [{ imageId: res.data.imageId, url, purpose: "HTML" }, ...list]);
+      done(url);
+      toastSuccess("Picture uploaded and added to the HTML at the cursor.");
+    });
+  }
+
   const links = [{ label: "Home", path: "/" }, { label: "All categories", path: "/categories" }, ...categories.slice(0, 10).map((c) => ({ label: c.name, path: `/${c.slug}` }))];
   const live = useMemo(() => liveCounts(preview), [preview]);
 
@@ -277,7 +296,8 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
                 errors={errors}
                 hasSlots={doc.timeSlots.length > 0}
                 categories={categories}
-                pictures={{ gallery: images.map((img) => ({ imageId: img.imageId, url: urlOf(img.imageId) ?? img.url })), urlOf, uploading, onUpload: uploadBanner }}
+                pictures={{ gallery: images.filter((img) => img.purpose !== "HTML").map((img) => ({ imageId: img.imageId, url: urlOf(img.imageId) ?? img.url })), urlOf, uploading, onUpload: uploadBanner }}
+                htmlPictures={{ list: images.filter((img) => img.purpose === "HTML").map((img) => ({ imageId: img.imageId, url: img.url })), uploading: uploading === "html", onUpload: uploadHtmlPicture }}
                 links={links}
                 live={live}
               />
@@ -383,6 +403,12 @@ function liveCounts(page: HomePage | null): Record<string, string> {
   for (const s of page.sections) {
     if (s.type === "CATEGORY_GRID") out[s.id] = n(page.categoryGrids[s.id]?.length ?? 0, "category", "categories");
     if (s.type === "TRENDING_SEARCHES") out[s.id] = n(page.trendingSearches[s.id]?.length ?? 0, "search", "searches");
+    if (s.type === "BUY_AGAIN") out[s.id] = "per shopper";
+    if (s.type === "HTML_BLOCK") {
+      // The preview includes blocks outside their schedule; say where each one is.
+      const state = htmlBlockState(s, Date.now());
+      out[s.id] = state === "LIVE" ? (s.endsAt ? `showing until ${dateTimeText(s.endsAt)}` : "showing now") : state === "ENDED" ? "ended, hidden" : `scheduled: starts ${dateTimeText(s.startsAt ?? "")}`;
+    }
     if (s.type === "PRODUCT_RAIL" && !isSlotSource(s.source)) out[s.id] = n(page.rails[s.id]?.length ?? 0, "product", "products");
     if (s.type === "PRODUCT_RAIL" && isSlotSource(s.source)) {
       const rows = Object.values(page.slotRails[s.id] ?? {});

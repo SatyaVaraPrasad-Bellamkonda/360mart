@@ -1,4 +1,4 @@
-import { ArrowRight, Search, Store } from "lucide-react";
+import { ArrowRight, RotateCcw, Search, Store } from "lucide-react";
 import Link from "next/link";
 import { CategoryCard } from "@/components/CategoryCard";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
@@ -12,8 +12,9 @@ import { revealOf, type ProductCard, type RevealAnimation } from "@/lib/category
 import { isSlotSource, type CategoryGridSection, type HomePage, type HomeSection } from "@/lib/home-page/types";
 import { railSourceInfo, slotAt } from "@/lib/home-page/validation";
 import { searchHref } from "@/lib/search/query";
-import { BuyAgainRow } from "./BuyAgainRow";
+import { BUY_AGAIN_TEXT, BuyAgainRow } from "./BuyAgainRow";
 import { HomeHero } from "./HomeHero";
+import { HtmlBlock } from "./HtmlBlock";
 import { HomeProductRow } from "./HomeProductRow";
 import { HOME_THEME } from "./theme";
 import { TimeSlotRow } from "./TimeSlotRow";
@@ -26,9 +27,10 @@ const REVEAL: Record<RevealAnimation, string> = { NONE: "", FADE: "reveal-fade",
  * the day when rendering (picks the time-of-day row; the browser checks again).
  * `parents` = the top-level categories, for links to picked subcategories.
  * Used by the shop and the admin's full preview (preview: no JSON-LD, no links,
- * no per-shopper row).
+ * no per-shopper row). `now` = the server's clock (HTML blocks' schedules; the
+ * browser checks again).
  */
-export function HomeView({ data, minute, parents, preview }: { data: HomePage; minute: number; parents: Category[]; preview?: boolean }) {
+export function HomeView({ data, minute, now, parents, preview }: { data: HomePage; minute: number; now: number; parents: Category[]; preview?: boolean }) {
   const sections = data.sections.filter((s) => s.enabled !== false && hasContent(s, data));
   const firstGrid = sections.find((s) => s.type === "CATEGORY_GRID")?.id;
   const faq = sections.find((s) => s.type === "FAQ");
@@ -37,13 +39,15 @@ export function HomeView({ data, minute, parents, preview }: { data: HomePage; m
       {!preview && <PageJsonLd data={data} sections={sections} minute={minute} parents={parents} />}
       {!preview && faq?.type === "FAQ" && <JsonLd data={faqJsonLd(faq.items)} />}
       <HomeHero hero={data.hero} />
-      <div className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:space-y-16 sm:py-14">
-        {!preview && <BuyAgainRow />}
+      {/* Each section in the page column, except edge-to-edge HTML blocks. An empty wrapper (a guest's Buy again) takes no room. */}
+      <div className="space-y-12 py-10 sm:space-y-16 sm:py-14">
         {sections.map((s) => (
-          <Section key={s.id} section={s} data={data} minute={minute} parents={parents} anchor={s.id === firstGrid} />
+          <div key={s.id} className={s.type === "HTML_BLOCK" && s.width === "FULL" ? "empty:hidden" : "mx-auto max-w-6xl px-4 empty:hidden"}>
+            <Section section={s} data={data} minute={minute} now={now} parents={parents} anchor={s.id === firstGrid} preview={preview} />
+          </div>
         ))}
         {sections.length === 0 && (
-          <div className="flex flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+          <div className="mx-auto flex max-w-6xl flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
             <Store aria-hidden className="size-8 text-brand-deep" />
             <p className="mt-3 font-bold text-ink">Stores are getting ready</p>
             <p className="mt-1 max-w-sm text-sm text-muted">Local shops are adding their products. Check back soon.</p>
@@ -72,12 +76,16 @@ function hasContent(s: HomeSection, data: HomePage): boolean {
       return (s.points?.length ?? 0) > 0;
     case "FAQ":
       return (s.items?.length ?? 0) > 0;
+    case "HTML_BLOCK":
+      return !!s.html?.trim();
+    case "BUY_AGAIN":
+      return true; // per shopper: the browser decides (guests and nothing bought = no row)
     default:
       return false; // a type this site doesn't know yet
   }
 }
 
-function Section({ section: s, data, minute, parents, anchor }: { section: HomeSection; data: HomePage; minute: number; parents: Category[]; anchor: boolean }) {
+function Section({ section: s, data, minute, now, parents, anchor, preview }: { section: HomeSection; data: HomePage; minute: number; now: number; parents: Category[]; anchor: boolean; preview?: boolean }) {
   const id = `section-${s.id}`;
   const reveal = REVEAL[revealOf(s)];
   switch (s.type) {
@@ -138,6 +146,25 @@ function Section({ section: s, data, minute, parents, anchor }: { section: HomeS
           <FaqBlock section={s} theme={HOME_THEME} id={id} />
         </section>
       );
+    case "BUY_AGAIN":
+      // The admin's full preview has no shopper: show where the row goes.
+      if (preview)
+        return (
+          <section aria-label="Buy again" className="flex items-center gap-3 rounded-3xl border-2 border-dashed border-line bg-surface px-5 py-6">
+            <RotateCcw aria-hidden className="size-5 shrink-0 text-brand-deep" />
+            <div className="min-w-0">
+              <p className="font-bold text-ink">{s.title || BUY_AGAIN_TEXT.title}</p>
+              <p className="text-sm text-muted">Each signed-in shopper sees up to {s.limit ?? 12} products they bought before, here. Guests and new shoppers see nothing.</p>
+            </div>
+          </section>
+        );
+      return <BuyAgainRow id={s.id} title={s.title} subtitle={s.subtitle} limit={s.limit ?? 12} className={reveal} />;
+    case "HTML_BLOCK":
+      return (
+        <div className={reveal}>
+          <HtmlBlock section={s} id={id} serverNow={now} preview={preview} />
+        </div>
+      );
     default:
       return null;
   }
@@ -181,7 +208,7 @@ function CategoryGrid({ section: s, categories, parents, anchor, reveal }: { sec
           ))}
         </ul>
       ) : (
-        <ul className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-5 lg:grid-cols-6">
           {categories.map((c, i) => (
             <li key={c.categoryId}>
               <CategoryCard category={c} href={linkOf(c, parents)} priority={anchor && i < 2} />

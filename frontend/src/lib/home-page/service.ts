@@ -56,7 +56,7 @@ export function uploadImage(token: string, purpose: PageImagePurpose, image: Fil
   const form = new FormData();
   form.append("purpose", purpose);
   form.append("image", image, image.name || "home-image");
-  return callApi<{ success: boolean; message: string; id: string }>(`${base}/images`, { method: "POST", body: form, sessionToken: token });
+  return callApi<{ success: boolean; message: string; id: string; url?: string | null }>(`${base}/images`, { method: "POST", body: form, sessionToken: token });
 }
 
 // ---- search ----

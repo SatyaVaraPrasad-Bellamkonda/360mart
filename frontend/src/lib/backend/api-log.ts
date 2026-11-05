@@ -133,7 +133,7 @@ function cachedOrigin(): string {
 export function logIncoming(requestId: string, request: { method: string; pathname: string; headers: Headers }): void {
   if (apiLogMode() === "off" || request.pathname.startsWith("/api/dev/")) return;
   const h = request.headers;
-  const kind = h.get("next-action") ? "server action" : h.get("next-router-prefetch") ? "prefetch" : h.get("rsc") ? "navigation" : request.method === "GET" ? "page" : "request";
+  const kind = request.pathname.startsWith("/api/v1") ? "browser API call (forwarded)" : h.get("next-action") ? "server action" : h.get("next-router-prefetch") ? "prefetch" : h.get("rsc") ? "navigation" : request.method === "GET" ? "page" : "request";
   const color = process.stdout.isTTY;
   const paint = (code: number, text: string) => (color ? `\x1b[${code}m${text}\x1b[0m` : text);
   const time = new Date().toLocaleTimeString("en-GB", { hour12: false });

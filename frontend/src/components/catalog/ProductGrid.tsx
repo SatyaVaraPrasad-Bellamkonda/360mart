@@ -60,7 +60,7 @@ export function ProductGrid({ products, basePath, showFilters = true, total }: {
         )}
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {shown.map((product, i) => (
           <li key={product.productId} className="motion-safe:animate-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
             <ShopProductCard product={product} href={`${basePath}/${product.slug}`} eager={i < 4} />

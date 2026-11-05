@@ -7,7 +7,7 @@ import { ROLE_HOME } from "@/lib/auth/roles";
 import { AuthSync } from "./AuthProvider";
 import { NavPill } from "./NavPill";
 
-// Header link: "Login" for visitors, or the signed-in user's name linking to
+// Header link: "Login" for visitors, or the signed-in user's photo linking to
 // their dashboard. Reads the session cookie, so it must sit inside <Suspense>.
 // It also hands the same user to <AuthProvider> for client components, so the
 // backend is asked once per page, not twice.
@@ -37,9 +37,9 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
   return (
     <div className="flex items-center gap-2">
       {user.role === "seller" && (
-        <NavPill href="/seller" area="/seller" label="Your store" className="size-10 justify-center sm:w-auto sm:px-4">
+        <NavPill href="/seller" area="/seller" label="Your store" className="size-10 justify-center xl:w-auto xl:px-4">
           <Store aria-hidden className="size-4 shrink-0" />
-          <span className="hidden sm:inline">Your store</span>
+          <span className="hidden xl:inline">Your store</span>
         </NavPill>
       )}
       <AccountChip user={user} href={account} />
@@ -48,16 +48,16 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
 }
 
 function AccountChip({ user, href }: { user: CurrentUser; href: string }) {
+  // Just the photo (or initials): the name isn't needed to know it's you, and anyone near the screen sees the header.
+  const name = user.firstName ? `My account (${user.firstName})` : "My account";
   return (
-    <NavPill href={href} area={href} label="My account" className="relative py-1 pl-1 pr-1 sm:pr-4">
+    <NavPill href={href} area={href} label={name} className="relative size-10 justify-center">
       <Avatar user={user} size="sm" />
       {user.role === "seller" && <UnreadDot />}
-      {/* First name only, never the phone number: the header is visible to anyone near the screen. On phones only the avatar, like "Your store". */}
-      <span className="hidden max-w-28 truncate sm:inline">{user.firstName ?? "My account"}</span>
     </NavPill>
   );
 }
 
 export function AccountLinkFallback() {
-  return <span aria-hidden className="inline-block h-9 w-20 rounded-full bg-surface" />;
+  return <span aria-hidden className="inline-block size-10 rounded-full bg-surface" />;
 }

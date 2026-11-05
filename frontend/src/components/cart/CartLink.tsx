@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -30,7 +30,7 @@ export function CartLink() {
       aria-current={active ? "page" : undefined}
       className={`relative flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition ${active ? "bg-brand-soft text-brand-deep ring-brand/50" : "bg-white text-ink ring-line hover:ring-ink"}`}
     >
-      <ShoppingBag aria-hidden className="size-5" />
+      <ShoppingCart aria-hidden className="size-5" />
       {!!count && (
         <span key={count} className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-extrabold text-ink ring-2 ring-white motion-safe:animate-pop-in">
           {count > 99 ? "99+" : count}
@@ -43,7 +43,7 @@ export function CartLink() {
 export function CartLinkFallback() {
   return (
     <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-ink ring-1 ring-line">
-      <ShoppingBag className="size-5" />
+      <ShoppingCart className="size-5" />
     </span>
   );
 }

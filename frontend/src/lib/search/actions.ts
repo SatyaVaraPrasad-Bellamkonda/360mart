@@ -4,26 +4,12 @@ import { updateTag } from "next/cache";
 import type { ActionError, ActionResult } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { clearSession, getSessionToken } from "@/lib/auth/session";
-import { getShopCategories, HOME_PAGE_TAG } from "@/lib/catalog/data";
-import type { Category } from "@/lib/catalog/types";
-import { categoryHref } from "@/lib/catalog/validation";
+import { HOME_PAGE_TAG } from "@/lib/catalog/data";
 import * as api from "@/lib/home-page/service";
-import type { HiddenTerm, SearchResult, SearchTermStat } from "@/lib/home-page/service";
-import { cleanQuery, SUGGEST_SIZE } from "./query";
+import type { HiddenTerm, SearchTermStat } from "@/lib/home-page/service";
+import { cleanQuery } from "./query";
 
-// Shopper search (the type-ahead) and the admin's search report.
-
-export type Suggestions = Pick<SearchResult, "products"> & { categories: (Category & { href: string; parentName: string | null })[] };
-
-/** Type-ahead suggestions while typing: a few products and categories (with their links). Not counted as a search. */
-export async function suggestAction(q: string): Promise<ActionResult<Suggestions>> {
-  const text = cleanQuery(q);
-  if (!text) return { ok: true, data: { products: { items: [], page: 0, size: SUGGEST_SIZE, totalItems: 0, totalPages: 0 }, categories: [] } };
-  const [res, parents] = await Promise.all([api.search(text, 0, SUGGEST_SIZE, true), getShopCategories()]);
-  if (!res.ok) return fail({ code: res.error.code, message: res.error.message, fieldErrors: {} });
-  const top = parents.ok ? parents.data : [];
-  return { ok: true, data: { products: res.data.products, categories: res.data.categories.map((c) => ({ ...c, href: categoryHref(c, top), parentName: top.find((t) => t.categoryId === c.parentCategoryId)?.name ?? null })) } };
-}
+// The admin's search report. (The shopper's type-ahead calls the API straight from the browser: lib/search/client.ts.)
 
 export async function searchTermsAction(days: 7 | 30): Promise<ActionResult<SearchTermStat[]>> {
   if (days !== 7 && days !== 30) return fail(unexpected());

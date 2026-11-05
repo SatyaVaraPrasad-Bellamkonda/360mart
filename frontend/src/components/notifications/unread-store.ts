@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { unreadCountAction } from "@/lib/campaigns/inbox-actions";
+import { api } from "@/lib/api-client";
 
 // The offers inbox's unread number, shared by the header bell and the inbox
 // page (like an AngularJS service both controllers inject). Read once when the
@@ -41,7 +41,9 @@ export function refreshUnread(userId: string, maxAgeMs = 60_000): Promise<void> 
   if (loading) return loading;
   if (readAt && Date.now() - readAt < maxAgeMs) return Promise.resolve();
   const startedAt = changes;
-  loading = unreadCountAction()
+  // Straight from the browser (GET /api/v1/users/me/notifications/unread-count); a badge is never worth an error, so any problem = 0.
+  loading = api<{ unread: number }>("/users/me/notifications/unread-count")
+    .then((res) => (res.ok ? Math.max(0, Number(res.data?.unread) || 0) : 0))
     .then((n) => {
       if (startedAt !== changes) return;
       unread = n;

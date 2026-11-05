@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
 import type { ProductCard } from "@/lib/category-page/types";
-import { suggestAction, type Suggestions } from "@/lib/search/actions";
+import { loadSuggestions, type ParentCategory, type Suggestions } from "@/lib/search/client";
 import { cleanQuery, MAX_QUERY, searchHref } from "@/lib/search/query";
 import { clearRecent, readRecent, rememberSearch } from "@/lib/search/recent";
 
@@ -16,7 +16,7 @@ type Option = { key: string; href: string; label: string; remember?: string };
 // used). Enter or "See all results" opens /search. Arrow keys move through
 // the suggestions (a combobox for screen readers). Full screen on phones.
 // Mounted fresh for each opening, so it starts empty.
-export function SearchPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SearchPanel({ open, onClose, parents = [] }: { open: boolean; onClose: () => void; parents?: ParentCategory[] }) {
   const ref = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
@@ -44,14 +44,14 @@ export function SearchPanel({ open, onClose }: { open: boolean; onClose: () => v
     const ticket = ++latest.current;
     const timer = setTimeout(async () => {
       setLoading(true);
-      const res = await suggestAction(text);
+      const res = await loadSuggestions(text, parents);
       if (ticket !== latest.current) return;
       setLoading(false);
       setFailed(!res.ok);
       if (res.ok) setFound({ for: text, products: res.data.products.items, categories: res.data.categories });
     }, 300);
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, parents]);
 
   const shown = text && found?.for === text ? found : null;
   const options: Option[] = text

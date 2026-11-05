@@ -40,11 +40,13 @@ export function CategoryMenu({ categories }: { categories: Item[] }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className={`flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold transition ${open ? "bg-ink text-white" : "text-ink hover:bg-surface"}`}
+        aria-label="Categories"
+        className={`flex min-h-10 min-w-10 items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold ring-1 transition lg:px-4 ${open ? "bg-ink text-white ring-ink" : "bg-white text-ink ring-line hover:ring-ink"}`}
       >
         <LayoutGrid aria-hidden className="size-4" />
-        Categories
-        <ChevronDown aria-hidden className={`size-4 transition ${open ? "rotate-180" : ""}`} />
+        {/* Icon only on medium screens, where the search bar needs the room. */}
+        <span className="hidden lg:inline">Categories</span>
+        <ChevronDown aria-hidden className={`hidden size-4 transition lg:block ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div id={panelId} className="absolute right-0 top-full z-40 mt-2 w-[min(40rem,calc(100vw-2rem))] rounded-3xl bg-white p-3 shadow-2xl ring-1 ring-line motion-safe:animate-pop-in">

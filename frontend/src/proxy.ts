@@ -4,6 +4,7 @@ import { toCurrentUser } from "@/lib/auth/current-user";
 import { PROTECTED_AREAS, ROLE_LOGIN, SESSION_COOKIE } from "@/lib/auth/roles";
 import { isSessionToken, openUser, sealUser, secureCookies, USER_COOKIE, USER_COOKIE_OPTIONS } from "@/lib/auth/user-cookie";
 import { apiLogMode, logIncoming, ORIGIN_HEADER } from "@/lib/backend/api-log";
+import { forwardApi, isApiPath } from "@/lib/backend/api-gateway";
 import { callApi, REQUEST_ID_HEADER } from "@/lib/backend/client";
 
 // Runs before every page and server action (not images/scripts). Three jobs:
@@ -26,6 +27,12 @@ export async function proxy(request: NextRequest) {
   const existing = request.headers.get(REQUEST_ID_HEADER);
   const requestId = existing && /^[0-9a-f]{12}$/.test(existing) ? existing : crypto.randomUUID().replaceAll("-", "").slice(0, 12);
   logIncoming(requestId, { method: request.method, pathname: request.nextUrl.pathname, headers: request.headers });
+  // The API door (/api/v1/...): checked and forwarded to Spring Boot, never a page.
+  if (isApiPath(request.nextUrl.pathname)) {
+    const forwarded = forwardApi(request, requestId);
+    forwarded.headers.set("X-Request-Id", requestId);
+    return forwarded;
+  }
   const response = await handle(request, requestId);
   response.headers.set("X-Request-Id", requestId);
   return response;

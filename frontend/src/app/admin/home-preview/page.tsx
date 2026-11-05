@@ -36,7 +36,7 @@ async function Preview({ searchParams }: Pick<PageProps<"/admin/home-preview">, 
         <Eye aria-hidden className="size-4 shrink-0" />
         {version ? `Preview of published version ${version}` : "Preview of your draft"}: shoppers don&apos;t see this yet
       </p>
-      <HomeView data={res.data} minute={indiaMinutes(new Date())} parents={top.ok ? top.data : []} preview />
+      <HomeView data={res.data} minute={indiaMinutes(new Date())} now={new Date().getTime()} parents={top.ok ? top.data : []} preview />
     </>
   );
 }

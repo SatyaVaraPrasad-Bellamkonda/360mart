@@ -80,7 +80,7 @@ async function DesignedHome() {
   if (!page.ok) return <StandardHome categories={categories.ok ? categories.data : null} />;
   // Read after the data (the request has started), so this is the time of this visit.
   const minute = indiaMinutes(new Date());
-  return <HomeView data={page.data} minute={minute} parents={categories.ok ? categories.data : []} />;
+  return <HomeView data={page.data} minute={minute} now={new Date().getTime()} parents={categories.ok ? categories.data : []} />;
 }
 
 /** The design couldn't be loaded: the standard hero and every category, so shoppers can still start. */
@@ -103,7 +103,7 @@ function StandardHome({ categories }: { categories: Category[] | null }) {
         ) : (
           <>
             <JsonLd data={categoryListJsonLd("Shop by category", categories.map((c) => ({ name: c.name, path: categoryPath(c) })))} />
-            <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+            <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-5 lg:grid-cols-6">
               {categories.map((category, i) => (
                 <li key={category.categoryId}>
                   <CategoryCard category={category} priority={i < 2} />
@@ -129,7 +129,7 @@ function HomeSkeleton() {
       </div>
       <div aria-hidden className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-6 h-7 w-48 animate-pulse rounded-lg bg-surface" />
-        <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-5 lg:grid-cols-6">
           {Array.from({ length: 4 }, (_, i) => (
             <CategoryCardSkeleton key={i} />
           ))}

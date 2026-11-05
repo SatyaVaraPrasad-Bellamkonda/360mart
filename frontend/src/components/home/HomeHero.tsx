@@ -14,9 +14,14 @@ export function HomeHero({ hero }: { hero: HomeHeroView }) {
   // The cart is drawn art, not a backdrop: "Full picture" falls back to picture right.
   const layout = cart && hero.layout === "IMAGE_BACKGROUND" ? "IMAGE_RIGHT" : hero.layout;
   const alt = hero.imageAlt || HOME_DEFAULTS.imageAlt;
-  return (
+  // Compact: a small cart on bigger screens and none on phones, where it would push the page down.
+  const compact = hero.size === "COMPACT";
+  // A full photo sits in the page column as a rounded card (lined up with the
+  // sections below); the other layouts keep their soft full-width band.
+  const photoCard = layout === "IMAGE_BACKGROUND";
+  const view = (
     <PageHero
-      band
+      band={!photoCard}
       theme={HOME_THEME}
       stats={[]}
       hero={{
@@ -31,7 +36,18 @@ export function HomeHero({ hero }: { hero: HomeHeroView }) {
       }}
       display={{ enabled: hero.enabled, layout, size: hero.size, showBadge: hero.showBadge, showTrustPoints: false, showStats: false, animation: hero.animation }}
       button={hero.buttonLabel && hero.buttonLink ? { label: hero.buttonLabel, href: hero.buttonLink } : null}
-      art={cart ? <HeroVisual labels={hero.floatingLabels} alt={alt} /> : undefined}
+      art={
+        cart ? (
+          compact ? (
+            <div className="hidden md:block">
+              <HeroVisual labels={hero.floatingLabels} alt={alt} compact />
+            </div>
+          ) : (
+            <HeroVisual labels={hero.floatingLabels} alt={alt} />
+          )
+        ) : undefined
+      }
     />
   );
+  return photoCard ? <div className="mx-auto max-w-6xl px-4 pt-4 sm:pt-6">{view}</div> : view;
 }

@@ -171,7 +171,8 @@ export type CategoryPage = {
 
 // ---- the admin editor ----
 
-export type PageImagePurpose = "HERO" | "HERO_MOBILE" | "BANNER" | "GUIDE" | "OG";
+/** HTML = a picture pasted into a home page HTML block (<img src>); home page only. */
+export type PageImagePurpose = "HERO" | "HERO_MOBILE" | "BANNER" | "GUIDE" | "OG" | "HTML";
 export type PageImage = { imageId: string; url: string; purpose: PageImagePurpose };
 
 export type AdminCategoryPage = {

@@ -7,7 +7,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { cancelOrderAction, loadOrderAction } from "@/lib/orders/actions";
+import { api } from "@/lib/api-client";
+import { cancelOrderAction } from "@/lib/orders/actions";
 import { endedReason, STATUS, when } from "@/lib/orders/format";
 import { isOpen, REASON_MAX, REASON_MIN, type CustomerOrder } from "@/lib/orders/types";
 import { useNow } from "@/components/support/Deadline";
@@ -38,7 +39,8 @@ export function CustomerOrderView({ initial, justPlaced }: { initial: CustomerOr
 
   async function refresh(quiet = true) {
     if (!quiet) setRefreshing(true);
-    const res = await loadOrderAction(order.orderId);
+    // Straight from the browser (GET /api/v1/orders/{id}): every refresh shows in Network.
+    const res = await api<CustomerOrder>(`/orders/${encodeURIComponent(order.orderId)}`);
     if (!quiet) setRefreshing(false);
     if (res.ok) {
       if (res.data.status !== order.status && quiet) toastSuccess(`Order ${STATUS[res.data.status]?.label.toLowerCase() ?? "updated"}`);

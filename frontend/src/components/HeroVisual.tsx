@@ -33,9 +33,10 @@ const SPARKLES = [
 // Home page hero art: the 360mart cart inside a soft glow with orbit rings,
 // sparkles and floating labels. Labels are decorative, so screen readers
 // only get the image description.
-export function HeroVisual({ labels = STANDARD_LABELS, alt = "Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores" }: { labels?: string[]; alt?: string }) {
+// compact = the banner's Compact size: about half as big, smaller labels.
+export function HeroVisual({ labels = STANDARD_LABELS, alt = "Shopping cart full of fruits, vegetables, groceries, fish and clothes from local stores", compact = false }: { labels?: string[]; alt?: string; compact?: boolean }) {
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-xs sm:max-w-lg">
+    <div className={`relative mx-auto aspect-square w-full ${compact ? "max-w-[15rem] lg:max-w-[17rem]" : "max-w-xs sm:max-w-lg"}`}>
       <div aria-hidden className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(187,247,208,0.9),rgba(254,243,199,0.7)_45%,rgba(253,230,138,0.25)_62%,transparent_72%)] blur-md" />
       <div aria-hidden className="absolute inset-[6%] rounded-full border border-green-200/80" />
       <div aria-hidden className="absolute inset-[14%] rounded-full border-2 border-dashed border-amber-200 motion-safe:animate-[spin_60s_linear_infinite]" />
@@ -79,7 +80,7 @@ export function HeroVisual({ labels = STANDARD_LABELS, alt = "Shopping cart full
           key={i}
           aria-hidden
           style={{ animationDelay: CHIP_SPOTS[i].delay }}
-          className={`absolute max-w-[60%] truncate whitespace-nowrap rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-ink shadow-md ring-1 ring-line backdrop-blur sm:text-xs motion-safe:animate-float ${CHIP_SPOTS[i].className}`}
+          className={`absolute max-w-[60%] truncate whitespace-nowrap rounded-full bg-white/90 font-semibold text-ink shadow-md ring-1 ring-line backdrop-blur motion-safe:animate-float ${compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-[11px] sm:text-xs"} ${CHIP_SPOTS[i].className}`}
         >
           {text}
         </span>

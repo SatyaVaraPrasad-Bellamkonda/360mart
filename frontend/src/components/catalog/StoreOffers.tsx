@@ -13,7 +13,7 @@ import type { FoodType, ProductUnit } from "@/lib/catalog/types";
 import { money } from "@/lib/inventory/validation";
 import { loadAddressChoicesAction } from "@/lib/location/actions";
 import type { MapConfig } from "@/lib/maps/config";
-import { loadOffersAction } from "@/lib/offers/actions";
+import { loadOffers } from "@/lib/offers/client";
 import type { ProductStoreOffers, StoreOffer } from "@/lib/offers/types";
 
 type Size = { variantId: number; label: string; quantity: number; unit: ProductUnit };
@@ -62,7 +62,7 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
   useEffect(() => {
     if (!key || !location || !variantId) return;
     let live = true;
-    loadOffersAction(productId, variantId, location.latitude, location.longitude, 0).then((res) => {
+    loadOffers(productId, variantId, location.latitude, location.longitude, 0).then((res) => {
       if (live) setLoaded({ key, data: res.ok ? res.data : null, error: res.ok ? null : res.error.message });
     });
     return () => {
@@ -74,7 +74,7 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
     if (!current?.data || !location) return;
     const page = current.data.stores.page + 1;
     startMore(async () => {
-      const res = await loadOffersAction(productId, variantId, location.latitude, location.longitude, page);
+      const res = await loadOffers(productId, variantId, location.latitude, location.longitude, page);
       if (!res.ok) return toastError(res.error.message);
       setLoaded((l) => (l && l.key === key && l.data ? { ...l, data: { ...res.data, stores: { ...res.data.stores, items: [...l.data.stores.items, ...res.data.stores.items] } } } : l));
     });

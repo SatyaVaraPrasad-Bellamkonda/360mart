@@ -5,6 +5,7 @@ import { getShopCategoriesNow } from "@/lib/catalog/data";
 import { categoryPath } from "@/lib/catalog/validation";
 import { CategoryImage } from "./catalog/CategoryImage";
 import { CategoryMenu } from "./CategoryMenu";
+import { SearchLauncher } from "./search/SearchLauncher";
 
 // Header categories. Not the Featured ones: the list grows, so the desktop
 // header has one "Categories" button opening every category (CategoryMenu),
@@ -19,6 +20,12 @@ async function all() {
 export async function DesktopCategoryNav() {
   const items = await all();
   return <CategoryMenu categories={items.map((c) => ({ id: c.categoryId, name: c.name, href: categoryPath(c), image: categoryPicture(c) }))} />;
+}
+
+/** The header search, with the shop's own category names as its live hint (same cached list, no extra call). */
+export async function HeaderSearch() {
+  const items = await all();
+  return <SearchLauncher hints={items.slice(0, 12).map((c) => c.name.toLowerCase())} parents={items.map((c) => ({ categoryId: c.categoryId, slug: c.slug, name: c.name }))} />;
 }
 
 export async function PhoneCategoryStrip() {
@@ -46,7 +53,7 @@ export async function PhoneCategoryStrip() {
 }
 
 export function DesktopCategoryNavFallback() {
-  return <span aria-hidden className="block h-10 w-32 animate-pulse rounded-full bg-surface" />;
+  return <span aria-hidden className="block size-10 animate-pulse rounded-full bg-surface lg:w-36" />;
 }
 
 export function PhoneCategoryStripFallback() {

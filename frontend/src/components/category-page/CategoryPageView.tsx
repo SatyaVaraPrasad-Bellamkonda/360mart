@@ -136,7 +136,7 @@ function Section({ section: s, data, theme, path, preview }: { section: PageSect
             ))}
           </ul>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-5 lg:grid-cols-6">
             {data.subcategories.map((sub) => (
               <li key={sub.categoryId}>
                 <CategoryTile category={sub} href={categoryPath(sub, category)} />

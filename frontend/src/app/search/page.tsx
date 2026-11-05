@@ -91,7 +91,7 @@ async function Results({ searchParams }: Pick<PageProps<"/search">, "searchParam
       {categories.length > 0 && <CategoryChips categories={categories} parents={parents} title="Matching categories" compact />}
       {products.items.length > 0 && (
         <section aria-label="Products" className="mt-6">
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {products.items.map((p) => (
               <li key={p.productId}>
                 <ShopProductCard product={p} href={`/${p.categorySlug}/${p.subcategorySlug}/${p.slug}`} />
@@ -179,7 +179,7 @@ function ResultsSkeleton() {
     <div aria-hidden>
       <div className="h-14 animate-pulse rounded-2xl bg-surface" />
       <div className="mt-6 h-7 w-56 animate-pulse rounded-lg bg-surface" />
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-surface" />
         ))}

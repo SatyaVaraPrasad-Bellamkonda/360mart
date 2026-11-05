@@ -35,15 +35,6 @@ export async function placeOrderAction(input: { idempotencyKey: unknown; address
   return ok({ message: res.data.message, ids: res.data.ids ?? [] });
 }
 
-/** The order page's refresh while the order is moving (polled every ~25 s). */
-export async function loadOrderAction(orderId: unknown): Promise<ActionResult<CustomerOrder>> {
-  const token = await sessionToken();
-  if (!token) return failWith(LOGIN_NEEDED);
-  if (!isUuidLike(orderId)) return invalid("Order not found.");
-  const res = await api.getOrder(token, orderId);
-  return res.ok ? ok(res.data) : failWith(res.error);
-}
-
 /** Cancel while the store hasn't accepted yet; returns the fresh order. */
 export async function cancelOrderAction(orderId: unknown, reasonInput: unknown): Promise<ActionResult<{ message: string; order: CustomerOrder | null }>> {
   const token = await sessionToken();

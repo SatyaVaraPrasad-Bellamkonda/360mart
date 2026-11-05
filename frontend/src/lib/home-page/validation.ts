@@ -10,7 +10,8 @@ import {
   cleanBlock, cleanContentSection, cleanLine, CONTENT_TYPES, contentSectionErrors, editableSection, isContentSection, newContentSection, oneOf,
   readContentSection, readSectionBase, str, text, type PageErrors,
 } from "@/lib/category-page/validation";
-import { STANDARD_FLOATING_LABELS, type HomeHeroDoc, type HomePageDocument, type HomeSection, type HomeSectionType, type RailSource, type TimeSlot } from "./types";
+import { HTML_BLOCK_LINK, HTML_LIMITS, HTML_TEMPLATES, htmlProblem } from "./html-block";
+import { HOME_SCHEMA_VERSION, STANDARD_FLOATING_LABELS, type HtmlBlockSection, type HomeHeroDoc, type HomePageDocument, type HomeSection, type HomeSectionType, type RailSource, type TimeSlot } from "./types";
 
 export const HOME_LIMITS = {
   headline: 60,
@@ -43,6 +44,9 @@ export const HOME_LIMITS = {
   trendingMin: 3,
   trendingMax: 12,
   trendingDefault: 8,
+  buyAgainMin: 4,
+  buyAgainMax: 20,
+  buyAgainDefault: 12,
 } as const;
 
 /** "/", "/fruits", "/fruits/mangoes", "/#categories": our own site only (= the backend's SITE_LINK). */
@@ -58,6 +62,8 @@ export const HOME_SECTION_INFO: Record<HomeSectionType, { label: string; text: s
   TRUST_STRIP: { label: "Trust strip", text: "2 to 4 short promises with icons", max: 2 },
   FAQ: { label: "Questions", text: "Questions and answers that open on tap", max: 1 },
   TRENDING_SEARCHES: { label: "Trending searches", text: "What shoppers search for most, as chips", max: 1 },
+  BUY_AGAIN: { label: "Buy again", text: "Each signed-in shopper's own past buys", max: 1 },
+  HTML_BLOCK: { label: "HTML block", text: "Your own HTML and inline CSS: announcements, offers", max: HTML_LIMITS.blocks },
 };
 
 export const RAIL_SOURCES: { value: RailSource; label: string; text: string; title: string }[] = [
@@ -211,6 +217,12 @@ export function homeErrors(doc: HomePageDocument): PageErrors {
       if (s.mode === "PICKED" && picked.length === 0) e[`${at}.categoryIds`] = "Pick at least one category";
       else if (picked.length > HOME_LIMITS.gridPicks) e[`${at}.categoryIds`] = `Pick at most ${HOME_LIMITS.gridPicks} categories`;
     }
+    if (s.type === "HTML_BLOCK") htmlBlockErrors(e, at, s);
+    if (s.type === "BUY_AGAIN") {
+      const limit = s.limit ?? HOME_LIMITS.buyAgainDefault;
+      if (!Number.isInteger(limit) || limit < HOME_LIMITS.buyAgainMin) e[`${at}.limit`] = `Show at least ${HOME_LIMITS.buyAgainMin} products`;
+      else if (limit > HOME_LIMITS.buyAgainMax) e[`${at}.limit`] = `Show at most ${HOME_LIMITS.buyAgainMax} products`;
+    }
     if (s.type === "TRENDING_SEARCHES") {
       const limit = s.limit ?? HOME_LIMITS.trendingDefault;
       if (!Number.isInteger(limit) || limit < HOME_LIMITS.trendingMin || limit > HOME_LIMITS.trendingMax) e[`${at}.limit`] = `Show ${HOME_LIMITS.trendingMin} to ${HOME_LIMITS.trendingMax} searches`;
@@ -269,18 +281,33 @@ export function cleanHomeDocument(doc: HomePageDocument): HomePageDocument {
           productIds: s.source === "HANDPICKED" ? [...new Set(s.productIds ?? [])] : null,
           windowDays: s.source === "BESTSELLERS" ? (s.windowDays === 30 ? 30 : 7) : null,
         };
+      case "BUY_AGAIN":
+        return { ...base, type: s.type, limit: s.limit ?? HOME_LIMITS.buyAgainDefault };
+      case "HTML_BLOCK":
+        return {
+          ...base,
+          type: s.type,
+          html: (s.html ?? "").trim(),
+          mobileHtml: (s.mobileHtml ?? "").trim() || null,
+          linkPath: (s.linkPath ?? "").trim() || null,
+          // The label only means something with a link.
+          linkLabel: (s.linkPath ?? "").trim() ? cleanLine(s.linkLabel) : null,
+          width: s.width === "FULL" ? "FULL" : "CONTAINED",
+          startsAt: s.startsAt || null,
+          endsAt: s.endsAt || null,
+        };
       default:
         return { ...base, type: s.type, limit: s.limit ?? HOME_LIMITS.trendingDefault };
     }
   });
-  return { schemaVersion: 1, hero, timeSlots, sections };
+  return { schemaVersion: HOME_SCHEMA_VERSION, hero, timeSlots, sections };
 }
 
 /** The designer's working copy: every field present, so the form is always controlled. */
 export function toEditableHome(doc: HomePageDocument): HomePageDocument {
   const h = doc.hero ?? {};
   return {
-    schemaVersion: 1,
+    schemaVersion: HOME_SCHEMA_VERSION,
     hero: {
       headline: h.headline ?? "",
       accentLine: h.accentLine ?? "",
@@ -299,7 +326,7 @@ export function toEditableHome(doc: HomePageDocument): HomePageDocument {
     // Types this designer doesn't know yet (a newer backend) are left out rather than broken.
     sections: (doc.sections ?? [])
       .filter((s) => s.type in HOME_SECTION_INFO)
-      .map((s) => editableSection({ ...s, enabled: s.enabled !== false, title: s.title ?? "", subtitle: s.subtitle ?? "", reveal: s.reveal ?? "NONE" } as HomeSection)),
+      .map((s) => editableHomeSection({ ...s, enabled: s.enabled !== false, title: s.title ?? "", subtitle: s.subtitle ?? "", reveal: s.reveal ?? "NONE" } as HomeSection)),
   };
 }
 
@@ -310,7 +337,29 @@ export const floatingLabelsOf = (h: Pick<HomeHeroDoc, "floatingLabels">) => (h.f
 
 // ---- new sections ----
 
-const PREFIX: Record<HomeSectionType, string> = { CATEGORY_GRID: "cats", PRODUCT_RAIL: "row", PROMO_BANNER: "promo", TEXT_BLOCK: "text", TRUST_STRIP: "promises", FAQ: "faq", TRENDING_SEARCHES: "trending" };
+/** Every field of a section present, so its inputs are always controlled. */
+function editableHomeSection(s: HomeSection): HomeSection {
+  if (s.type !== "HTML_BLOCK") return editableSection(s);
+  return { ...s, html: s.html ?? "", mobileHtml: s.mobileHtml ?? "", linkPath: s.linkPath ?? "", linkLabel: s.linkLabel ?? "", width: s.width === "FULL" ? "FULL" : "CONTAINED", startsAt: s.startsAt ?? null, endsAt: s.endsAt ?? null };
+}
+
+/** An HTML block's fields, checked like the backend (its sanitizer is the real check of the HTML, on save). */
+function htmlBlockErrors(e: Record<string, string>, at: string, s: HtmlBlockSection) {
+  const linked = !!(s.linkPath ?? "").trim();
+  if (!(s.html ?? "").trim()) e[`${at}.html`] = "Add the HTML of the block";
+  else {
+    const p = htmlProblem(s.html, linked);
+    if (p) e[`${at}.html`] = p;
+  }
+  const m = (s.mobileHtml ?? "").trim() ? htmlProblem(s.mobileHtml ?? "", linked) : null;
+  if (m) e[`${at}.mobileHtml`] = m;
+  if (linked && !HTML_BLOCK_LINK.test((s.linkPath ?? "").trim())) e[`${at}.linkPath`] = "Use a link on 360mart, like /fruits/mangoes";
+  if (linked && !(s.linkLabel ?? "").trim()) e[`${at}.linkLabel`] = 'Say where the link goes, like "See mango offers"';
+  else if (linked) text(e, `${at}.linkLabel`, s.linkLabel, HTML_LIMITS.linkLabel, "Link text");
+  if (s.startsAt && s.endsAt && Date.parse(s.endsAt) <= Date.parse(s.startsAt)) e[`${at}.endsAt`] = "End after it starts";
+}
+
+const PREFIX: Record<HomeSectionType, string> = { BUY_AGAIN: "buy-again", HTML_BLOCK: "html", CATEGORY_GRID: "cats", PRODUCT_RAIL: "row", PROMO_BANNER: "promo", TEXT_BLOCK: "text", TRUST_STRIP: "promises", FAQ: "faq", TRENDING_SEARCHES: "trending" };
 
 export function newHomeId(prefix: string, taken: string[]): string {
   for (;;) {
@@ -325,6 +374,8 @@ export function newHomeSection(type: HomeSectionType, taken: string[], source: R
   const base = { id, enabled: true, subtitle: "", reveal: "RISE" as const };
   if (type === "CATEGORY_GRID") return { ...base, type, title: "Shop by category", mode: "ALL", categoryIds: [], limit: HOME_LIMITS.gridDefault, layout: "TILES" };
   if (type === "TRENDING_SEARCHES") return { ...base, type, title: "Trending searches", limit: HOME_LIMITS.trendingDefault };
+  if (type === "BUY_AGAIN") return { ...base, type, title: "", reveal: "NONE", limit: HOME_LIMITS.buyAgainDefault };
+  if (type === "HTML_BLOCK") return { ...base, type, title: "", reveal: "FADE", html: HTML_TEMPLATES[0].html, mobileHtml: "", linkPath: "", linkLabel: "", width: "CONTAINED", startsAt: null, endsAt: null };
   return { ...base, type: "PRODUCT_RAIL", title: railSourceInfo(source).title, source, limit: HOME_LIMITS.railDefault, productIds: [], windowDays: 7 };
 }
 
@@ -392,9 +443,16 @@ export function readHomeDocument(input: unknown): HomePageDocument | null {
       if (oneOf(SOURCES, s.source) && productIds && typeof s.limit === "number")
         section = { ...base, type: s.type, source: s.source, limit: s.limit, productIds, windowDays: s.windowDays === 30 ? 30 : 7 };
     } else if (s.type === "TRENDING_SEARCHES" && typeof s.limit === "number") section = { ...base, type: s.type, limit: s.limit };
+    else if (s.type === "BUY_AGAIN" && (s.limit === undefined || typeof s.limit === "number")) section = { ...base, type: s.type, limit: (s.limit as number | undefined) ?? HOME_LIMITS.buyAgainDefault };
+    else if (s.type === "HTML_BLOCK") {
+      const [html, mobileHtml, linkPath, linkLabel, startsAt, endsAt] = [str(s.html), str(s.mobileHtml), str(s.linkPath), str(s.linkLabel), str(s.startsAt), str(s.endsAt)];
+      const dates = [startsAt, endsAt].every((d) => d == null || !Number.isNaN(Date.parse(d)));
+      if (typeof html === "string" && ![mobileHtml, linkPath, linkLabel].includes(undefined) && dates && (s.width === undefined || s.width === "CONTAINED" || s.width === "FULL"))
+        section = { ...base, type: s.type, html, mobileHtml, linkPath, linkLabel, width: s.width === "FULL" ? "FULL" : "CONTAINED", startsAt: startsAt ?? null, endsAt: endsAt ?? null };
+    }
     if (!section) return null;
     sections.push(section);
   }
-  return { schemaVersion: 1, hero: h, timeSlots, sections };
+  return { schemaVersion: HOME_SCHEMA_VERSION, hero: h, timeSlots, sections };
 }
 

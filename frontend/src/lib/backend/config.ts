@@ -4,7 +4,8 @@ let warned = false;
 
 // Base URL of the Spring Boot API, from the API_URL environment variable:
 //   local:      http://localhost:8080/api/v1   (.env.local)
-//   production: https://api.360mart.in/api/v1  (Vercel → Settings → Environment Variables)
+//   production: https://<app>.onrender.com/api/v1  (Vercel → Settings → Environment Variables;
+//               the browser uses 360mart.in/api/v1, forwarded here by proxy.ts)
 // It has no NEXT_PUBLIC_ prefix, so it is read on the server at request time and
 // never shipped to the browser. One build can point at any backend.
 export function apiBaseUrl(): string | null {
@@ -34,4 +35,15 @@ function misconfigured(message: string): null {
     warned = true;
   }
   return null;
+}
+
+/**
+ * The secret shared with the backend (API_PROXY_SECRET, server-only): sent as
+ * X-Proxy-Secret on every call from this site (its own server calls and the
+ * /api/v1 door), so the backend can refuse calls that skip the site and trust
+ * the X-Forwarded-For we send. Unset = not sent (local development).
+ */
+export function proxySecret(): string | null {
+  const s = process.env.API_PROXY_SECRET?.trim();
+  return s && s.length >= 32 ? s : null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, GalleryHorizontal, LayoutGrid, MessageCircleQuestion, Rows3, Search, ShieldCheck, TextQuote, type LucideIcon } from "lucide-react";
+import { Clock, Code2, GalleryHorizontal, RotateCcw, LayoutGrid, MessageCircleQuestion, Rows3, Search, ShieldCheck, TextQuote, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { TextField } from "@/components/auth/AuthFields";
@@ -10,6 +10,7 @@ import type { Category } from "@/lib/catalog/types";
 import { revealOf } from "@/lib/category-page/types";
 import { isSlotSource, type CategoryGridSection, type HomeRailSection, type HomeSection, type HomeSectionType, type RailSource } from "@/lib/home-page/types";
 import { addableHomeSections, canAddSlotRail, HOME_LIMITS, HOME_SECTION_INFO, newHomeSection, RAIL_SOURCES, railSourceInfo } from "@/lib/home-page/validation";
+import { HtmlBlockFields, type HtmlPictures } from "./HtmlBlockFields";
 import { CategoryPicker, ProductPicker } from "./pickers";
 
 const ICON: Record<HomeSectionType, LucideIcon> = {
@@ -20,6 +21,8 @@ const ICON: Record<HomeSectionType, LucideIcon> = {
   TRUST_STRIP: ShieldCheck,
   FAQ: MessageCircleQuestion,
   TRENDING_SEARCHES: Search,
+  HTML_BLOCK: Code2,
+  BUY_AGAIN: RotateCcw,
 };
 const REVEAL_LABEL = { NONE: "", FADE: " · fades in", RISE: " · rises in" };
 const MODE_LABEL = { ALL: "All categories", FEATURED: "Featured categories", PICKED: "Your pick" };
@@ -35,6 +38,10 @@ export function homeTitle(s: HomeSection): string {
       return s.title?.trim() || "Trending searches";
     case "PROMO_BANNER":
       return s.headline?.trim() || "Offer banner";
+    case "BUY_AGAIN":
+      return s.title?.trim() || "Buy again";
+    case "HTML_BLOCK":
+      return s.title?.trim() || (s.linkLabel?.trim() ? `HTML block: ${s.linkLabel.trim()}` : "HTML block");
     default:
       return s.title?.trim() || HOME_SECTION_INFO[s.type].label;
   }
@@ -47,6 +54,12 @@ function summary(s: HomeSection, live: string | undefined): string {
   if (s.type === "TRUST_STRIP") text += ` · ${s.points?.length ?? 0} points`;
   if (s.type === "FAQ") text += ` · ${s.items?.length ?? 0} ${s.items?.length === 1 ? "question" : "questions"}`;
   if (s.type === "PROMO_BANNER" && !s.imageId) text += " · needs a picture";
+  if (s.type === "BUY_AGAIN") text += ` · up to ${s.limit ?? HOME_LIMITS.buyAgainDefault} · each shopper's own`;
+  if (s.type === "HTML_BLOCK") {
+    if (s.mobileHtml?.trim()) text += " · own phone design";
+    if (s.linkPath?.trim()) text += ` · opens ${s.linkPath.trim()}`;
+    if (s.width === "FULL") text += " · edge to edge";
+  }
   text += REVEAL_LABEL[revealOf(s)];
   if (live) text += ` · ${live}`;
   return text;
@@ -61,6 +74,7 @@ export function HomeSectionsEditor({
   hasSlots,
   categories,
   pictures,
+  htmlPictures,
   links,
   live,
 }: {
@@ -70,6 +84,7 @@ export function HomeSectionsEditor({
   hasSlots: boolean;
   categories: Category[];
   pictures: BannerPictures;
+  htmlPictures: HtmlPictures;
   links: PageLink[];
   /** What each saved section shows on the page now ("8 products now"), by id. */
   live: Record<string, string>;
@@ -123,12 +138,12 @@ export function HomeSectionsEditor({
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <TextField
-                    label={s.type === "PROMO_BANNER" || s.type === "TEXT_BLOCK" || s.type === "TRUST_STRIP" ? "Heading above it" : "Title"}
+                    label={s.type === "PROMO_BANNER" || s.type === "TEXT_BLOCK" || s.type === "TRUST_STRIP" || s.type === "HTML_BLOCK" ? "Heading above it" : "Title"}
                     name={`title-${s.id}`}
                     optional
                     autoComplete="off"
                     maxLength={HOME_LIMITS.title}
-                    placeholder={s.type === "PROMO_BANNER" || s.type === "TEXT_BLOCK" || s.type === "TRUST_STRIP" ? "No heading" : homeTitle({ ...s, title: "" } as HomeSection)}
+                    placeholder={s.type === "PROMO_BANNER" || s.type === "TEXT_BLOCK" || s.type === "TRUST_STRIP" || s.type === "HTML_BLOCK" ? "No heading" : homeTitle({ ...s, title: "" } as HomeSection)}
                     value={s.title ?? ""}
                     onChange={(v) => update(i, { title: v })}
                     error={errors[`${at}.title`]}
@@ -151,6 +166,15 @@ export function HomeSectionsEditor({
                 </div>
               )}
               {s.type === "PROMO_BANNER" && <PromoBannerFields section={s} at={at} errors={errors} update={(p) => update(i, p)} pictures={pictures} links={links} />}
+              {s.type === "BUY_AGAIN" && (
+                <div className="space-y-2">
+                  <NumberSelect label="How many products" value={s.limit ?? HOME_LIMITS.buyAgainDefault} min={HOME_LIMITS.buyAgainMin} max={HOME_LIMITS.buyAgainMax} onChange={(limit) => update(i, { limit })} error={errors[`${at}.limit`]} />
+                  <p className="text-sm text-muted">
+                    Each signed-in shopper sees products from their own delivered orders here, most recent first. Guests and shoppers who haven&apos;t ordered yet see nothing, so this spot simply closes up for them. Empty title = &ldquo;Buy again&rdquo;.
+                  </p>
+                </div>
+              )}
+              {s.type === "HTML_BLOCK" && <HtmlBlockFields section={s} at={at} errors={errors} update={(p) => update(i, p)} links={links} pictures={htmlPictures} />}
               {s.type === "TEXT_BLOCK" && <TextBlockFields section={s} at={at} errors={errors} update={(p) => update(i, p)} />}
               {s.type === "TRUST_STRIP" && <TrustStripFields section={s} at={at} errors={errors} update={(p) => update(i, p)} />}
               {s.type === "FAQ" && <FaqFields section={s} at={at} errors={errors} update={(p) => update(i, p)} />}

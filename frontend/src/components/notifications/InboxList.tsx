@@ -4,7 +4,7 @@ import { ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { markOpenedAction } from "@/lib/campaigns/inbox-actions";
+import { api } from "@/lib/api-client";
 import type { InboxItem } from "@/lib/campaigns/types";
 import { when } from "@/lib/orders/format";
 import { markOneRead, setUnread } from "./unread-store";
@@ -29,8 +29,8 @@ export function InboxList({ items, complete }: { items: InboxItem[]; complete: b
     setOpened((s) => new Set(s).add(item.campaignId));
     // Right away: a link leaves this page before any effect here would run.
     markOneRead();
-    // Not awaited: a link opens at once; the call finishes in the background.
-    void markOpenedAction(item.campaignId).then((res) => {
+    // Not awaited: a link opens at once; keepalive lets the call finish even as the page changes.
+    void api(`/users/me/notifications/${encodeURIComponent(item.campaignId)}/opened`, { method: "POST", keepalive: true }).then((res) => {
       if (!res.ok && res.error.code === "UNAUTHENTICATED") sessionExpired();
     });
   }

@@ -66,10 +66,10 @@ export async function restoreHomeAction(version: number, fromVersion: number): P
   return write(await api.restore(token, version, fromVersion));
 }
 
-const PURPOSES: PageImagePurpose[] = ["HERO", "HERO_MOBILE", "BANNER", "GUIDE", "OG"];
+const PURPOSES: PageImagePurpose[] = ["HERO", "HERO_MOBILE", "BANNER", "GUIDE", "OG", "HTML"];
 
-/** Upload a home page picture (JPEG/PNG, ≤ 2 MB); answers with its id. */
-export async function uploadHomeImageAction(form: FormData): Promise<ActionResult<{ imageId: string }>> {
+/** Upload a home page picture (JPEG/PNG, ≤ 2 MB); answers with its id, and its permanent public link for HTML pictures. */
+export async function uploadHomeImageAction(form: FormData): Promise<ActionResult<{ imageId: string; url: string | null }>> {
   if (!(form instanceof FormData)) return fail(unexpected());
   const purpose = form.get("purpose");
   const image = form.get("image");
@@ -84,7 +84,7 @@ export async function uploadHomeImageAction(form: FormData): Promise<ActionResul
     if (res.error.status === 502 || res.error.code === "STORAGE_UNAVAILABLE") return fail(error(res.error.code, "Picture storage is busy right now. Please try again in a minute."));
     return fail(await toError(res.error));
   }
-  return { ok: true, data: { imageId: res.data.id } };
+  return { ok: true, data: { imageId: res.data.id, url: res.data.url ?? null } };
 }
 
 /** The designer's product picker: products on sale matching the text (a type-ahead call, so not counted as a search). */
@@ -95,15 +95,6 @@ export async function pickProductsAction(q: string): Promise<ActionResult<Produc
   if (typeof token !== "string") return fail(token);
   const res = await api.search(text, 0, 12, true);
   return res.ok ? { ok: true, data: res.data.products.items } : fail(await toError(res.error));
-}
-
-/** Products from the shopper's delivered orders still on sale ([] = hide the row; also when signed out). */
-export async function buyAgainAction(): Promise<ActionResult<ProductCard[]>> {
-  const token = await getSessionToken();
-  if (!token) return { ok: true, data: [] };
-  const res = await api.buyAgain(token, 12);
-  if (!res.ok) return res.error.code === "UNAUTHENTICATED" || res.error.status === 403 ? { ok: true, data: [] } : fail({ code: res.error.code, message: res.error.message, fieldErrors: {} });
-  return { ok: true, data: res.data };
 }
 
 // ---- helpers ----

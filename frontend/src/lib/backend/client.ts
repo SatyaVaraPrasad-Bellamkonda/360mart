@@ -1,11 +1,11 @@
 import "server-only";
-import { isIP } from "node:net";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import type { ApiProblem } from "@/lib/auth/api-types";
 import { apiLogMode, describeBody, describeOrigin, logApiCall, mask, maskPath } from "./api-log";
 import { SESSION_COOKIE } from "@/lib/auth/roles";
-import { apiBaseUrl } from "./config";
+import { clientIp } from "./api-gateway";
+import { apiBaseUrl, proxySecret } from "./config";
 
 // The only way the website talks to the Spring Boot API. It runs on our
 // Next.js server (never in the browser), so the API address stays private and
@@ -52,6 +52,7 @@ export async function callApi<T>(path: string, { method = "GET", body, sessionTo
   // FormData: fetch sets "multipart/form-data; boundary=…" itself.
   if (body !== undefined && !isUpload) requestHeaders.set("Content-Type", "application/json");
   if (sessionToken) requestHeaders.set("Cookie", `${SESSION_COOKIE}=${sessionToken}`);
+  signAsSite(requestHeaders);
   const source = incoming ?? (await headers());
   forwardClientDetails(source, requestHeaders);
   const requestId = source.get(REQUEST_ID_HEADER) ?? "-";
@@ -107,6 +108,7 @@ export async function callApiFile(path: string, { sessionToken }: { sessionToken
   const base = apiBaseUrl();
   if (!base) return failure(0, "API_UNAVAILABLE", UNREACHABLE);
   const requestHeaders = new Headers({ Accept: "*/*", Cookie: `${SESSION_COOKIE}=${sessionToken}` });
+  signAsSite(requestHeaders);
   const source = await headers();
   forwardClientDetails(source, requestHeaders);
   const requestId = source.get(REQUEST_ID_HEADER) ?? "-";
@@ -138,16 +140,25 @@ export async function callApiFile(path: string, { sessionToken }: { sessionToken
   return { ok: true, response };
 }
 
+// Every call from this site says so: X-Client (the backend's CSRF rule for
+// changes) and the shared proxy secret (so the backend trusts our
+// X-Forwarded-For and can refuse calls that skip the site).
+function signAsSite(target: Headers): void {
+  target.set("X-Client", "web");
+  const secret = proxySecret();
+  if (secret) target.set("X-Proxy-Secret", secret);
+}
+
 // The API rate-limits per IP and lists each session's device, so it needs the
-// shopper's IP and browser, not our server's. Vercel sets x-real-ip /
+// shopper's IP and browser, not our server's (clientIp: trusted on Vercel only). Vercel sets x-real-ip /
 // x-forwarded-for itself; the backend only trusts X-Forwarded-For from known
 // proxy addresses (server.forward-headers-strategy).
 function forwardClientDetails(incoming: Headers, target: Headers): void {
   const userAgent = incoming.get("user-agent");
   if (userAgent) target.set("User-Agent", userAgent.slice(0, 255));
 
-  const ip = (incoming.get("x-real-ip") ?? incoming.get("x-forwarded-for")?.split(",")[0])?.trim();
-  if (ip && isIP(ip)) target.set("X-Forwarded-For", ip);
+  const ip = clientIp(incoming);
+  if (ip) target.set("X-Forwarded-For", ip);
 }
 
 async function readJson(response: Response): Promise<unknown> {
