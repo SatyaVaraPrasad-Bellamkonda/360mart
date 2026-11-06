@@ -1,6 +1,6 @@
 import "server-only";
 import { callApi } from "@/lib/backend/client";
-import type { Cart, CheckoutInput, CustomerOrder, Invoice, LedgerAccount, LedgerAccountType, LedgerEntry, OrderStatus, OrderSummary, Page, SettlementInput, StoreLedger, StoreOrder, UndeliveredReason, WriteResult } from "./types";
+import type { Cart, CheckoutInput, CustomerOrder, Invoice, LedgerAccount, LedgerAccountType, LedgerEntry, OrderStatus, OrderSummary, Page, StoreLedger, StoreOrder, UndeliveredReason, WriteResult } from "./types";
 
 // One function per cart / checkout / orders / ledger endpoint. Every one needs
 // the session (customer, store owner or admin). Writes answer { success,
@@ -56,7 +56,5 @@ export const storeCancelOrder = (token: string, orderId: string, reason: string)
 export const listAdminOrders = (token: string, p: { status?: OrderStatus[]; storeId?: string; page: number; size: number }) =>
   callApi<Page<OrderSummary>>(`/admin/orders${query({ status: p.status, storeId: p.storeId, page: p.page, size: p.size })}`, { sessionToken: token });
 export const getAdminOrder = (token: string, orderId: string) => callApi<StoreOrder>(`/admin/orders/${id(orderId)}`, { sessionToken: token });
-export const adminCancelOrder = (token: string, orderId: string, reason: string) => callApi<WriteResult>(`/admin/orders/${id(orderId)}/cancel`, { method: "POST", body: { reason }, sessionToken: token });
 export const listLedgerAccounts = (token: string, p: { type?: LedgerAccountType; page: number; size: number }) => callApi<Page<LedgerAccount>>(`/admin/ledger/accounts${query({ type: p.type, page: p.page, size: p.size })}`, { sessionToken: token });
 export const ledgerEntries = (token: string, accountId: number, page: number, size: number) => callApi<Page<LedgerEntry>>(`/admin/ledger/accounts/${accountId}/entries${query({ page, size })}`, { sessionToken: token });
-export const recordSettlement = (token: string, storeId: string, input: SettlementInput) => callApi<WriteResult>(`/admin/stores/${id(storeId)}/settlements`, { method: "POST", body: input, sessionToken: token });

@@ -8,8 +8,8 @@ import { SAFE_LINE, SAFE_MULTILINE } from "@/lib/catalog/validation";
 import { BACKEND_ACCEPTS_CUSTOM_COLOUR, contrastWithWhite, HEX_COLOUR, MIN_CONTRAST, PAGE_THEMES, themeColour } from "@/lib/catalog/food-theme";
 import type { PageTheme } from "@/lib/catalog/types";
 import {
-  HERO_ANIMATIONS, HERO_LAYOUTS, HERO_SIZES, heroDisplay, PAGE_STATS, REVEAL_ANIMATIONS, revealOf, TRUST_ICONS,
-  type FaqItem, type FaqPageSection, type HeroDisplay, type PromoBannerSection, type TextBlockSection, type TrustStripSection, type HeroDoc, type PageDocument, type PageSection, type PageStat, type RevealAnimation, type SectionType, type TrustIcon, type TrustPoint,
+  heroDisplay, PAGE_STATS, REVEAL_ANIMATIONS, revealOf, TRUST_ICONS,
+  type FaqItem, type FaqPageSection, type PromoBannerSection, type TextBlockSection, type TrustStripSection, type HeroDoc, type PageDocument, type PageSection, type RevealAnimation, type SectionType, type TrustIcon, type TrustPoint,
 } from "./types";
 
 export const PAGE_LIMITS = {
@@ -55,9 +55,6 @@ export const SECTION_INFO: Record<SectionType, { label: string; text: string; to
 
 export type PageErrors = Record<string, string>;
 
-const OLD_NAMES = { VEG: 1, NON_VEG: 1, EGG: 1, GENERAL: 1 };
-// Only the values the editor offers (the backend refuses others).
-const THEMES: PageTheme[] = PAGE_THEMES.map((t) => t.value);
 const SECTION_ID = /^[a-z0-9-]{1,20}$/;
 
 /** The value to send for a theme: the offered one with the same colour (old food-type names become colour names). */
@@ -278,46 +275,6 @@ export function addableSections(sections: PageSection[], isSubcategory: boolean)
 
 export const str = (v: unknown) => (typeof v === "string" ? v : v == null ? null : undefined);
 
-/** A document from the browser, rebuilt from known fields only; null when it isn't shaped like one. */
-export function readPageDocument(input: unknown): PageDocument | null {
-  if (!input || typeof input !== "object") return null;
-  const raw = input as Record<string, unknown>;
-  const hero = raw.hero as Record<string, unknown> | undefined;
-  if (!hero || typeof hero !== "object" || !Array.isArray(raw.sections)) return null;
-  const theme = raw.theme === undefined ? undefined : THEMES.includes(raw.theme as PageTheme) ? (raw.theme as PageTheme) : typeof raw.theme === "string" && raw.theme in OLD_NAMES ? themeValue(raw.theme as PageTheme) : null;
-  if (theme === null) return null;
-
-  const fields = ["headline", "accentLine", "intro", "imageId", "mobileImageId", "imageAlt", "badge"] as const;
-  const h: HeroDoc = {};
-  for (const f of fields) {
-    const v = str(hero[f]);
-    if (v === undefined) return null;
-    h[f] = v;
-  }
-  const points = hero.trustPoints ?? [];
-  const stats = hero.stats ?? [];
-  if (!Array.isArray(points) || !Array.isArray(stats)) return null;
-  const trust = readPoints(points);
-  if (!trust) return null;
-  const statValues = PAGE_STATS.map((s) => s.value);
-  if (stats.some((s) => !statValues.includes(s as PageStat))) return null;
-  h.trustPoints = trust;
-  h.stats = stats as PageStat[];
-  const display = readDisplay(hero);
-  if (!display) return null;
-  Object.assign(h, display);
-
-  const sections: PageSection[] = [];
-  for (const item of raw.sections) {
-    const section = readSection(item);
-    if (!section) return null;
-    sections.push(section);
-  }
-  const custom = raw.customColour;
-  if (custom != null && (typeof custom !== "string" || !HEX_COLOUR.test(custom))) return null;
-  return { schemaVersion: 1, ...(theme ? { theme } : {}), ...(custom ? { customColour: custom } : {}), hero: h, sections };
-}
-
 export function readPoints(list: unknown[]): TrustPoint[] | null {
   const out: TrustPoint[] = [];
   for (const p of list) {
@@ -330,33 +287,6 @@ export function readPoints(list: unknown[]): TrustPoint[] | null {
 }
 
 export const oneOf = <T extends string>(values: readonly T[], v: unknown): v is T => values.includes(v as T);
-
-function readDisplay(hero: Record<string, unknown>): HeroDisplay | null {
-  const flags = ["enabled", "showBadge", "showTrustPoints", "showStats"] as const;
-  if (flags.some((f) => hero[f] !== undefined && typeof hero[f] !== "boolean")) return null;
-  if (hero.layout !== undefined && !oneOf(HERO_LAYOUTS, hero.layout)) return null;
-  if (hero.size !== undefined && !oneOf(HERO_SIZES, hero.size)) return null;
-  if (hero.animation !== undefined && !oneOf(HERO_ANIMATIONS, hero.animation)) return null;
-  return heroDisplay(hero as Partial<HeroDisplay>);
-}
-
-function readSection(item: unknown): PageSection | null {
-  if (!item || typeof item !== "object") return null;
-  const s = item as Record<string, unknown>;
-  const base = readSectionBase(s);
-  if (!base) return null;
-  if ((CONTENT_TYPES as readonly unknown[]).includes(s.type)) return readContentSection(s, base);
-  switch (s.type) {
-    case "SUBCATEGORIES":
-      return { ...base, type: s.type, layout: s.layout === "CHIPS" ? "CHIPS" : "TILES" };
-    case "PRODUCT_RAIL":
-      return (s.source === "IN_SEASON" || s.source === "FEATURED") && typeof s.limit === "number" ? { ...base, type: s.type, source: s.source, limit: s.limit } : null;
-    case "PRODUCT_GRID":
-      return { ...base, type: s.type, showFilters: s.showFilters !== false };
-    default:
-      return null;
-  }
-}
 
 /** The common fields of a section from the browser (null when they aren't shaped right). */
 export function readSectionBase(s: Record<string, unknown>) {

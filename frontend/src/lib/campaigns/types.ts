@@ -28,6 +28,25 @@ export type CampaignAudience = {
   joinedWithinDays?: number | null;
 };
 
+/**
+ * The countdown on an Android push: NONE, SIMPLE (a ticking clock in the
+ * notification's header) or BANNER (a coloured strip with a big clock). It
+ * counts down to expiresAt. iPhones show no ticking clock: their push gets
+ * "Ends 11:00 am" (India time) added to the text instead.
+ */
+export const TIMER_STYLES = ["NONE", "SIMPLE", "BANNER"] as const;
+export type TimerStyle = (typeof TIMER_STYLES)[number];
+export const TIMER_THEMES = ["GOLD", "INK", "TEAL", "RED"] as const;
+export type TimerTheme = (typeof TIMER_THEMES)[number];
+/** The banner's exact colours (= what Android draws). */
+export const TIMER_COLOURS: Record<TimerTheme, { name: string; background: string; text: string }> = {
+  GOLD: { name: "Gold", background: "#FFC629", text: "#1A1A1A" },
+  INK: { name: "Ink", background: "#1F2430", text: "#FFFFFF" },
+  TEAL: { name: "Teal", background: "#00695C", text: "#FFFFFF" },
+  RED: { name: "Red", background: "#C62828", text: "#FFFFFF" },
+};
+export const DEFAULT_TIMER_LABEL = "Offer ends in";
+
 /** Body of POST / PUT /admin/campaigns. */
 export type CampaignInput = {
   name: string;
@@ -36,6 +55,10 @@ export type CampaignInput = {
   imageId: string | null;
   link: string | null;
   expiresAt: string | null;
+  /** Label and theme are null when the style is NONE. */
+  timerStyle: TimerStyle;
+  timerLabel: string | null;
+  timerTheme: TimerTheme | null;
   audience: CampaignAudience;
 };
 
@@ -60,6 +83,10 @@ export type Campaign = {
   imageUrl: string | null;
   link: string | null;
   expiresAt: string | null;
+  /** Missing on campaigns from before countdowns = NONE. */
+  timerStyle?: TimerStyle | null;
+  timerLabel?: string | null;
+  timerTheme?: TimerTheme | null;
   audience: CampaignAudience | null;
   status: CampaignStatus;
   sendAt: string | null;

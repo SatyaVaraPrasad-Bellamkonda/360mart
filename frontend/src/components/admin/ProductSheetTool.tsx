@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { loadSubcategoriesAction } from "@/lib/catalog/actions";
 import { MAX_SHEET_CATEGORIES, nothingChanged, PRODUCT_SHEET_ACCEPT, PRODUCT_SHEET_DOWNLOAD, productSheetFileError, productSheetProblems } from "@/lib/catalog/product-sheet";
-import { uploadProductSheetAction, type ProductSheetFailure } from "@/lib/catalog/product-sheet-actions";
+import { fetchSubcategories, uploadProductSheet, type ProductSheetFailure } from "@/lib/catalog/admin-client";
 
 type TopCategory = { id: number; name: string };
 type Sub = { id: number; name: string };
@@ -46,7 +45,7 @@ export function ProductSheetTool({ categories }: { categories: TopCategory[] }) 
     if (next !== null && (!subs[next] || subs[next] === "failed")) {
       setSubs((s) => ({ ...s, [next]: "loading" }));
       startLoad(async () => {
-        const res = await loadSubcategoriesAction(next);
+        const res = await fetchSubcategories(next);
         if (!res.ok && res.error.code === "UNAUTHENTICATED") return sessionExpired();
         setSubs((s) => ({ ...s, [next]: res.ok ? res.data.map((c) => ({ id: c.categoryId, name: c.name })) : "failed" }));
       });
@@ -132,9 +131,7 @@ export function ProductSheetTool({ categories }: { categories: TopCategory[] }) 
     if (!file) return;
     setOutcome(null);
     startUpload(async () => {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await uploadProductSheetAction(form);
+      const res = await uploadProductSheet(file);
       if (!res.ok && res.error.code === "UNAUTHENTICATED") return sessionExpired();
       if (res.ok && nothingChanged(res.message)) {
         setOutcome({ kind: "notice", message: res.message });

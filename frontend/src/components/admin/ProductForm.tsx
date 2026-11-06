@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { SubmitButton, TextAreaField, TextField } from "@/components/auth/AuthFields";
 import { ShopProductCard } from "@/components/catalog/ShopProductCard";
 import { RichTextField } from "@/components/RichTextField";
-import { saveProductAction } from "@/lib/catalog/product-actions";
+import { saveProduct } from "@/lib/catalog/admin-client";
 import { PRODUCT_LIMITS, productErrors, productSlug, shopProductPath, toProductInput } from "@/lib/catalog/product-validation";
 import { productDescription, productTitle } from "@/lib/catalog/seo";
 import type { Product, ProductDraft, ProductErrors, ProductField, ProductVariant } from "@/lib/catalog/types";
@@ -33,6 +34,7 @@ type Props = {
 // one by one, and a new product gets them right after it's created).
 export function ProductForm({ productId, initial, start, currentImageUrl, variants }: Props) {
   const { sessionExpired } = useAuth();
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [draft, setDraft] = useState(initial);
   const [image, setImage] = useState<File | null>(null);
@@ -71,14 +73,10 @@ export function ProductForm({ productId, initial, start, currentImageUrl, varian
     setMessage(null);
     if (Object.keys(found).length) return focusFirstError();
 
-    const form = new FormData();
-    form.append("draft", JSON.stringify(draft));
-    form.append("parentCategoryId", String(where?.category.categoryId ?? "")); // to come back to the right list
-    if (image) form.append("image", image);
     startTransition(async () => {
-      // On success the action moves on (to the sizes, or back to the list).
-      const res = await saveProductAction(productId, form);
-      if (!res || res.ok) return;
+      // On success, move on (to the sizes, or back to the list); the category comes along to find the right list.
+      const res = await saveProduct(productId, draft, image, where?.category.categoryId ?? null);
+      if (res.ok) return router.push(res.data.next);
       const { code, fieldErrors } = res.error;
       if (code === "UNAUTHENTICATED") return sessionExpired();
       const known = Object.fromEntries(Object.entries(fieldErrors).filter(([field]) => FIELDS.has(field as ProductField)));

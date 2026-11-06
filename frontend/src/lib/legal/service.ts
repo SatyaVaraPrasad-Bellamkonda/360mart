@@ -21,5 +21,3 @@ export const getConsents = (token: string) => callApi<ConsentStatus>("/users/me/
 export const acceptPolicies = (token: string, policies: Acceptance[]) => callApi<Write>("/users/me/consents", { method: "POST", body: { policies }, sessionToken: token });
 
 export const adminVersions = (token: string, type: PolicyType) => callApi<Policy[]>(`/admin/legal/policies/${type}/versions`, { sessionToken: token });
-export const publishVersion = (token: string, type: PolicyType, body: { title: string; content: string; changeSummary: string | null; requiresReacceptance: boolean }) =>
-  callApi<Write>(`/admin/legal/policies/${type}/versions`, { method: "POST", body, sessionToken: token });

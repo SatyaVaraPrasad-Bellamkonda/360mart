@@ -5,11 +5,14 @@ import { useState, useTransition } from "react";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { toastError } from "@/components/Toaster";
 import type { Product } from "@/lib/catalog/types";
-import { loadMoreProductsAction } from "@/lib/category-page/actions";
+import { api } from "@/lib/api-client";
 import type { Page } from "@/lib/inventory/types";
 
+const PAGE_SIZE = 24;
+
 // A subcategory's products: the first page comes with the page (server
-// rendered, cached), "Show more" adds the next 24 (also cached on our server).
+// rendered, cached), "Show more" fetches the next 24 straight from the browser
+// (GET /api/v1/categories/{id}/products: visible in Network).
 export function ProductGridBlock({ subcategoryId, first, basePath, showFilters, preview }: { subcategoryId: number; first: Page<Product>; basePath: string; showFilters: boolean; preview?: boolean }) {
   const [items, setItems] = useState(first.items);
   const [page, setPage] = useState(first.page);
@@ -19,7 +22,7 @@ export function ProductGridBlock({ subcategoryId, first, basePath, showFilters, 
 
   function showMore() {
     startTransition(async () => {
-      const res = await loadMoreProductsAction(subcategoryId, page + 1);
+      const res = await api<Page<Product>>(`/categories/${subcategoryId}/products?page=${page + 1}&size=${PAGE_SIZE}`);
       if (!res.ok) return toastError(res.error.message);
       // A product could move between pages while browsing: never list it twice.
       setItems((now) => [...now, ...res.data.items.filter((p) => !now.some((n) => n.productId === p.productId))]);

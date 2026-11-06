@@ -12,7 +12,7 @@ import { setDeliveryLocation } from "@/components/location/delivery-location";
 import { EmptyOrders } from "@/components/orders/OrderParts";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import type { AddressChoice } from "@/lib/orders/address-choice";
-import { clearCartAction, loadCartAction, setCartItemAction } from "@/lib/orders/cart-actions";
+import { clearCart, loadCart, setCartItem } from "@/lib/orders/client";
 import { money } from "@/lib/orders/format";
 import type { Cart, CartItem, CartStore } from "@/lib/orders/types";
 import { Stepper } from "./AddToCart";
@@ -53,7 +53,7 @@ export function CartView({ initialCart, addresses, initialAddressId }: { initial
 
   async function changeItem(item: CartItem, quantity: number) {
     setBusyItems((b) => [...b, item.listingId]);
-    const res = await setCartItemAction({ listingId: item.listingId, quantity, addressId, reload: true });
+    const res = await setCartItem({ listingId: item.listingId, quantity, addressId, reload: true });
     setBusyItems((b) => b.filter((id) => id !== item.listingId));
     if (!res.ok) return failed(res.error);
     if (res.data.cart) adopt(res.data.cart);
@@ -62,7 +62,7 @@ export function CartView({ initialCart, addresses, initialAddressId }: { initial
 
   function chooseAddress(a: AddressChoice) {
     startMoving(async () => {
-      const res = await loadCartAction(a.addressId);
+      const res = await loadCart(a.addressId);
       if (!res.ok) return failed(res.error);
       setAddressId(a.addressId);
       adopt(res.data);
@@ -74,7 +74,7 @@ export function CartView({ initialCart, addresses, initialAddressId }: { initial
 
   async function clear() {
     setClearing(true);
-    const res = await clearCartAction();
+    const res = await clearCart();
     setClearing(false);
     setConfirmClear(false);
     if (!res.ok) return failed(res.error);

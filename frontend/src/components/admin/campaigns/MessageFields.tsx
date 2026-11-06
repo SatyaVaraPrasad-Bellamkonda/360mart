@@ -6,6 +6,7 @@ import { TextAreaField, TextField } from "@/components/auth/AuthFields";
 import { CATEGORY_IMAGE_TYPES, categoryImageError } from "@/lib/catalog/validation";
 import { APP_LINK, LIMITS, type CampaignDraft } from "@/lib/campaigns/validation";
 import type { CategoryOption } from "./CategoryChooser";
+import { CountdownFields } from "./CountdownFields";
 
 // The campaign's words, picture, link and offer end. What the lock screen
 // shows: title (Android cuts it after about 65 characters) + message.
@@ -101,7 +102,8 @@ export function MessageFields({
         </div>
       </div>
 
-      <EndsField value={draft.expiresAt} onChange={(expiresAt) => set({ expiresAt })} error={errors.expiresAt} />
+      <EndsField value={draft.expiresAt} onChange={(expiresAt) => set({ expiresAt })} error={errors.expiresAt} timer={draft.timerStyle !== "NONE"} />
+      <CountdownFields draft={draft} set={set} errors={errors} />
     </div>
   );
 }
@@ -167,12 +169,12 @@ function Picture({ url, uploading, onUpload, onRemove, error }: { url: string | 
   );
 }
 
-function EndsField({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+function EndsField({ value, onChange, error, timer }: { value: string; onChange: (v: string) => void; error?: string; timer: boolean }) {
   const id = useId();
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        Offer ends <span className="font-normal text-muted">(optional)</span>
+        Offer ends {timer ? <span className="font-normal text-brand-deep">(needed for the countdown)</span> : <span className="font-normal text-muted">(optional)</span>}
       </label>
       <div className="flex gap-2">
         <input
@@ -184,7 +186,7 @@ function EndsField({ value, onChange, error }: { value: string; onChange: (v: st
           aria-describedby={`${id}-hint`}
           className={`min-h-12 min-w-0 flex-1 rounded-xl border bg-white px-3 text-base text-ink outline-none focus:ring-2 focus:ring-brand/40 ${error ? "border-red-500" : "border-line focus:border-ink"}`}
         />
-        {value && (
+        {value && !timer && (
           <button type="button" onClick={() => onChange("")} className="flex size-12 shrink-0 items-center justify-center rounded-xl text-muted ring-1 ring-line hover:text-ink hover:ring-ink" aria-label="No end date">
             <X aria-hidden className="size-5" />
           </button>
@@ -194,7 +196,9 @@ function EndsField({ value, onChange, error }: { value: string; onChange: (v: st
         <p className="mt-1.5 text-sm text-red-700">{error}</p>
       ) : (
         <p id={`${id}-hint`} className="mt-1.5 text-sm text-muted">
-          India time. After it the offer isn&apos;t sent any more and leaves the inbox. At least 15 minutes after sending.
+          {timer
+            ? "India time. The countdown runs to this time (15 minutes to 24 hours after sending). After it the offer isn't sent any more and leaves the inbox."
+            : "India time. After it the offer isn't sent any more and leaves the inbox. At least 15 minutes after sending."}
         </p>
       )}
     </div>

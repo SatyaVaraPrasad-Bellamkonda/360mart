@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { loadSubcategoriesAction } from "@/lib/catalog/actions";
+import { fetchSubcategories } from "@/lib/catalog/admin-client";
 import { toPlace, type PickerPlace, type PickerStart } from "./picker-place";
 import { SearchSelect, type SearchSelectHandle } from "./SearchSelect";
 
@@ -61,7 +61,7 @@ export function SubcategoryPicker({ start, value, onChange, onCategoryChange, hi
     setSubcategories([]);
     onChange(null);
     startLoading(async () => {
-      const res = await loadSubcategoriesAction(id);
+      const res = await fetchSubcategories(id);
       if (!res.ok) {
         if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
         return setLoadError(res.error.message);

@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { Dialog } from "@/components/Dialog";
 import { toastError } from "@/components/Toaster";
-import { loadSubcategoriesAction } from "@/lib/catalog/actions";
+import { fetchSubcategories } from "@/lib/catalog/admin-client";
 import type { Category } from "@/lib/catalog/types";
 import type { ProductCard } from "@/lib/category-page/types";
-import { pickProductsAction } from "@/lib/home-page/actions";
+import { pickProducts } from "@/lib/home-page/admin-client";
 import { useNames } from "./names";
 
 // The designer's pickers: chosen items as an ordered list (move, remove) and a
@@ -95,7 +95,7 @@ function ProductSearchDialog({ open, onClose, ids, onChange, max }: { open: bool
     const ticket = ++latest.current;
     const timer = setTimeout(async () => {
       setLoading(true);
-      const res = await pickProductsAction(text);
+      const res = await pickProducts(text);
       if (ticket !== latest.current) return;
       setLoading(false);
       if (!res.ok) return toastError(res.error.message);
@@ -210,7 +210,7 @@ function CategoryDialog({ open, onClose, ids, onChange, max, categories, subcate
     setExpanded(c.categoryId);
     if (subs[c.categoryId]) return;
     setLoading(c.categoryId);
-    const res = await loadSubcategoriesAction(c.categoryId);
+    const res = await fetchSubcategories(c.categoryId);
     setLoading(null);
     if (!res.ok) return toastError(res.error.message);
     names.learnCategories(res.data, c.name);

@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { SelectField, TextField } from "@/components/auth/AuthFields";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { addVariantsAction, saveVariantAction } from "@/lib/catalog/product-actions";
+import { addVariants, saveVariant } from "@/lib/catalog/admin-client";
 import { SIZE_PRESETS, UNITS, VARIANT_LIMITS, emptyVariantDraft, sizeText, sortVariants, toVariantDraft, variantClashes, variantErrors } from "@/lib/catalog/product-validation";
 import type { ProductUnit, ProductVariant, VariantDraft, VariantErrors } from "@/lib/catalog/types";
 import { Toggle } from "./FormParts";
@@ -112,7 +112,7 @@ function VariantRow({ productId, variant: v, onEdit, onChanged }: { productId: n
 
   function flip() {
     startTransition(async () => {
-      const res = await saveVariantAction(productId, v.variantId, { ...toVariantDraft(v), isActive: !v.isActive });
+      const res = await saveVariant(productId, v.variantId, { ...toVariantDraft(v), isActive: !v.isActive });
       if (res.ok) return onChanged(res.data.isActive ? `${v.label} is back in the shop.` : `${v.label} is hidden from shoppers.`);
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
       toastError(res.error.message);
@@ -246,7 +246,7 @@ function NewSizes({ productId, existing, onCancel, onSaved }: { productId: numbe
       return focusError();
     }
     startTransition(async () => {
-      const res = await addVariantsAction(productId, drafts);
+      const res = await addVariants(productId, drafts);
       if (res.ok) return onSaved(res.data.message);
       const { code, message: text, fieldErrors } = res.error;
       if (code === "UNAUTHENTICATED") return sessionExpired();
@@ -464,7 +464,7 @@ function VariantForm({ productId, variant, others, onCancel, onSaved, onGone }: 
       return;
     }
     startTransition(async () => {
-      const res = await saveVariantAction(productId, variant.variantId, draft);
+      const res = await saveVariant(productId, variant.variantId, draft);
       if (res.ok) return onSaved(res.data.label);
       const { code, fieldErrors } = res.error;
       if (code === "UNAUTHENTICATED") return sessionExpired();

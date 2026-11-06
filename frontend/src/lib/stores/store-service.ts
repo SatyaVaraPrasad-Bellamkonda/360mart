@@ -1,6 +1,6 @@
 import "server-only";
 import { callApi } from "@/lib/backend/client";
-import type { DayHoursInput, DocumentInput, HoursExceptionInput, ReviewDecision, Store, StoreApplication, StoreInput, StoreStatus } from "./types";
+import type { DayHoursInput, DocumentInput, HoursExceptionInput, Store, StoreApplication, StoreInput, StoreStatus } from "./types";
 
 // One function per store endpoint. The owner's calls have no store id: it's
 // always the signed-in owner's own store. Writes return only a short
@@ -59,14 +59,6 @@ export function listStores(token: string, status: StoreStatus) {
 
 export function getStore(token: string, storeId: string) {
   return callApi<StoreApplication>(`/admin/stores/${storeId}`, { sessionToken: token });
-}
-
-export function reviewDocument(token: string, storeId: string, documentId: string, decision: ReviewDecision) {
-  return callApi<ActionResponse>(`/admin/stores/${storeId}/documents/${documentId}/review`, { method: "POST", body: decision, sessionToken: token });
-}
-
-export function reviewStore(token: string, storeId: string, decision: ReviewDecision) {
-  return callApi<ActionResponse>(`/admin/stores/${storeId}/review`, { method: "POST", body: decision, sessionToken: token });
 }
 
 // Two parts: "store" (JSON with its own content type, or Spring answers 415)

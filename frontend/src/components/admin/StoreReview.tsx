@@ -8,7 +8,7 @@ import { toastError, toastSuccess } from "@/components/Toaster";
 import { Card, DocumentPill, DocumentRow, placeText, StatusPill, StoreDetailsList, StoreHoursList, StoreLogo } from "@/components/stores/StoreParts";
 import { formatMobile } from "@/lib/auth/validation";
 import type { ActionResult } from "@/lib/auth/actions";
-import { reviewDocumentAction, reviewStoreAction } from "@/lib/stores/actions";
+import { reviewDocument, reviewStore } from "@/lib/stores/admin-client";
 import { DOCUMENT_LABEL, type ReviewDecision, type StoreApplication, type StoreDocument } from "@/lib/stores/types";
 import { dateTimeText, reasonError, STORE_LIMITS } from "@/lib/stores/validation";
 
@@ -117,7 +117,7 @@ function DocumentDecision({ storeId, document, onDone }: { storeId: string; docu
   const { message, pending, decide } = useDecision(onDone);
   const [rejecting, setRejecting] = useState(false);
   const review = (decision: ReviewDecision) =>
-    decide(() => reviewDocumentAction(storeId, document.documentId, decision), `${DOCUMENT_LABEL[document.documentType]} ${decision.approved ? "verified" : "rejected"}`);
+    decide(() => reviewDocument(storeId, document.documentId, decision), `${DOCUMENT_LABEL[document.documentType]} ${decision.approved ? "verified" : "rejected"}`);
 
   if (rejecting) {
     return (
@@ -208,7 +208,7 @@ function Decision({ app, onDone }: { app: StoreApplication; onDone: (app: StoreA
             pending={pending}
             serverError={message}
             onCancel={() => setRejecting(false)}
-            onSubmit={(reason) => decide(() => reviewStoreAction(store.storeId, { approved: false, reason }), "Sent back to the shopkeeper with your reason", () => setRejecting(false))}
+            onSubmit={(reason) => decide(() => reviewStore(store.storeId, { approved: false, reason }), "Sent back to the shopkeeper with your reason", () => setRejecting(false))}
           />
         </div>
       ) : (
@@ -216,7 +216,7 @@ function Decision({ app, onDone }: { app: StoreApplication; onDone: (app: StoreA
           <button
             type="button"
             disabled={!canApprove || pending}
-            onClick={() => decide(() => reviewStoreAction(store.storeId, { approved: true }), `${store.name} is approved and live`)}
+            onClick={() => decide(() => reviewStore(store.storeId, { approved: true }), `${store.name} is approved and live`)}
             className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-fresh px-6 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-fresh/40"
           >
             <BadgeCheck aria-hidden className="size-5" />

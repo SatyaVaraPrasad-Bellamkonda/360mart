@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, LoaderCircle, Moon, Send } from "lucide-react";
+import { CalendarClock, LoaderCircle, Moon, Send, Timer } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { Dialog } from "@/components/Dialog";
 import { count } from "@/lib/campaigns/format";
@@ -19,6 +19,7 @@ export function ScheduleDialog({
   onClose,
   audience,
   expiresAt,
+  timer = false,
   currentSendAt,
   onConfirm,
 }: {
@@ -26,6 +27,8 @@ export function ScheduleDialog({
   onClose: () => void;
   audience: AudienceCount | null;
   expiresAt: string | null;
+  /** The campaign has a countdown: the offer must end within 24 hours of sending. */
+  timer?: boolean;
   currentSendAt: string | null;
   /** Resolves with the problem to show, or null when it worked (the dialog is then closed by the parent). */
   onConfirm: (sendAt: string | null) => Promise<Result>;
@@ -33,12 +36,12 @@ export function ScheduleDialog({
   return (
     <Dialog open={open} onClose={onClose} title={currentSendAt ? "Change when it goes out" : "Send this campaign"} description="Promotions go out between 09:00 and 21:00 India time.">
       {/* Mounted per opening so it starts from the current time. */}
-      {open && <Body onClose={onClose} audience={audience} expiresAt={expiresAt} currentSendAt={currentSendAt} onConfirm={onConfirm} />}
+      {open && <Body onClose={onClose} audience={audience} expiresAt={expiresAt} timer={timer} currentSendAt={currentSendAt} onConfirm={onConfirm} />}
     </Dialog>
   );
 }
 
-function Body({ onClose, audience, expiresAt, currentSendAt, onConfirm }: Omit<Parameters<typeof ScheduleDialog>[0], "open">) {
+function Body({ onClose, audience, expiresAt, timer = false, currentSendAt, onConfirm }: Omit<Parameters<typeof ScheduleDialog>[0], "open">) {
   const id = useId();
   const [now] = useState(() => Date.now());
   const quiet = isQuietTime(now);
@@ -50,7 +53,7 @@ function Body({ onClose, audience, expiresAt, currentSendAt, onConfirm }: Omit<P
   async function confirm() {
     const sendAt = mode === "now" ? null : isoFromIstInput(at);
     if (mode === "later" && !sendAt) return setResult({ fieldErrors: { sendAt: "Pick a date and time" }, message: "" });
-    const local = scheduleErrors(sendAt, expiresAt);
+    const local = scheduleErrors(sendAt, expiresAt, Date.now(), timer);
     if (Object.keys(local).length) return setResult({ fieldErrors: local, message: "" });
     setBusy(true);
     setResult(null);
@@ -96,7 +99,21 @@ function Body({ onClose, audience, expiresAt, currentSendAt, onConfirm }: Omit<P
         </div>
       )}
 
-      {result?.fieldErrors.expiresAt && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">Offer end: {result.fieldErrors.expiresAt}. Change the offer end in the editor, or send earlier.</p>}
+      {timer && expiresAt && !result?.fieldErrors.expiresAt && (
+        <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          <Timer aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Countdown to {when(expiresAt)} (India time). Android phones show a ticking clock; iPhones show &ldquo;Ends&nbsp;…&rdquo; in the text. The offer must end within 24 hours of sending.
+          </span>
+        </p>
+      )}
+      {result?.fieldErrors.expiresAt && (
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">
+          Offer end: {result.fieldErrors.expiresAt}
+          {/* The countdown message already says what to do. */}
+          {/Send it later/.test(result.fieldErrors.expiresAt) ? "." : ". Change the offer end in the editor, or send earlier."}
+        </p>
+      )}
       {result?.message && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">{result.message}</p>}
 
       <p className="text-sm text-muted">

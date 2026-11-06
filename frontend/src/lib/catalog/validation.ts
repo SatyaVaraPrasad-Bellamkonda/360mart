@@ -151,27 +151,6 @@ export function emptyDraft(parentCategoryId: number | null = null): CategoryDraf
   };
 }
 
-/** A draft from untrusted input (a server action argument), or null when it isn't shaped like one. */
-export function readDraft(input: unknown): CategoryDraft | null {
-  if (!input || typeof input !== "object") return null;
-  const raw = input as Record<string, unknown>;
-  const text = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string) : null);
-  const parent = raw.parentCategoryId;
-  if (parent !== null && typeof parent !== "number") return null;
-  const values = {
-    name: text("name"),
-    slug: text("slug"),
-    description: text("description"),
-    badgeLabel: text("badgeLabel"),
-    seoTitle: text("seoTitle"),
-    seoDescription: text("seoDescription"),
-    displayOrder: text("displayOrder"),
-  };
-  if (Object.values(values).some((v) => v === null)) return null;
-  if (typeof raw.isFeatured !== "boolean" || typeof raw.isActive !== "boolean") return null;
-  return { ...(values as Record<keyof typeof values, string>), parentCategoryId: parent, isFeatured: raw.isFeatured, isActive: raw.isActive };
-}
-
 /** Whether a URL segment could be a category slug at all (anything else is a 404 without asking the backend). */
 export function isSlug(value: string): boolean {
   return value.length <= CATEGORY_LIMITS.slug && SLUG.test(value);

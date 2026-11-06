@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { FoodType } from "@/lib/catalog/types";
-import { cartLinesAction, mergeGuestCartAction, setCartItemAction, type CartLines } from "@/lib/orders/cart-actions";
+import { loadCartLines, mergeGuestCart, setCartItem, type CartLines } from "@/lib/orders/client";
 import { CART_ITEM_LIMIT, MAX_QUANTITY } from "@/lib/orders/types";
 import { toastError, toastSuccess } from "@/components/Toaster";
 
@@ -110,7 +110,7 @@ export function syncCart(mode: "guest" | "user") {
   loading = (async () => {
     const guest = readGuest();
     if (guest.length) {
-      const res = await mergeGuestCartAction(guest.map((g) => ({ listingId: g.listingId, quantity: g.quantity })));
+      const res = await mergeGuestCart(guest.map((g) => ({ listingId: g.listingId, quantity: g.quantity })));
       if (res.ok) {
         writeGuest([]);
         toastSuccess(res.data.message);
@@ -122,7 +122,7 @@ export function syncCart(mode: "guest" | "user") {
     }
     const cached = cachedLines();
     if (cached) return saveLines(cached);
-    const res = await cartLinesAction();
+    const res = await loadCartLines();
     if (res.ok) saveLines(res.data);
   })().finally(() => {
     loading = null;
@@ -173,7 +173,7 @@ export async function setItemQuantity(listingId: string, quantity: number, snaps
 
   set({ busy: [...state.busy, listingId] });
   try {
-    const res = await setCartItemAction({ listingId, quantity: qty });
+    const res = await setCartItem({ listingId, quantity: qty });
     if (!res.ok) {
       toastError(res.error.message);
       return false;

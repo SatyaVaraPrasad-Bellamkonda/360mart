@@ -8,7 +8,7 @@ import { CategoryImage } from "@/components/catalog/CategoryImage";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { api } from "@/lib/api-client";
-import { cancelOrderAction } from "@/lib/orders/actions";
+import { cancelOrder } from "@/lib/orders/client";
 import { endedReason, STATUS, when } from "@/lib/orders/format";
 import { isOpen, REASON_MAX, REASON_MIN, type CustomerOrder } from "@/lib/orders/types";
 import { useNow } from "@/components/support/Deadline";
@@ -230,7 +230,7 @@ function CancelDialog({ open, onClose, orderId, onDone, onExpired }: { open: boo
     if (length < REASON_MIN) return setError(`Tell the store why (at least ${REASON_MIN} characters).`);
     setBusy(true);
     setError(null);
-    const res = await cancelOrderAction(orderId, reason);
+    const res = await cancelOrder(orderId, reason);
     setBusy(false);
     if (!res.ok) {
       if (res.error.code === "UNAUTHENTICATED") return onExpired();

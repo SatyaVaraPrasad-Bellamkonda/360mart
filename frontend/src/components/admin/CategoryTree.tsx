@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
-import { loadSubcategoriesAction } from "@/lib/catalog/actions";
+import { fetchSubcategories } from "@/lib/catalog/admin-client";
 import type { Category } from "@/lib/catalog/types";
 import { categoryPath, CUSTOM_CATEGORY_PAGES } from "@/lib/catalog/validation";
 import { productsUrl } from "./picker-place";
@@ -48,7 +48,7 @@ export function CategoryTree({ categories, open: initiallyOpen, saved }: { categ
       next.delete(id);
       return next;
     });
-    const res = await loadSubcategoriesAction(id);
+    const res = await fetchSubcategories(id);
     setLoading((s) => {
       const next = new Set(s);
       next.delete(id);

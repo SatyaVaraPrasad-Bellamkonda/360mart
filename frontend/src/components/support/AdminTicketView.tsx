@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { money } from "@/lib/orders/format";
-import { adminMessageAction, loadAdminTicketAction, resolveTicketAction, startTicketAction } from "@/lib/support/admin-actions";
+import { adminMessage, loadAdminTicket, resolveTicket, startTicket } from "@/lib/support/admin-client";
 import { ticketVersion } from "@/lib/support/format";
 import { CATEGORIES, isOpenTicket, RESOLUTIONS, type Ticket, type TicketResolution } from "@/lib/support/types";
 import { noteError, refundError, SUPPORT_LIMITS } from "@/lib/support/validation";
@@ -40,13 +40,13 @@ export function AdminTicketView({ initial, order }: { initial: Ticket; order: Or
     toastError(error.message);
     // Someone else changed it meanwhile: show it as it is now.
     if (error.code === "TICKET_CLOSED" || error.code.endsWith("CONFLICT")) {
-      const fresh = await loadAdminTicketAction(ticket.ticketId);
+      const fresh = await loadAdminTicket(ticket.ticketId);
       if (fresh.ok) setTicket(fresh.data);
     }
   }
 
   async function send(body: string, internal: boolean) {
-    const res = await adminMessageAction(ticket.ticketId, body, internal);
+    const res = await adminMessage(ticket.ticketId, body, internal);
     if (!res.ok) {
       await failed(res.error);
       return false;
@@ -58,7 +58,7 @@ export function AdminTicketView({ initial, order }: { initial: Ticket; order: Or
 
   async function start() {
     setStarting(true);
-    const res = await startTicketAction(ticket.ticketId);
+    const res = await startTicket(ticket.ticketId);
     setStarting(false);
     if (!res.ok) return failed(res.error);
     toastSuccess(res.data.message);
@@ -172,7 +172,7 @@ function ResolveDialog({ open, onClose, ticket, orderTotal, onDone, onFailed }: 
     setErrors(found);
     if (Object.keys(found).length || !resolution) return;
     setBusy(true);
-    const res = await resolveTicketAction(ticket.ticketId, { resolution, note, refundAmount: resolution === "REFUND" ? amount : undefined, orderTotal: orderTotal ?? undefined });
+    const res = await resolveTicket(ticket.ticketId, { resolution, note, refundAmount: resolution === "REFUND" ? amount : undefined, orderTotal: orderTotal ?? undefined });
     setBusy(false);
     if (!res.ok) {
       if (res.error.code === "VALIDATION_FAILED" && Object.keys(res.error.fieldErrors).length) return setErrors(res.error.fieldErrors);

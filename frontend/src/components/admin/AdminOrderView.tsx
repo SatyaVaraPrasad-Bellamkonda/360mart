@@ -3,10 +3,11 @@
 import { ExternalLink, FileText, MessageSquareText, Store, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
 import { AddressBlock, OrderItems, OrderTotals, Panel, ProgressTracker, StatusPill, Timeline } from "@/components/orders/OrderParts";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { adminCancelOrderAction } from "@/lib/orders/admin-actions";
+import { adminCancelOrder } from "@/lib/orders/admin-client";
 import { endedReason, when } from "@/lib/orders/format";
 import { REASON_MAX, REASON_MIN, type StoreOrder } from "@/lib/orders/types";
 
@@ -115,6 +116,7 @@ export function AdminOrderView({ initial }: { initial: StoreOrder }) {
 
 function CancelDialog({ open, orderId, orderNumber, onClose, onDone }: { open: boolean; orderId: string; orderNumber: string; onClose: () => void; onDone: (order: StoreOrder | null) => void }) {
   const id = useId();
+  const { sessionExpired } = useAuth();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -123,8 +125,9 @@ function CancelDialog({ open, orderId, orderNumber, onClose, onDone }: { open: b
     const r = reason.trim();
     if (r.length < REASON_MIN || r.length > REASON_MAX) return setError(`Write ${REASON_MIN} to ${REASON_MAX} characters.`);
     start(async () => {
-      const res = await adminCancelOrderAction(orderId, r);
+      const res = await adminCancelOrder(orderId, r);
       if (!res.ok) {
+        if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
         setError(res.error.fieldErrors.reason ?? res.error.message);
         toastError(res.error.message);
         return;

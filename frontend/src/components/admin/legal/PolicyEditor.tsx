@@ -10,7 +10,7 @@ import { Dialog } from "@/components/Dialog";
 import { PolicyMarkdown } from "@/components/legal/PolicyMarkdown";
 import { Switch } from "@/components/admin/page-editor/parts";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { publishPolicyAction } from "@/lib/legal/admin-actions";
+import { publishPolicy } from "@/lib/legal/admin-client";
 import { legalTabHref } from "@/lib/legal/admin-tabs";
 import { POLICY_LIMITS, policyErrors, type PolicyDraft, type PolicyField } from "@/lib/legal/admin-validation";
 import { POLICY_PAGES, type PolicyType } from "@/lib/legal/types";
@@ -64,7 +64,7 @@ export function PolicyEditor({ type, start, nextVersion }: { type: PolicyType; s
   function publish() {
     setBanner(null);
     startTransition(async () => {
-      const res = await publishPolicyAction(type, draft);
+      const res = await publishPolicy(type, draft);
       setConfirming(false);
       if (!res.ok) {
         if (res.error.code === "UNAUTHENTICATED") return sessionExpired();

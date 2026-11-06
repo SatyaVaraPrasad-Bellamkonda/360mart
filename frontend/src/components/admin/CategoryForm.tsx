@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { FormMessage } from "@/components/auth/AuthCard";
 import { SelectField, SubmitButton, TextAreaField, TextField } from "@/components/auth/AuthFields";
 import { RichTextField } from "@/components/RichTextField";
-import { saveCategoryAction } from "@/lib/catalog/actions";
+import { saveCategory } from "@/lib/catalog/admin-client";
 import { categoryDescription, categoryTitle } from "@/lib/catalog/seo";
 import type { CategoryDraft, CategoryErrors, CategoryField } from "@/lib/catalog/types";
 import { CATEGORY_LIMITS, CUSTOM_CATEGORY_PAGES, categoryErrors, categoryImageError, effectiveSlug, slugFromName } from "@/lib/catalog/validation";
@@ -34,6 +35,7 @@ const TOP_LEVEL = "";
 // the field they belong to.
 export function CategoryForm({ categoryId, initial, parents, currentImageUrl, childCount }: Props) {
   const { sessionExpired } = useAuth();
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [draft, setDraft] = useState(initial);
   const [image, setImage] = useState<File | null>(null);
@@ -65,13 +67,10 @@ export function CategoryForm({ categoryId, initial, parents, currentImageUrl, ch
     setMessage(null);
     if (Object.keys(found).length) return focusFirstError();
 
-    const form = new FormData();
-    form.append("draft", JSON.stringify(draft));
-    if (image) form.append("image", image);
     startTransition(async () => {
-      // On success the action goes back to the category list.
-      const res = await saveCategoryAction(categoryId, form);
-      if (!res || res.ok) return;
+      // On success, back to the category list (the button stays busy until it opens).
+      const res = await saveCategory(categoryId, draft, image);
+      if (res.ok) return router.push(res.data.next);
       const { code, fieldErrors } = res.error;
       if (code === "UNAUTHENTICATED") return sessionExpired();
       const known = Object.fromEntries(Object.entries(fieldErrors).filter(([field]) => FIELDS.has(field as CategoryField)));

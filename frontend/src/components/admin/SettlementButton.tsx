@@ -4,9 +4,10 @@ import { Banknote } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { FieldError } from "@/components/auth/AuthFields";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
-import { recordSettlementAction } from "@/lib/orders/admin-actions";
+import { recordSettlement } from "@/lib/orders/admin-client";
 import { SETTLEMENT_REFERENCE, type SettlementDirection } from "@/lib/orders/types";
 
 type Errors = Partial<Record<"direction" | "amount" | "reference" | "note", string>>;
@@ -22,6 +23,7 @@ const input = (bad: boolean) =>
 // "Record settlement": money that actually moved between a store and 360mart
 // (bank transfer / UPI), with its reference. The statement reloads afterwards.
 export function SettlementButton({ storeId, storeName }: { storeId: string; storeName: string }) {
+  const { sessionExpired } = useAuth();
   const router = useRouter();
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -46,8 +48,9 @@ export function SettlementButton({ storeId, storeName }: { storeId: string; stor
     setErrors(e);
     if (Object.keys(e).length) return;
     start(async () => {
-      const res = await recordSettlementAction({ storeId, direction, amount: value, reference: reference.trim(), note: note.trim() || undefined });
+      const res = await recordSettlement({ storeId, direction, amount: value, reference: reference.trim(), note: note.trim() || undefined });
       if (!res.ok) {
+        if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
         const f = res.error.fieldErrors;
         setErrors({
           direction: f.direction,

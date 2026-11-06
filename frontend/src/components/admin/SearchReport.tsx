@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import type { HiddenTerm, SearchTermStat } from "@/lib/home-page/service";
-import { hideTermAction, unhideTermAction } from "@/lib/search/actions";
+import { hideTerm, unhideTerm } from "@/lib/search/admin-client";
 import { searchHref } from "@/lib/search/query";
 import { dateTimeText } from "@/lib/stores/validation";
 
@@ -38,8 +38,8 @@ export function SearchReport({ days, terms, hidden }: { days: 7 | 30; terms: Sea
       router.refresh();
     });
   }
-  const hide = (t: string) => act(`hide:${t}`, () => hideTermAction(t), `“${t}” won't show in trending searches.`);
-  const unhide = (id: number, t: string) => act(`show:${id}`, () => unhideTermAction(id), `“${t}” can show in trending searches again.`);
+  const hide = (t: string) => act(`hide:${t}`, () => hideTerm(t), `“${t}” won't show in trending searches.`);
+  const unhide = (id: number, t: string) => act(`show:${id}`, () => unhideTerm(id), `“${t}” can show in trending searches again.`);
 
   return (
     <div className="space-y-5">

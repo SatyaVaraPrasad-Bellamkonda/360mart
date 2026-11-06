@@ -40,8 +40,3 @@ export const replyStoreTicket = (token: string, ticketId: string, body: string) 
 export const listAdminTickets = (token: string, p: { status: TicketStatus[]; category?: SupportCategory; overdue?: boolean; page: number; size: number }) =>
   callApi<TicketPage>(`/admin/support-tickets${query(p)}`, { sessionToken: token });
 export const getAdminTicket = (token: string, ticketId: string) => callApi<Ticket>(`/admin/support-tickets/${id(ticketId)}`, { sessionToken: token });
-export const adminMessage = (token: string, ticketId: string, body: string, internal: boolean) =>
-  callApi<Write>(`/admin/support-tickets/${id(ticketId)}/messages`, { method: "POST", body: { body, internal }, sessionToken: token });
-export const startTicket = (token: string, ticketId: string) => callApi<Write>(`/admin/support-tickets/${id(ticketId)}/start`, { method: "POST", sessionToken: token });
-export const resolveTicket = (token: string, ticketId: string, body: { resolution: string; note: string; refundAmount?: number }) =>
-  callApi<Write>(`/admin/support-tickets/${id(ticketId)}/resolve`, { method: "POST", body, sessionToken: token });

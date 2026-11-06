@@ -11,7 +11,7 @@ import type { ActionError } from "@/lib/auth/actions";
 import type { Category } from "@/lib/catalog/types";
 import { heroDisplay, type PageImagePurpose } from "@/lib/category-page/types";
 import { htmlBlockState } from "@/lib/home-page/html-block";
-import { discardHomeDraftAction, homeHistoryAction, loadHomeAdminAction, publishHomeAction, restoreHomeAction, saveHomeDraftAction, uploadHomeImageAction } from "@/lib/home-page/actions";
+import { discardHomeDraft, homeHistory, loadHomeAdmin, publishHome, restoreHome, saveHomeDraft, uploadHomeImage } from "@/lib/home-page/admin-client";
 import { HOME_DEFAULTS, isSlotSource, type AdminHomePage, type HomeHeroDoc, type HomeHeroView, type HomePage, type HomePageDocument, type HomeSection, type TimeSlot } from "@/lib/home-page/types";
 import { cleanHomeDocument, floatingLabelsOf, homeErrors, indiaMinutes, sameHome, slotAt, timeLabel, toEditableHome } from "@/lib/home-page/validation";
 import { dateTimeText } from "@/lib/stores/validation";
@@ -109,7 +109,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
       focusFirstError();
       return null;
     }
-    const res = await saveHomeDraftAction(from, clean);
+    const res = await saveHomeDraft(from, clean);
     if (!res.ok) {
       failed(res.error);
       return null;
@@ -142,7 +142,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
       const from = dirty ? await persist() : version;
       if (from === null) return;
       if (!dirty && !unpublished) return void toastSuccess("Everything is already live.");
-      const res = await publishHomeAction(from);
+      const res = await publishHome(from);
       if (!res.ok) return failed(res.error);
       setVersion(res.data.version);
       setUnpublished(false);
@@ -159,7 +159,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
     });
 
   async function reload(message?: string) {
-    const res = await loadHomeAdminAction();
+    const res = await loadHomeAdmin();
     if (!res.ok) return failed(res.error);
     reset(res.data);
     if (message) toastSuccess(message);
@@ -168,7 +168,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
   const discard = () =>
     run("discard", async () => {
       setConfirmDiscard(false);
-      const res = await discardHomeDraftAction(version);
+      const res = await discardHomeDraft(version);
       if (!res.ok) return failed(res.error);
       await reload("Draft discarded. The designer shows the live page again.");
     });
@@ -176,7 +176,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
   const resolveConflict = (keepMine: boolean) =>
     run("load", async () => {
       setConflict(false);
-      const res = await loadHomeAdminAction();
+      const res = await loadHomeAdmin();
       if (!res.ok) return failed(res.error);
       if (!keepMine) {
         reset(res.data);
@@ -198,7 +198,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
       form.append("purpose", purpose);
       form.append("image", file);
       startTransition(async () => {
-        const res = await uploadHomeImageAction(form);
+        const res = await uploadHomeImage(form);
         setUploading(null);
         if (!res.ok) return failed(res.error);
         const imageId = res.data.imageId;
@@ -229,7 +229,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
     form.append("purpose", "HTML");
     form.append("image", file);
     startTransition(async () => {
-      const res = await uploadHomeImageAction(form);
+      const res = await uploadHomeImage(form);
       setUploading(null);
       if (!res.ok) return failed(res.error);
       const url = res.data.url;
@@ -351,12 +351,12 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
         <HistoryDialog
           open={historyOpen}
           onClose={() => setHistoryOpen(false)}
-          load={homeHistoryAction}
+          load={homeHistory}
           liveVersion={meta.publishedVersion}
           hasDraftChanges={dirty || unpublished}
           onPreview={(v) => showPreview(v)}
           onRestore={async (from) => {
-            const res = await restoreHomeAction(version, from);
+            const res = await restoreHome(version, from);
             if (!res.ok) return failed(res.error);
             setHistoryOpen(false);
             await reload(`Version ${from} is back in the draft. Publish to make it live.`);

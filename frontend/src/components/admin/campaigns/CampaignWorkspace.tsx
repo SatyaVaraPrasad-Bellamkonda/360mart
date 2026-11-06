@@ -9,18 +9,9 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import type { ActionError } from "@/lib/auth/actions";
-import {
-  campaignStepAction,
-  createCampaignAction,
-  deleteCampaignAction,
-  loadCampaignAction,
-  previewAudienceAction,
-  scheduleCampaignAction,
-  updateCampaignAction,
-  uploadCampaignImageAction,
-} from "@/lib/campaigns/admin-actions";
+import { campaignStep, createCampaign, deleteCampaign, loadCampaign, previewAudience, scheduleCampaign, updateCampaign, uploadCampaignImage } from "@/lib/campaigns/admin-client";
 import { STATUS_META } from "@/lib/campaigns/format";
-import type { AudienceCount, Campaign, CampaignAction } from "@/lib/campaigns/types";
+import { DEFAULT_TIMER_LABEL, TIMER_COLOURS, type AudienceCount, type Campaign, type CampaignAction } from "@/lib/campaigns/types";
 import { audienceErrors, audienceFromDraft, campaignErrors, draftFromCampaign, EMPTY_DRAFT, inputFromDraft, type CampaignDraft } from "@/lib/campaigns/validation";
 import { when } from "@/lib/orders/format";
 import { AudienceBuilder, type CountState } from "./AudienceBuilder";
@@ -36,7 +27,7 @@ const POLL_MS = 5_000;
 // One campaign, from first draft to results (like an AngularJS controller
 // owning the page's state). A draft, or a scheduled one being edited, shows
 // the editor; otherwise the results. Buttons come only from allowedActions.
-// Every write is followed by one GET (loadCampaignAction).
+// Every write is followed by one GET (loadCampaign).
 export function CampaignWorkspace({ initial, categories }: { initial: Campaign | null; categories: CategoryOption[] }) {
   const router = useRouter();
   const { sessionExpired } = useAuth();
@@ -59,6 +50,19 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
   const dirty = JSON.stringify(input) !== saved;
   const imageUrl = draft.imageId ? (localImage?.imageId === draft.imageId ? localImage.url : campaign?.imageId === draft.imageId ? campaign.imageUrl : null) : null;
 
+  // A newer copy from the server (a later visit: visited pages stay alive; or
+  // the refresh after a save) is taken in here, unless there are unsaved
+  // edits. Not by remounting: that would also drop an open dialog, like the
+  // send dialog opened right after "Send or schedule" saved the changes.
+  // Compared as timestamps: the API's precision differs after a save.
+  const serverVersion = initial ? Date.parse(initial.updatedAt ?? initial.createdAt) : 0;
+  const [seenVersion, setSeenVersion] = useState(serverVersion);
+  if (initial && serverVersion !== seenVersion) {
+    setSeenVersion(serverVersion);
+    const mine = campaign ? Date.parse(campaign.updatedAt ?? campaign.createdAt) : 0;
+    if (!dirty && serverVersion > mine) take(initial);
+  }
+
   const set = (patch: Partial<CampaignDraft>) => {
     setDraft((d) => ({ ...d, ...patch }));
     // A changed field's error goes; the rest stay until the next save.
@@ -78,7 +82,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
 
   async function reload(campaignId = id): Promise<Campaign | null> {
     if (!campaignId) return null;
-    const res = await loadCampaignAction(campaignId);
+    const res = await loadCampaign(campaignId);
     if (res.ok) {
       take(res.data);
       return res.data;
@@ -93,7 +97,12 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
       toastError("This campaign was deleted.");
       return router.push("/admin/campaigns");
     }
-    toastError(error.message);
+    // A problem with one field (e.g. the countdown's end time on "Send test"): its own words, marked on the field.
+    const fields = Object.entries(error.fieldErrors ?? {});
+    if (fields.length) {
+      showErrors(error.fieldErrors);
+      toastError(fields[0][1]);
+    } else toastError(error.message);
     if (error.code === "CAMPAIGN_STATE_CONFLICT" && reloadOnConflict) {
       setEditing(false);
       void reload();
@@ -119,7 +128,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
       toastError("Please fix the highlighted fields.");
       return null;
     }
-    const res = id ? await updateCampaignAction(id, input) : await createCampaignAction(input);
+    const res = id ? await updateCampaign(id, input) : await createCampaign(input);
     if (!res.ok) {
       if (Object.keys(res.error.fieldErrors).length) showErrors(res.error.fieldErrors);
       failed(res.error);
@@ -151,7 +160,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
     run("test", async () => {
       const savedId = await save();
       if (!savedId) return;
-      const res = await campaignStepAction(savedId, "test");
+      const res = await campaignStep(savedId, "test");
       if (res.ok) toastSuccess(res.data.message);
       else if (res.error.code === "NO_TEST_DEVICE") toastError(`${res.error.message} Log in to the 360mart app on your phone with this admin account, then try again.`);
       else failed(res.error);
@@ -164,7 +173,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
 
   async function onConfirmSend(sendAt: string | null) {
     if (!id) return null;
-    const res = await scheduleCampaignAction(id, sendAt, campaign?.expiresAt ?? null);
+    const res = await scheduleCampaign(id, sendAt, campaign?.expiresAt ?? null, !!campaign?.timerStyle && campaign.timerStyle !== "NONE");
     if (res.ok) {
       toastSuccess(res.data.message);
       setSendOpen(false);
@@ -187,7 +196,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
   const onStep = (step: "unschedule" | "cancel" | "duplicate") =>
     run(step, async () => {
       if (!id) return;
-      const res = await campaignStepAction(id, step);
+      const res = await campaignStep(id, step);
       setConfirm(null);
       if (!res.ok) return failed(res.error);
       toastSuccess(res.data.message);
@@ -199,7 +208,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
   const onDelete = () =>
     run("delete", async () => {
       if (!id) return;
-      const res = await deleteCampaignAction(id);
+      const res = await deleteCampaign(id);
       setConfirm(null);
       if (!res.ok) return failed(res.error);
       toastSuccess(res.data.message);
@@ -216,7 +225,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
     });
     const form = new FormData();
     form.append("image", file);
-    const [res, url] = await Promise.all([uploadCampaignImageAction(form), preview]);
+    const [res, url] = await Promise.all([uploadCampaignImage(form), preview]);
     setUploading(false);
     if (!res.ok) {
       if (res.error.code === "UNAUTHENTICATED") return sessionExpired();
@@ -239,7 +248,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
     if (!counting || audienceProblem) return;
     const seq = ++countSeq.current;
     const timer = setTimeout(async () => {
-      const res = await previewAudienceAction(JSON.parse(audienceJson));
+      const res = await previewAudience(JSON.parse(audienceJson));
       if (seq !== countSeq.current) return;
       if (!res.ok && res.error.code === "UNAUTHENTICATED") return sessionExpired();
       setCounted({ key: audienceJson, result: res.ok ? { ok: true, count: res.data } : { ok: false, message: res.error.message } });
@@ -263,7 +272,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
     if (!id || showEditor || (status !== "SENDING" && status !== "SCHEDULED")) return;
     const tick = () => {
       if (document.visibilityState !== "visible") return;
-      void loadCampaignAction(id).then((res) => {
+      void loadCampaign(id).then((res) => {
         if (res.ok) take(res.data);
       });
     };
@@ -289,7 +298,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
 
   const meta = campaign ? STATUS_META[campaign.status] : null;
   const title = (showEditor ? draft.name.trim() : campaign?.name) || "New campaign";
-  const preview = <PhonePreview title={draft.title} body={draft.body} imageUrl={imageUrl} link={draft.link.trim()} expiresAt={input.expiresAt} />;
+  const preview = <PhonePreview title={draft.title} body={draft.body} imageUrl={imageUrl} link={draft.link.trim()} expiresAt={input.expiresAt} timer={{ style: input.timerStyle, label: input.timerLabel, theme: input.timerTheme }} />;
 
   const actionBar = (
     <div className={showEditor ? "sticky bottom-0 z-10 -mx-4 border-t border-line bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-3xl sm:border sm:p-4" : "rounded-3xl border border-line bg-white p-3 sm:p-4"}>
@@ -404,6 +413,12 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
                     <span className="whitespace-pre-line">{campaign.body}</span>
                   </Fact>
                   <Fact label="Offer ends">{campaign.expiresAt ? `${when(campaign.expiresAt)} (India time)` : "No end"}</Fact>
+                  {campaign.timerStyle && campaign.timerStyle !== "NONE" && (
+                    <Fact label="Countdown">
+                      {campaign.timerStyle === "BANNER" ? "Banner" : "Simple clock"}
+                      {campaign.timerTheme ? ` · ${TIMER_COLOURS[campaign.timerTheme]?.name ?? campaign.timerTheme}` : ""} · &ldquo;{campaign.timerLabel || DEFAULT_TIMER_LABEL}&rdquo;
+                    </Fact>
+                  )}
                   <Fact label={campaign.status === "SCHEDULED" ? "Goes out" : "Sent"}>{campaign.sendAt ? `${when(campaign.sendAt)} (India time)` : "Not yet"}</Fact>
                   <Fact label="Audience" wide>
                     <ul className="list-inside list-disc space-y-0.5">
@@ -422,7 +437,7 @@ export function CampaignWorkspace({ initial, categories }: { initial: Campaign |
 
       {showEditor && actionBar}
 
-      <ScheduleDialog open={sendOpen} onClose={() => setSendOpen(false)} audience={live.state === "ready" ? live.count : null} expiresAt={campaign?.expiresAt ?? null} currentSendAt={campaign?.status === "SCHEDULED" ? campaign.sendAt : null} onConfirm={onConfirmSend} />
+      <ScheduleDialog open={sendOpen} onClose={() => setSendOpen(false)} audience={live.state === "ready" ? live.count : null} expiresAt={campaign?.expiresAt ?? null} timer={!!campaign?.timerStyle && campaign.timerStyle !== "NONE"} currentSendAt={campaign?.status === "SCHEDULED" ? campaign.sendAt : null} onConfirm={onConfirmSend} />
 
       <Dialog
         open={confirm !== null}

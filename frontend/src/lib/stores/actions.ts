@@ -9,7 +9,7 @@ import { isUuid } from "@/lib/auth/validation";
 import type { ApiFailure, ApiResult } from "@/lib/backend/client";
 import * as api from "./store-service";
 import type { ActionResponse } from "./store-service";
-import type { ReviewDecision, StoreApplication } from "./types";
+import type { StoreApplication } from "./types";
 import {
   documentErrors,
   hoursErrors,
@@ -20,19 +20,19 @@ import {
   toExceptionInput,
   readHoursDraft,
   readStoreDraft,
-  reasonError,
   storeErrors,
   toDocumentInput,
   toHoursInput,
   toStoreInput,
 } from "./validation";
 
-// Store registration (shopkeeper) and review (admin) actions. Same pattern as
+// Store registration (shopkeeper) actions. Same pattern as
 // the other actions: check everything again here (browser input can be forged),
 // then the backend checks it once more, including the caller's role. A write
 // only returns a short confirmation, so each action then reads the application
 // once (GET) and returns it: always two backend calls, and the screen refreshes
-// from the answer.
+// from the answer. (The admin's review calls the API from the browser:
+// admin-client.ts.)
 
 type Result = Promise<ActionResult<StoreApplication>>;
 
@@ -127,32 +127,6 @@ export async function submitStoreAction(): Result {
 
 export async function withdrawStoreAction(): Result {
   return run("seller", (token) => api.withdrawStore(token), MY_STORE);
-}
-
-// ---- admin ----
-
-export async function reviewDocumentAction(storeId: unknown, documentId: unknown, decision: unknown): Result {
-  if (!isUuid(storeId) || !isUuid(documentId)) return fail(error("DOCUMENT_NOT_FOUND", "Document not found."));
-  const checked = readDecision(decision);
-  if (!checked.ok) return checked;
-  return run("admin", (token) => api.reviewDocument(token, storeId as string, documentId as string, checked.data), (token) => api.getStore(token, storeId as string));
-}
-
-export async function reviewStoreAction(storeId: unknown, decision: unknown): Result {
-  if (!isUuid(storeId)) return fail(error("STORE_NOT_FOUND", "Store not found."));
-  const checked = readDecision(decision);
-  if (!checked.ok) return checked;
-  return run("admin", (token) => api.reviewStore(token, storeId as string, checked.data), (token) => api.getStore(token, storeId as string));
-}
-
-function readDecision(input: unknown): ActionResult<ReviewDecision> {
-  const raw = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
-  if (raw.approved === true) return { ok: true, data: { approved: true } };
-  if (raw.approved !== false) return fail(unexpected());
-  const reason = typeof raw.reason === "string" ? raw.reason.trim().replace(/ {2,}/g, " ") : "";
-  const problem = reasonError(reason);
-  if (problem) return fail({ code: "VALIDATION_FAILED", message: problem, fieldErrors: { reason: problem } });
-  return { ok: true, data: { approved: false, reason } };
 }
 
 // ---- shared ----

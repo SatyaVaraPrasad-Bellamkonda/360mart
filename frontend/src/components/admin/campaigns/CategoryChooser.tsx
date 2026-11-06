@@ -4,7 +4,7 @@ import { Check, ChevronDown, LoaderCircle, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "@/components/Dialog";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { loadSubcategoriesAction } from "@/lib/catalog/actions";
+import { fetchSubcategories } from "@/lib/catalog/admin-client";
 import { LIMITS } from "@/lib/campaigns/validation";
 
 export type CategoryOption = { id: number; name: string; slug: string };
@@ -42,7 +42,7 @@ export function CategoryChooser({
     setExpanded(id);
     if (subs[id] && typeof subs[id] !== "string") return;
     setSubs((s) => ({ ...s, [id]: "loading" }));
-    const res = await loadSubcategoriesAction(id);
+    const res = await fetchSubcategories(id);
     if (!res.ok) {
       if (res.error.code === "UNAUTHENTICATED") sessionExpired();
       return setSubs((s) => ({ ...s, [id]: res.error.message }));

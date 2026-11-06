@@ -1,11 +1,14 @@
-import { AUDIENCE_ROLES, ORDER_ACTIVITIES, PLATFORMS, type AudienceRole, type Campaign, type CampaignAudience, type CampaignInput, type OrderActivity, type Platform } from "./types";
+import { AUDIENCE_ROLES, DEFAULT_TIMER_LABEL, ORDER_ACTIVITIES, PLATFORMS, TIMER_STYLES, TIMER_THEMES, type AudienceRole, type Campaign, type CampaignAudience, type CampaignInput, type OrderActivity, type Platform, type TimerStyle, type TimerTheme } from "./types";
 
 // The campaign editor's form model and the backend's rules (SaveCampaignRequest,
 // CampaignAudience, CampaignRules), checked in the browser for quick feedback
 // and again in the server action. The backend checks everything once more.
 // Safe for client components.
 
-export const LIMITS = { name: 80, title: 65, body: 240, link: 300, cities: 20, pincodes: 50, categories: 20, days: 365 } as const;
+export const LIMITS = { name: 80, title: 65, body: 240, link: 300, timerLabel: 30, cities: 20, pincodes: 50, categories: 20, days: 365 } as const;
+
+/** With a countdown, the offer must end at most this long after sending. */
+export const MAX_TIMER_HOURS = 24;
 
 /** Minutes an offer must outlive "now" (or the send time). */
 export const MIN_OFFER_MINUTES = 15;
@@ -30,6 +33,10 @@ export type CampaignDraft = {
   link: string;
   /** "YYYY-MM-DDTHH:mm" India time, or "". */
   expiresAt: string;
+  timerStyle: TimerStyle;
+  /** "" = the standard "Offer ends in". */
+  timerLabel: string;
+  timerTheme: TimerTheme;
   roles: AudienceRole[];
   platforms: Platform[];
   cities: string[];
@@ -48,6 +55,9 @@ export const EMPTY_DRAFT: CampaignDraft = {
   imageId: null,
   link: "",
   expiresAt: "",
+  timerStyle: "NONE",
+  timerLabel: "",
+  timerTheme: "GOLD",
   roles: [...AUDIENCE_ROLES],
   platforms: [],
   cities: [],
@@ -71,6 +81,9 @@ export function draftFromCampaign(c: Campaign): CampaignDraft {
     imageId: c.imageId ?? null,
     link: c.link ?? "",
     expiresAt: c.expiresAt ? istInput(c.expiresAt) : "",
+    timerStyle: c.timerStyle && TIMER_STYLES.includes(c.timerStyle) ? c.timerStyle : "NONE",
+    timerLabel: c.timerLabel && c.timerLabel !== DEFAULT_TIMER_LABEL ? c.timerLabel : "",
+    timerTheme: c.timerTheme && TIMER_THEMES.includes(c.timerTheme) ? c.timerTheme : "GOLD",
     roles: a.roles?.length ? a.roles.filter((r) => AUDIENCE_ROLES.includes(r)) : [...AUDIENCE_ROLES],
     platforms: (a.platforms ?? []).filter((p) => PLATFORMS.includes(p)),
     cities: a.cities ?? [],
@@ -105,6 +118,10 @@ export function inputFromDraft(d: CampaignDraft): CampaignInput {
     imageId: d.imageId,
     link: d.link.trim() || null,
     expiresAt: d.expiresAt ? isoFromIstInput(d.expiresAt) : null,
+    // No timer = no label or theme (the backend stores them as null then).
+    timerStyle: d.timerStyle,
+    timerLabel: d.timerStyle === "NONE" ? null : d.timerLabel.trim() || null,
+    timerTheme: d.timerStyle === "NONE" ? null : d.timerTheme,
     audience: audienceFromDraft(d),
   };
 }
@@ -139,6 +156,11 @@ export function campaignErrors(input: CampaignInput, now = Date.now()): Record<s
   else if (input.body.length > LIMITS.body) e.body = `At most ${LIMITS.body} characters`;
   else if (!SAFE_MULTILINE.test(input.body)) e.body = "Remove special characters like < >";
   if (input.link && (input.link.length > LIMITS.link || !APP_LINK.test(input.link))) e.link = "Use a link inside 360mart, like /fruits or /search?q=mango";
+  if (input.timerStyle !== "NONE") {
+    if (input.timerLabel && input.timerLabel.length > LIMITS.timerLabel) e.timerLabel = `At most ${LIMITS.timerLabel} characters`;
+    else if (input.timerLabel && !SAFE_LINE.test(input.timerLabel)) e.timerLabel = "Remove special characters like < >";
+    if (input.expiresAt === null) e.expiresAt = "A countdown needs the offer end time";
+  }
   if (input.expiresAt !== null) {
     const t = Date.parse(input.expiresAt);
     if (Number.isNaN(t)) e.expiresAt = "Pick a date and time";
@@ -147,8 +169,8 @@ export function campaignErrors(input: CampaignInput, now = Date.now()): Record<s
   return { ...e, ...audienceErrors(input.audience, "audience.") };
 }
 
-/** Problems with a send time (null = now), as the backend's checkSchedule. */
-export function scheduleErrors(sendAt: string | null, expiresAt: string | null, now = Date.now()): Record<string, string> {
+/** Problems with a send time (null = now), as the backend's checkSchedule. `timer` = the campaign has a countdown. */
+export function scheduleErrors(sendAt: string | null, expiresAt: string | null, now = Date.now(), timer = false): Record<string, string> {
   const e: Record<string, string> = {};
   const at = sendAt ? Date.parse(sendAt) : now;
   if (Number.isNaN(at)) e.sendAt = "Pick a date and time";
@@ -156,6 +178,9 @@ export function scheduleErrors(sendAt: string | null, expiresAt: string | null, 
   else if (at > now + MAX_SCHEDULE_DAYS * 86_400_000) e.sendAt = `At most ${MAX_SCHEDULE_DAYS} days ahead`;
   else if (isQuietTime(at)) e.sendAt = "Promotions can't go out between 21:00 and 09:00 (India time). Pick another time";
   if (!e.sendAt && expiresAt && Date.parse(expiresAt) < at + MIN_OFFER_MINUTES * 60_000) e.expiresAt = "The offer must end at least 15 minutes after it is sent";
+  else if (!e.sendAt && timer && !expiresAt) e.expiresAt = "A countdown needs the offer end time";
+  else if (!e.sendAt && timer && expiresAt && Date.parse(expiresAt) > at + MAX_TIMER_HOURS * 3_600_000)
+    e.expiresAt = "With a countdown the offer must end within 24 hours of sending. Send it later, end it sooner, or turn the countdown off";
   return e;
 }
 

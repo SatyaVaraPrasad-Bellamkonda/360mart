@@ -11,8 +11,7 @@ import { ProductThumb } from "@/components/inventory/ListingParts";
 import { toastSuccess } from "@/components/Toaster";
 import { loadConsentsAction, type ConsentPrompt } from "@/lib/legal/actions";
 import type { AddressChoice } from "@/lib/orders/address-choice";
-import { placeOrderAction } from "@/lib/orders/actions";
-import { loadCartAction } from "@/lib/orders/cart-actions";
+import { loadCart, placeOrder } from "@/lib/orders/client";
 import { money } from "@/lib/orders/format";
 import { NOTE_MAX, type Cart, type CartStore } from "@/lib/orders/types";
 import { AddressPicker } from "./AddressPicker";
@@ -84,7 +83,7 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
   const [idempotencyKey, forgetKey] = useIdempotencyKey(signature);
 
   async function reloadCart(id = addressId) {
-    const res = await loadCartAction(id ?? undefined);
+    const res = await loadCart(id ?? undefined);
     if (res.ok) {
       setCart(res.data);
       replaceCartLines(linesOf(res.data));
@@ -108,7 +107,7 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
     setPlacing(true);
     setBanner(null);
     setFieldErrors({});
-    const res = await placeOrderAction({
+    const res = await placeOrder({
       idempotencyKey,
       addressId,
       stores: chosen.map((s) => ({ storeId: s.storeId, note: notes[s.storeId] ?? "" })),

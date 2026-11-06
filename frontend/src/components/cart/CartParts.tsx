@@ -1,6 +1,6 @@
 import { AlertTriangle, Store } from "lucide-react";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
-import type { CartLines } from "@/lib/orders/cart-actions";
+import type { CartLines } from "@/lib/orders/client";
 import { money } from "@/lib/orders/format";
 import type { Cart, CartStore } from "@/lib/orders/types";
 

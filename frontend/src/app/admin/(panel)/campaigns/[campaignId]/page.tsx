@@ -33,6 +33,7 @@ async function Campaign({ params }: Pick<PageProps<"/admin/campaigns/[campaignId
     return <AdminLoadFailed message={campaign.error.message} />;
   }
   const options = categories.ok ? categories.data.map((c) => ({ id: c.categoryId, name: c.name, slug: c.slug })) : [];
-  // Keyed on the saved version: a fresh visit after a change starts from the new copy (visited pages keep their state).
-  return <CampaignWorkspace key={`${campaign.data.campaignId}@${campaign.data.updatedAt ?? campaign.data.createdAt}`} initial={campaign.data} categories={options} />;
+  // Keyed on the campaign only: a newer copy is taken in by the workspace itself (see serverVersion there),
+  // so a save's page refresh doesn't rebuild the editor and close an open dialog.
+  return <CampaignWorkspace key={campaign.data.campaignId} initial={campaign.data} categories={options} />;
 }

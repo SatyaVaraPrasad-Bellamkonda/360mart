@@ -8,7 +8,7 @@ import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { BACKEND_ACCEPTS_CUSTOM_COLOUR, colourLabel, colourSwatch, contrastWithWhite, HEX_COLOUR, MIN_CONTRAST, PAGE_THEMES, pageTheme, readableShade, themeColour, themeStyle } from "@/lib/catalog/food-theme";
 import type { PageTheme } from "@/lib/catalog/types";
-import { discardDraftAction, historyAction, loadAdminPageAction, publishAction, restoreAction, saveDraftAction, uploadPageImageAction } from "@/lib/category-page/actions";
+import * as pageApi from "@/lib/category-page/admin-client";
 import { heroDisplay, type AdminCategoryPage, type CategoryPage, type HeroDisplay, type HeroDoc, type PageDocument, type PageHistoryItem, type PageImagePurpose, type PageSection, type PageStat } from "@/lib/category-page/types";
 import { cleanDocument, pageErrors, sameDocument, toEditable, type PageErrors } from "@/lib/category-page/validation";
 import { dateTimeText } from "@/lib/stores/validation";
@@ -105,7 +105,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
       focusFirstError();
       return null;
     }
-    const res = await saveDraftAction(id, from, isSub, clean);
+    const res = await pageApi.saveDraft(id, from, isSub, clean);
     if (!res.ok) {
       failed(res.error);
       return null;
@@ -138,7 +138,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
       const from = dirty ? await persist() : version;
       if (from === null) return;
       if (!dirty && !unpublished) return void toastSuccess("Everything is already live.");
-      const res = await publishAction(id, from);
+      const res = await pageApi.publish(id, from);
       if (!res.ok) return failed(res.error);
       setVersion(res.data.version);
       setUnpublished(false);
@@ -155,7 +155,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
     });
 
   async function reload(message?: string) {
-    const res = await loadAdminPageAction(id);
+    const res = await pageApi.loadAdminPage(id);
     if (!res.ok) return failed(res.error);
     reset(res.data);
     if (message) toastSuccess(message);
@@ -164,7 +164,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
   const discard = () =>
     run("discard", async () => {
       setConfirmDiscard(false);
-      const res = await discardDraftAction(id, version);
+      const res = await pageApi.discardDraft(id, version);
       if (!res.ok) return failed(res.error);
       await reload("Draft discarded. The editor shows the live page again.");
     });
@@ -172,7 +172,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
   const resolveConflict = (keepMine: boolean) =>
     run("load", async () => {
       setConflict(false);
-      const res = await loadAdminPageAction(id);
+      const res = await pageApi.loadAdminPage(id);
       if (!res.ok) return failed(res.error);
       if (!keepMine) {
         reset(res.data);
@@ -191,11 +191,8 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = typeof reader.result === "string" ? reader.result : null;
-      const form = new FormData();
-      form.append("purpose", purpose);
-      form.append("image", file);
       startTransition(async () => {
-        const res = await uploadPageImageAction(id, form);
+        const res = await pageApi.uploadPageImage(id, purpose, file);
         setUploading(null);
         if (!res.ok) return failed(res.error);
         const imageId = res.data.imageId;
@@ -387,7 +384,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
       <HistoryDialog
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        load={(page) => historyAction(id, page)}
+        load={(page) => pageApi.loadHistory(id, page)}
         swatch={(h: PageHistoryItem) =>
           h.customColour ? (
             <span className="size-3 rounded-full" style={{ background: h.customColour }} title={`Custom ${h.customColour.toUpperCase()}`} />
@@ -399,7 +396,7 @@ export function PageEditor({ category, parent, initial, live, shopHref, customDe
         hasDraftChanges={dirty || unpublished}
         onPreview={(v) => preview(v)}
         onRestore={async (from) => {
-          const res = await restoreAction(id, version, from);
+          const res = await pageApi.restore(id, version, from);
           if (!res.ok) return failed(res.error);
           setHistoryOpen(false);
           await reload(`Version ${from} is back in the draft. Publish to make it live.`);

@@ -258,23 +258,6 @@ export function emptyProductDraft(categoryId = 0): ProductDraft {
   };
 }
 
-const PRODUCT_TEXT_FIELDS = [
-  "name", "slug", "brand", "shortDescription", "description", "origin", "seasonStart", "seasonEnd", "storageTip",
-  "shelfLife", "badgeLabel", "hsnCode", "gstRate", "seoTitle", "seoDescription", "displayOrder",
-] as const;
-
-/** A draft from untrusted input (a server action argument), or null when it isn't shaped like one. */
-export function readProductDraft(input: unknown): ProductDraft | null {
-  if (!input || typeof input !== "object") return null;
-  const raw = input as Record<string, unknown>;
-  if (typeof raw.categoryId !== "number") return null;
-  if (raw.foodType !== "" && !isFoodType(raw.foodType)) return null;
-  if (PRODUCT_TEXT_FIELDS.some((key) => typeof raw[key] !== "string")) return null;
-  if (typeof raw.alwaysInSeason !== "boolean" || typeof raw.isFeatured !== "boolean" || typeof raw.isActive !== "boolean") return null;
-  const text = Object.fromEntries(PRODUCT_TEXT_FIELDS.map((key) => [key, raw[key] as string])) as Record<(typeof PRODUCT_TEXT_FIELDS)[number], string>;
-  return { ...text, categoryId: raw.categoryId, foodType: raw.foodType as FoodType | "", alwaysInSeason: raw.alwaysInSeason, isFeatured: raw.isFeatured, isActive: raw.isActive };
-}
-
 // ---- Size form ----
 
 export function variantErrors(draft: VariantDraft): VariantErrors {
@@ -356,14 +339,6 @@ export function toVariantDraft(variant: ProductVariant): VariantDraft {
 
 export function emptyVariantDraft(displayOrder = 0): VariantDraft {
   return { label: "", quantity: "", unit: "KG", sku: "", displayOrder: String(displayOrder), isActive: true };
-}
-
-export function readVariantDraft(input: unknown): VariantDraft | null {
-  if (!input || typeof input !== "object") return null;
-  const raw = input as Record<string, unknown>;
-  const texts = ["label", "quantity", "sku", "displayOrder"] as const;
-  if (texts.some((key) => typeof raw[key] !== "string") || !isUnit(raw.unit) || typeof raw.isActive !== "boolean") return null;
-  return { label: raw.label as string, quantity: raw.quantity as string, unit: raw.unit, sku: raw.sku as string, displayOrder: raw.displayOrder as string, isActive: raw.isActive };
 }
 
 /** Shop URL of a product: /fruits/mangoes/alphonso-mango. */
