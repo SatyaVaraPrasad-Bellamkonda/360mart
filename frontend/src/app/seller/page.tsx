@@ -5,6 +5,7 @@ import { Suspense, type ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { HoursCard } from "@/components/seller/HoursCard";
 import { placeText, StatusPill, StoreLogo } from "@/components/stores/StoreParts";
+import { AddEmailPrompt } from "@/components/account/AddEmailPrompt";
 import { requireRole } from "@/lib/auth/dal";
 import { loadStoreOrders } from "@/lib/orders/data";
 import { loadMyStore } from "@/lib/stores/data";
@@ -42,6 +43,8 @@ async function SellerDashboard() {
         </div>
         <LogoutButton />
       </header>
+
+      {!user.emailVerified && <AddEmailPrompt userId={user.userId} hasEmail={!!user.email} />}
 
       {!res.ok ? (
         <p role="alert" className="rounded-3xl border border-line bg-white px-5 py-6 text-sm text-red-700">

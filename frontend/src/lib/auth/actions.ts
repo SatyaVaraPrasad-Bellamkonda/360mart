@@ -9,7 +9,7 @@ import * as api from "./auth-service";
 import { ROLE_FROM_API, safeNextPath, type Role } from "./roles";
 import { toCurrentUser } from "./current-user";
 import { clearSession, getSessionToken, readSessionCookie, saveSession, saveUser } from "./session";
-import { isUuid, loginPasswordError, newPasswordError, normalizeMobile, otpError } from "./validation";
+import { emailError, isUuid, loginPasswordError, newPasswordError, normalizeEmail, normalizeMobile, otpError } from "./validation";
 
 // Server actions = functions the forms call that run on our server (like an
 // AngularJS $http call, but Next.js creates the endpoint and blocks calls from
@@ -20,16 +20,23 @@ export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error:
 
 type CodeAndPassword = { mobileNumber: unknown; otpId: unknown; otp: unknown; password: unknown; next?: unknown; consents?: unknown };
 
-// Step 1 of signup: create the account (or resume an unfinished one) and text a code.
+// Step 1 of signup: create the account (or resume an unfinished one) and email a code
+// to the address typed in. Sending it again with a corrected email sends the code there.
 // A shopkeeper account (STORE_OWNER) can shop too, and also register a store.
-export async function startSignupAction(mobileInput: unknown, accountTypeInput?: unknown): Promise<ActionResult<{ mobileNumber: string; otp: OtpInfo }>> {
-  const mobile = normalizeMobile(mobileInput);
-  if (!mobile) return invalid({ mobileNumber: "Enter a valid 10-digit Indian mobile number" });
-  const accountType: AccountType = accountTypeInput === "STORE_OWNER" ? "STORE_OWNER" : "CUSTOMER";
+export async function startSignupAction(input: { mobileNumber: unknown; email: unknown; accountType?: unknown }): Promise<ActionResult<{ mobileNumber: string; email: string; otp: OtpInfo }>> {
+  const mobile = normalizeMobile(input?.mobileNumber);
+  const emailInput = typeof input?.email === "string" ? input.email : "";
+  const fieldErrors: Record<string, string> = {};
+  if (!mobile) fieldErrors.mobileNumber = "Enter a valid 10-digit Indian mobile number";
+  const emailProblem = emailError(emailInput);
+  if (emailProblem) fieldErrors.email = emailProblem;
+  if (!mobile || emailProblem) return invalid(fieldErrors);
+  const email = normalizeEmail(emailInput);
+  const accountType: AccountType = input.accountType === "STORE_OWNER" ? "STORE_OWNER" : "CUSTOMER";
 
-  const res = await api.signup(mobile, accountType);
+  const res = await api.signup(mobile, email, accountType);
   if (!res.ok) return fail(res.error);
-  return { ok: true, data: { mobileNumber: res.data.mobileNumber, otp: res.data.otp } };
+  return { ok: true, data: { mobileNumber: res.data.mobileNumber, email, otp: res.data.otp } };
 }
 
 // "Resend code" on signup, and step 1 of forgot password.
@@ -42,7 +49,7 @@ export async function sendCodeAction(mobileInput: unknown, purpose: unknown): Pr
   return res.ok ? { ok: true, data: res.data } : fail(res.error);
 }
 
-// Step 2 of signup: the code proves the number is theirs, then the password is saved.
+// Step 2 of signup: the code proves the email is theirs (it becomes the verified email), then the password is saved.
 export async function completeSignupAction(input: CodeAndPassword): Promise<ActionResult> {
   const checked = checkCodeAndPassword(input);
   if (!checked.ok) return checked;

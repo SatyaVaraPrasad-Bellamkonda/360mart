@@ -7,7 +7,8 @@ import type { CurrentUser } from "@/lib/auth/current-user";
 export function ProfileProgress({ user }: { user: CurrentUser }) {
   const steps = [
     { label: "Your name", done: !!user.firstName },
-    { label: "Email for receipts", done: !!user.email },
+    // Verified, since codes (log in, reset password) only go to a verified email.
+    { label: "Verified email", done: user.emailVerified },
     { label: "Profile photo", done: !!user.profileImageUrl },
   ];
   const done = steps.filter((s) => s.done).length;
@@ -26,7 +27,7 @@ export function ProfileProgress({ user }: { user: CurrentUser }) {
               Complete your profile
             </h2>
             <p className="text-sm text-brand-deep">
-              {done} of {steps.length} done · stores use your name and email for order updates
+              {done} of {steps.length} done · your codes come to your email, stores use your name for orders
             </p>
           </div>
         </div>

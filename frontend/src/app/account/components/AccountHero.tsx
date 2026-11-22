@@ -46,6 +46,13 @@ export function AccountHero({ user }: { user: CurrentUser }) {
             <li className="flex min-h-8 min-w-0 items-center gap-1.5 rounded-full bg-white/70 px-3 ring-1 ring-white backdrop-blur">
               <Mail aria-hidden className="size-3.5 shrink-0 text-muted" />
               {user.email ? <span className="truncate">{user.email}</span> : <span className="text-muted">No email added</span>}
+              {user.email && user.emailVerified && (
+                <span className="flex shrink-0 items-center text-fresh">
+                  <BadgeCheck aria-hidden className="size-4" />
+                  <span className="sr-only">(verified)</span>
+                </span>
+              )}
+              {user.email && !user.emailVerified && <span className="shrink-0 text-xs font-semibold text-amber-800">Not verified</span>}
             </li>
           </ul>
         </div>

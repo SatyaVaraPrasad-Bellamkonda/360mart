@@ -5,8 +5,9 @@ import type { AccountType, MessageResponse, OtpInfo, OtpPurpose, SignupResponse,
 // One function per Spring Boot auth endpoint. Inputs are already validated by
 // the caller (actions.ts); the backend validates them again.
 
-export function signup(mobileNumber: string, accountType: AccountType) {
-  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber, accountType } });
+// The signup code goes to `email`, which becomes the account's verified email once the code is entered.
+export function signup(mobileNumber: string, email: string, accountType: AccountType) {
+  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber, email, accountType } });
 }
 
 export function sendOtp(mobileNumber: string, purpose: OtpPurpose) {

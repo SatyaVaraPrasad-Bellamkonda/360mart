@@ -13,14 +13,17 @@ import {
 } from "@/lib/auth/actions";
 import type { AccountType, OtpInfo } from "@/lib/auth/api-types";
 import type { Acceptance } from "@/lib/legal/types";
-import { formatMobile, mobileError, newPasswordError, normalizeMobile, otpError } from "@/lib/auth/validation";
+import { EMAIL_MAX_LENGTH, emailError, formatMobile, mobileError, newPasswordError, normalizeMobile, otpError } from "@/lib/auth/validation";
 import { FormMessage } from "./AuthCard";
-import { CodeField, MobileField, PasswordField, SubmitButton } from "./AuthFields";
+import { CodeField, MobileField, PasswordField, SubmitButton, TextField } from "./AuthFields";
 import { formatSeconds, useCountdown } from "./useCountdown";
 
-// Two-step "prove you own this number, then choose a password" form.
-//   signup: mobile → POST /auth/signup        → code + password → /auth/set-password → logged in
-//   reset:  mobile → POST /auth/otp/send      → code + password → /auth/password/reset → logged in
+// Two-step "prove it's you with a code, then choose a password" form. Codes go by
+// email (never SMS): signup sends it to the email typed in, which becomes the
+// account's verified email; reset sends it to the account's verified email
+// without ever saying which address that is.
+//   signup: mobile + email → POST /auth/signup   → code + password → /auth/set-password → logged in
+//   reset:  mobile         → POST /auth/otp/send → code + password → /auth/password/reset → logged in
 // Step 2 needs the otpId from step 1. It lives only in this component's state
 // (like a controller variable in AngularJS), never in the URL or storage.
 
@@ -30,7 +33,10 @@ type Code = { otpId: string; expiresAt: number; resendAt: number };
 
 type Alert = { kind: "error" | "notice"; content: ReactNode };
 
-type FieldErrors = { mobile?: string; otp?: string; password?: string; agree?: string };
+type FieldErrors = { mobile?: string; email?: string; otp?: string; password?: string; agree?: string };
+
+// Shown with every "we emailed you" message: the sender, and where it may have landed.
+const SPAM_HINT = "It comes from no-reply@mail.360mart.in. Not there? Check your spam or promotions folder.";
 
 const COPY = {
   signup: { purpose: "SIGNUP", sendLabel: "Send code", passwordLabel: "Create a password", finishLabel: "Create account", finishing: "Creating your account…" },
@@ -52,6 +58,10 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
   const [step, setStep] = useState<"mobile" | "verify">("mobile");
   const [mobileInput, setMobileInput] = useState("");
   const [mobile, setMobile] = useState(""); // normalized 10 digits, fixed once a code is sent
+  const [emailInput, setEmailInput] = useState(""); // signup only
+  const [email, setEmail] = useState(""); // where the signup code went (as the backend keeps it)
+  // Going back to fix the email can't send again before the backend's wait is over.
+  const [sendLockedUntil, setSendLockedUntil] = useState<number | null>(null);
   const [code, setCode] = useState<Code | null>(null);
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
@@ -63,44 +73,64 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
   const resendRef = useRef<HTMLButtonElement>(null);
   const expiresIn = useCountdown(code?.expiresAt ?? null);
   const resendIn = useCountdown(code?.resendAt ?? null);
+  const sendLockedIn = useCountdown(sendLockedUntil);
 
   function acceptCode(info: OtpInfo) {
     const now = Date.now();
     setCode({ otpId: info.otpId, expiresAt: now + info.expiresInSeconds * 1000, resendAt: now + info.resendAfterSeconds * 1000 });
+    setSendLockedUntil(now + info.resendAfterSeconds * 1000);
     setOtp(""); // a new code cancels the old one
   }
 
   function showError(error: ActionError) {
+    // 409 EMAIL_ALREADY_IN_USE belongs under the email field.
+    const emailTaken = error.code === "EMAIL_ALREADY_IN_USE" ? `${error.message} Use a different email.` : undefined;
     setErrors({
       mobile: error.fieldErrors.mobileNumber,
+      email: error.fieldErrors.email ?? emailTaken,
       otp: error.fieldErrors.otp,
       password: error.fieldErrors.password ?? error.fieldErrors.newPassword,
     });
-    if (error.code !== "VALIDATION_FAILED") setAlert({ kind: "error", content: <ErrorText error={error} /> });
+    if (error.code !== "VALIDATION_FAILED" && !emailTaken) setAlert({ kind: "error", content: <ErrorText error={error} /> });
     else setAlert(null);
   }
 
   function handleSend(event: FormEvent) {
     event.preventDefault();
     const problem = mobileError(mobileInput);
+    const emailProblem = mode === "signup" ? emailError(emailInput) : undefined;
     const agree = mode === "signup" && !agreed ? "Tick the box to agree to the Terms and Privacy Policy." : undefined;
-    setErrors({ mobile: problem, agree });
-    if (problem || agree) return;
+    setErrors({ mobile: problem, email: emailProblem, agree });
+    if (problem || emailProblem || agree) return;
 
     setAlert(null);
     startTransition(async () => {
-      const res = mode === "signup" ? await startSignupAction(mobileInput, accountType) : await sendCodeAction(mobileInput, copy.purpose);
-      if (!res.ok) return showError(res.error);
+      const res =
+        mode === "signup"
+          ? await startSignupAction({ mobileNumber: mobileInput, email: emailInput, accountType })
+          : await sendCodeAction(mobileInput, copy.purpose);
+      if (!res.ok) {
+        const wait = /(\d+)\s*second/i.exec(res.error.message);
+        if (res.error.code === "OTP_RESEND_TOO_SOON" && wait) setSendLockedUntil(Date.now() + Number(wait[1]) * 1000);
+        return showError(res.error);
+      }
 
       const info = "otp" in res.data ? res.data.otp : res.data;
       setMobile(normalizeMobile(mobileInput) ?? "");
+      if ("email" in res.data) setEmail(res.data.email);
       acceptCode(info);
       setPassword("");
       setErrors({});
       setStep("verify");
-      // Signup: the number is new, so say it plainly. Reset: the backend's
-      // wording never reveals whether the number has an account.
-      setAlert({ kind: "notice", content: mode === "signup" ? "We sent a 6-digit code by SMS." : info.message });
+      // Signup: the address was just typed in, so name it. Reset: never say which
+      // email belongs to a number (or whether the number has an account at all).
+      setAlert({
+        kind: "notice",
+        content:
+          mode === "signup" && "email" in res.data
+            ? `We emailed a 6-digit code to ${res.data.email}. ${SPAM_HINT}`
+            : `We've emailed a code to the email on this account. ${SPAM_HINT}`,
+      });
     });
   }
 
@@ -118,7 +148,7 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
       }
       acceptCode(res.data);
       setErrors({});
-      setAlert({ kind: "notice", content: "We sent a new code. Only the newest code works." });
+      setAlert({ kind: "notice", content: `We emailed a new code. Only the newest code works. ${SPAM_HINT}` });
       otpRef.current?.focus();
     });
   }
@@ -140,6 +170,11 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
       const res = mode === "signup" ? await completeSignupAction(input) : await resetPasswordAction(input);
       if (!res || res.ok) return;
 
+      // Another account verified this email first: back to step 1 to use a different one.
+      if (res.error.code === "EMAIL_ALREADY_IN_USE") {
+        changeNumber();
+        return showError(res.error);
+      }
       showError(res.error);
       if (res.error.code === "OTP_INVALID") {
         setOtp("");
@@ -164,9 +199,28 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
       <form onSubmit={handleSend} noValidate className="space-y-4">
         {mode === "signup" && <AccountTypePicker value={accountType} onChange={setAccountType} />}
         <AlertMessage alert={alert} />
-        <MobileField value={mobileInput} onChange={setMobileInput} error={errors.mobile} autoFocus />
+        <MobileField value={mobileInput} onChange={setMobileInput} error={errors.mobile} autoFocus={!email} />
+        {mode === "signup" && (
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            maxLength={EMAIL_MAX_LENGTH}
+            value={emailInput}
+            onChange={setEmailInput}
+            error={errors.email}
+            autoFocus={!!email}
+            hint="We email your 6-digit code here, now and whenever you log in with a code or reset your password."
+          />
+        )}
         {mode === "signup" && <AgreeBox checked={agreed} onChange={setAgreed} error={errors.agree} />}
-        <SubmitButton pending={pending} label={copy.sendLabel} pendingLabel="Sending code…" />
+        <SubmitButton
+          pending={pending}
+          disabled={sendLockedIn > 0}
+          label={sendLockedIn > 0 ? `Send code in ${sendLockedIn}s` : copy.sendLabel}
+          pendingLabel="Sending code…"
+        />
       </form>
     );
   }
@@ -177,13 +231,23 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
       <input type="text" name="username" autoComplete="username" value={formatMobile(mobile)} readOnly hidden />
 
       <div className="flex flex-wrap items-center justify-between gap-x-3 rounded-xl bg-surface px-4 py-2 text-sm">
-        <span className="text-muted">
-          Code sent to <strong className="font-semibold text-ink">{formatMobile(mobile)}</strong>
-          {mode === "signup" && accountType === "STORE_OWNER" && <span className="block text-xs font-semibold text-brand-deep">Shopkeeper account</span>}
-        </span>
+        {mode === "signup" ? (
+          <span className="min-w-0 text-muted">
+            Check your email <strong className="break-all font-semibold text-ink">{email}</strong>
+            <span className="block text-xs">
+              for {formatMobile(mobile)}
+              {accountType === "STORE_OWNER" && <span className="font-semibold text-brand-deep"> · Shopkeeper account</span>}
+            </span>
+          </span>
+        ) : (
+          <span className="text-muted">
+            Code for <strong className="font-semibold text-ink">{formatMobile(mobile)}</strong>
+            <span className="block text-xs">Sent to the email on this account</span>
+          </span>
+        )}
         <button type="button" onClick={changeNumber} disabled={pending} className="flex min-h-10 items-center gap-1 font-semibold text-brand-deep hover:underline">
           <ArrowLeft aria-hidden className="size-4" />
-          Change
+          {mode === "signup" ? "Wrong email? Go back" : "Change"}
         </button>
       </div>
 
@@ -205,6 +269,19 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
             {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
           </button>
         </div>
+        {mode === "reset" && (
+          <p className="mt-2 rounded-xl bg-surface px-3 py-2 text-sm text-muted">
+            Didn&apos;t get it? Codes only go to an email you have verified on your account. If you never added one, you can still{" "}
+            <Link href="/login" className="font-semibold text-brand-deep underline underline-offset-2">
+              log in with your password
+            </Link>{" "}
+            and add it in your profile, or{" "}
+            <Link href="/contact" className="font-semibold text-brand-deep underline underline-offset-2">
+              contact us
+            </Link>
+            .
+          </p>
+        )}
       </div>
 
       <PasswordField

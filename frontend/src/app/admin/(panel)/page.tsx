@@ -31,7 +31,7 @@ export default function AdminDashboardPage() {
 
 async function Welcome() {
   const user = await requireRole("admin");
-  const missing = [!user.firstName && "your name", !user.email && "email", !user.profileImageUrl && "photo"].filter(Boolean) as string[];
+  const missing = [!user.firstName && "your name", !user.emailVerified && "a verified email", !user.profileImageUrl && "photo"].filter(Boolean) as string[];
   return (
     <section aria-label="Your account" className="relative overflow-hidden rounded-3xl bg-ink p-5 text-white sm:p-8">
       <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-brand/25 blur-3xl motion-safe:animate-drift-a" />

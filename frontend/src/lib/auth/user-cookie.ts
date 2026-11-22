@@ -54,7 +54,9 @@ export async function openUser(value: string | undefined, sessionToken: string, 
     const body = JSON.parse(new TextDecoder().decode(plain)) as Sealed;
     // Belongs to a different (older) session: ignore it.
     if (body.s !== (await fingerprint(sessionToken))) return null;
-    return { user: body.u, fetchedAt: body.t, fresh: now - body.t < USER_REFRESH_MS && body.t <= now };
+    // A copy saved before the email fields existed is refreshed from /users/me at once.
+    const complete = typeof body.u?.emailVerified === "boolean";
+    return { user: body.u, fetchedAt: body.t, fresh: complete && now - body.t < USER_REFRESH_MS && body.t <= now };
   } catch {
     return null; // tampered, truncated or encrypted with another secret
   }

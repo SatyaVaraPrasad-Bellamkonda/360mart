@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/auth/actions";
+import type { OtpInfo } from "@/lib/auth/api-types";
 import { getMe } from "@/lib/auth/auth-service";
 import { toCurrentUser, type CurrentUser } from "@/lib/auth/current-user";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { clearSession, getSessionToken, saveUser } from "@/lib/auth/session";
 import type { ApiFailure } from "@/lib/backend/client";
 import * as api from "./profile-service";
+import { emailError, isUuid, loginPasswordError, normalizeEmail, otpError } from "@/lib/auth/validation";
 import { profileErrors, profileImageError } from "./validation";
 
 // Profile server actions. Each one works on the logged-in user only (the
@@ -17,21 +19,20 @@ import { profileErrors, profileImageError } from "./validation";
 
 type Result = ActionResult<CurrentUser>;
 
-export async function updateProfileAction(input: { firstName: unknown; lastName: unknown; email: unknown }): Promise<Result> {
+export async function updateProfileAction(input: { firstName: unknown; lastName: unknown }): Promise<Result> {
   const values = {
     firstName: typeof input?.firstName === "string" ? input.firstName : "",
     lastName: typeof input?.lastName === "string" ? input.lastName : "",
-    email: typeof input?.email === "string" ? input.email : "",
   };
   const fieldErrors = profileErrors(values);
   if (Object.keys(fieldErrors).length) return invalid(fieldErrors as Record<string, string>);
 
   return withSession(async (token, user) => {
-    // Always the whole form: an omitted lastName or email would clear it.
+    // Always both names (an omitted lastName would clear it). The email is left
+    // out, which keeps it: it only changes through the code flow below.
     const res = await api.updateUser(token, user.userId, {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim() || null,
-      email: values.email.trim() || null,
     });
     if (!res.ok) return fail(res.error);
     const updated = toCurrentUser(res.data);
@@ -57,6 +58,48 @@ export async function removeProfileImageAction(): Promise<Result> {
     const res = await api.deleteProfileImage(token, user.userId);
     if (!res.ok) return fail(res.error);
     return done({ ...user, profileImageUrl: null }, token);
+  });
+}
+
+// Add / change / verify the email, step 1: the current password, then a code to
+// the new address. The user is re-read afterwards so pendingEmail shows at once.
+export async function requestEmailCodeAction(input: { email: unknown; currentPassword: unknown }): Promise<ActionResult<{ otp: OtpInfo; user: CurrentUser }>> {
+  const emailInput = typeof input?.email === "string" ? input.email : "";
+  const password = typeof input?.currentPassword === "string" ? input.currentPassword : "";
+  const fieldErrors: Record<string, string> = {};
+  const emailProblem = emailError(emailInput);
+  if (emailProblem) fieldErrors.email = emailProblem;
+  const passwordProblem = password ? loginPasswordError(password) : "Enter your current password";
+  if (passwordProblem) fieldErrors.currentPassword = passwordProblem;
+  if (emailProblem || passwordProblem) return { ok: false, error: { code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors } };
+
+  const sent: { otp?: OtpInfo } = {};
+  const result = await withSession(async (token, user) => {
+    const res = await api.requestEmailCode(token, normalizeEmail(emailInput), password);
+    if (!res.ok) return fail(res.error);
+    sent.otp = res.data;
+    const me = await getMe(token);
+    const fresh = me.ok ? toCurrentUser(me.data) : null;
+    // The code is on its way either way; without a fresh copy, show the pending address ourselves.
+    return done(fresh ?? { ...user, pendingEmail: normalizeEmail(emailInput) }, token);
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  return sent.otp ? { ok: true, data: { otp: sent.otp, user: result.data } } : { ok: false, error: unexpected() };
+}
+
+// Step 2: the code from the email. The account's email changes only now.
+export async function verifyEmailAction(input: { otpId: unknown; otp: unknown }): Promise<Result> {
+  const otp = typeof input?.otp === "string" ? input.otp.trim() : "";
+  if (!isUuid(input?.otpId)) return fail({ code: "NO_PENDING_EMAIL", message: "This code has expired. Send a new one.", fieldErrors: {} });
+  const problem = otpError(otp);
+  if (problem) return invalid({ otp: problem });
+
+  return withSession(async (token) => {
+    const res = await api.verifyEmail(token, input.otpId as string, otp);
+    if (!res.ok) return fail(res.error);
+    const me = await getMe(token);
+    const fresh = me.ok ? toCurrentUser(me.data) : null;
+    return fresh ? done(fresh, token) : fail(unexpected());
   });
 }
 

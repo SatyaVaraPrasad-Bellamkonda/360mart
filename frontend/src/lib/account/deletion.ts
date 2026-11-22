@@ -3,7 +3,8 @@ import { callApi } from "@/lib/backend/client";
 import type { OtpInfo } from "@/lib/auth/api-types";
 
 // Account deletion (Profile → Delete account): what would be deleted and kept,
-// an SMS code to confirm it's really the owner, then the deletion itself.
+// a code emailed to the account's verified email to confirm it's really the owner
+// (409 EMAIL_NOT_VERIFIED without one), then the deletion itself.
 
 export type DeletionBlockerCode = "OPEN_ORDERS" | "STORE_REGISTERED" | "ADMIN_ACCOUNT";
 

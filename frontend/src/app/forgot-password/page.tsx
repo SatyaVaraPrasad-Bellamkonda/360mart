@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
     <AuthCard
       badge="Account help"
       title="Reset your password"
-      subtitle="Enter your mobile number. We'll text you a code so you can choose a new password."
+      subtitle="Enter your mobile number. We'll email a code to the email on your account so you can choose a new password."
       footer={
         <>
           Remembered it?{" "}

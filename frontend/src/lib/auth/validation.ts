@@ -25,6 +25,23 @@ export function formatMobile(number: string): string {
   return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 }
 
+// Same as the backend's ValidationPatterns.EMAIL, checked after trimming and
+// lower-casing (the backend stores it that way too).
+const EMAIL = /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
+export const EMAIL_MAX_LENGTH = 254;
+
+/** " Asha@Example.com " → "asha@example.com" (what the backend keeps). */
+export function normalizeEmail(input: unknown): string {
+  return typeof input === "string" ? input.trim().toLowerCase() : "";
+}
+
+export function emailError(input: string): string | undefined {
+  const email = normalizeEmail(input);
+  if (!email) return "Email is required";
+  if (email.length > EMAIL_MAX_LENGTH || !EMAIL.test(email)) return "Enter a valid email address";
+  return undefined;
+}
+
 export const PASSWORD_RULES: { label: string; test: (password: string) => boolean }[] = [
   { label: "8 to 64 characters", test: (p) => p.length >= 8 && p.length <= 64 },
   { label: "At least one letter", test: (p) => /[A-Za-z]/.test(p) },

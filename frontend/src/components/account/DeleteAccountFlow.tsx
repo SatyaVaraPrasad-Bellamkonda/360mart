@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Loader2, Scale, ShieldAlert, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Loader2, Mail, Scale, ShieldAlert, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -9,7 +9,7 @@ import { CodeField } from "@/components/auth/AuthFields";
 import { formatSeconds, useCountdown } from "@/components/auth/useCountdown";
 import type { DeletionStatus } from "@/lib/account/deletion";
 import { deleteAccountAction, sendDeletionCodeAction } from "@/lib/account/deletion-actions";
-import { formatMobile, otpError } from "@/lib/auth/validation";
+import { otpError } from "@/lib/auth/validation";
 
 type Code = { otpId: string; expiresAt: number; resendAt: number };
 
@@ -20,9 +20,11 @@ const BLOCKER_LINK: Record<string, { href: string; label: string }> = {
 };
 
 // Delete my account: read what goes and what stays, tick "I understand", get
-// a code by SMS, type it in. The backend refuses while orders are open, a store
+// a code by email, type it in. The backend refuses while orders are open, a store
 // is registered or it's an admin; those reasons are shown and the button is off.
-export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionStatus; mobileNumber: string }) {
+// The code only goes to a verified email: `email` is that address, or null when
+// there's none yet (then the way forward is adding one in the profile).
+export function DeleteAccountFlow({ status, email }: { status: DeletionStatus; email: string | null }) {
   const { sessionExpired } = useAuth();
   const [blockers, setBlockers] = useState(status.blockers);
   const [understood, setUnderstood] = useState(false);
@@ -31,6 +33,8 @@ export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionSt
   const [otpProblem, setOtpProblem] = useState<string | undefined>();
   const [alert, setAlert] = useState<{ kind: "error" | "notice"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  // The backend has the last word (409 EMAIL_NOT_VERIFIED), e.g. on an older copy of the user.
+  const [needsEmail, setNeedsEmail] = useState(!email);
   const otpRef = useRef<HTMLInputElement>(null);
   const expiresIn = useCountdown(code?.expiresAt ?? null);
   const resendIn = useCountdown(code?.resendAt ?? null);
@@ -49,6 +53,7 @@ export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionSt
           setBlockers(found.length ? found : [{ code: "UNKNOWN", message: res.error.message }]);
           return;
         }
+        if (res.error.code === "EMAIL_NOT_VERIFIED") return setNeedsEmail(true);
         // "Please wait 18 second(s)": restart the resend timer from the backend's number.
         const wait = /(\d+)\s*second/i.exec(res.error.message);
         if (res.error.code === "OTP_RESEND_TOO_SOON" && wait && code) setCode({ ...code, resendAt: Date.now() + Number(wait[1]) * 1000 });
@@ -58,7 +63,8 @@ export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionSt
       setCode({ otpId: res.data.otpId, expiresAt: now + res.data.expiresInSeconds * 1000, resendAt: now + res.data.resendAfterSeconds * 1000 });
       setOtp("");
       setOtpProblem(undefined);
-      setAlert({ kind: "notice", text: code ? "We sent a new code. Only the newest code works." : `We sent a 6-digit code to ${formatMobile(mobileNumber)}.` });
+      const spam = "It comes from no-reply@mail.360mart.in; check your spam folder if you can't see it.";
+      setAlert({ kind: "notice", text: code ? `We emailed a new code. Only the newest code works. ${spam}` : `We emailed a 6-digit code to ${email ?? "your email"}. ${spam}` });
       requestAnimationFrame(() => otpRef.current?.focus());
     });
   }
@@ -130,7 +136,9 @@ export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionSt
             <h2 id="confirm-title" className="text-lg font-bold text-ink">
               Confirm with a code
             </h2>
-            <p className="text-sm text-muted">So only you can delete this account, we&apos;ll text a 6-digit code to {formatMobile(mobileNumber)}.</p>
+            <p className="text-sm text-muted">
+              {needsEmail ? "So only you can delete this account, we email you a 6-digit code." : <>So only you can delete this account, we&apos;ll email a 6-digit code to <strong className="break-all font-semibold text-ink">{email}</strong>.</>}
+            </p>
           </div>
         </div>
 
@@ -147,7 +155,19 @@ export function DeleteAccountFlow({ status, mobileNumber }: { status: DeletionSt
           </div>
         )}
 
-        {!code ? (
+        {needsEmail && !code ? (
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200 sm:flex-row sm:items-center">
+            <Mail aria-hidden className="size-5 shrink-0 text-amber-700" />
+            <p className="min-w-0 flex-1 text-sm text-amber-950">Add and verify an email address first: we send your codes there.</p>
+            <Link
+              href="/account/profile#email"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/85"
+            >
+              Add your email
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
+          </div>
+        ) : !code ? (
           <button
             type="button"
             onClick={sendCode}

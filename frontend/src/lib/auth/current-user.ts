@@ -14,6 +14,8 @@ export type CurrentUser = {
   lastName: string | null;
   mobileNumber: string; // E.164
   email: string | null;
+  emailVerified: boolean; // codes (login, reset, deletion) only go to a verified email
+  pendingEmail: string | null; // a new address waiting for its code; the old one stays active until then
   profileImageUrl: string | null; // signed link (~1 hour); never store it anywhere else
   mobileVerified: boolean;
   lastLoginAt: string | null; // ISO-8601 UTC
@@ -29,6 +31,8 @@ export function toCurrentUser(me: UserResponse | null | undefined): CurrentUser 
     lastName: me.lastName ?? null,
     mobileNumber: me.mobileNumber,
     email: me.email ?? null,
+    emailVerified: me.emailVerified === true,
+    pendingEmail: me.pendingEmail ?? null,
     profileImageUrl: me.profileImageUrl ?? null,
     mobileVerified: me.mobileVerified,
     lastLoginAt: me.lastLoginAt ?? null,

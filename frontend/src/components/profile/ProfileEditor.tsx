@@ -11,6 +11,7 @@ import { formatMobile } from "@/lib/auth/validation";
 import { removeProfileImageAction, updateProfileAction, uploadProfileImageAction } from "@/lib/profile/actions";
 import { PROFILE_IMAGE_TYPES, profileErrors, profileImageError, type ProfileErrors } from "@/lib/profile/validation";
 import { Avatar } from "./Avatar";
+import { EmailCard } from "./EmailCard";
 
 type Notice = { kind: "error" | "notice"; text: string } | null;
 
@@ -35,7 +36,10 @@ export function ProfileEditor({ initialUser }: { initialUser: CurrentUser }) {
   return (
     <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
       <PhotoCard user={user} onSaved={accept} onError={handleError} />
-      <DetailsCard user={user} onSaved={accept} onError={handleError} />
+      <div className="min-w-0 space-y-6">
+        <DetailsCard user={user} onSaved={accept} onError={handleError} />
+        <EmailCard user={user} onSaved={accept} onError={handleError} />
+      </div>
     </div>
   );
 }
@@ -144,36 +148,30 @@ function DetailsCard({ user, onSaved, onError }: CardProps) {
   const [pending, startTransition] = useTransition();
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
-  const [email, setEmail] = useState(user.email ?? "");
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [notice, setNotice] = useState<Notice>(null);
 
   function save(event: FormEvent) {
     event.preventDefault();
-    const found = profileErrors({ firstName, lastName, email });
+    const found = profileErrors({ firstName, lastName });
     setErrors(found);
     setNotice(null);
     if (Object.keys(found).length) return;
 
     startTransition(async () => {
-      const res = await updateProfileAction({ firstName, lastName, email });
+      const res = await updateProfileAction({ firstName, lastName });
       if (!res.ok) {
         const { fieldErrors, code } = res.error;
-        setErrors({
-          firstName: fieldErrors.firstName,
-          lastName: fieldErrors.lastName,
-          // 409: the email belongs to another account; show it under the field.
-          email: fieldErrors.email ?? (code === "EMAIL_ALREADY_IN_USE" ? res.error.message : undefined),
-        });
-        if (code !== "VALIDATION_FAILED" && code !== "EMAIL_ALREADY_IN_USE") {
+        setErrors({ firstName: fieldErrors.firstName, lastName: fieldErrors.lastName });
+        // A field-less validation error (e.g. about the email) still needs to be seen.
+        if (code !== "VALIDATION_FAILED" || (!fieldErrors.firstName && !fieldErrors.lastName)) {
           onError(res.error, (text) => setNotice({ kind: "error", text }));
         }
         return;
       }
-      // Show exactly what was saved (the backend trims and lowercases the email).
+      // Show exactly what was saved (the backend trims the names).
       setFirstName(res.data.firstName ?? "");
       setLastName(res.data.lastName ?? "");
-      setEmail(res.data.email ?? "");
       onSaved(res.data);
       setNotice({ kind: "notice", text: "Profile saved." });
     });
@@ -189,7 +187,6 @@ function DetailsCard({ user, onSaved, onError }: CardProps) {
           <TextField label="First name" name="firstName" autoComplete="given-name" maxLength={100} value={firstName} onChange={setFirstName} error={errors.firstName} />
           <TextField label="Last name" name="lastName" autoComplete="family-name" maxLength={100} value={lastName} onChange={setLastName} error={errors.lastName} optional />
         </div>
-        <TextField label="Email" name="email" type="email" autoComplete="email" maxLength={255} value={email} onChange={setEmail} error={errors.email} optional hint="For order receipts and updates." />
 
         <div>
           <p className="mb-1.5 text-sm font-semibold text-ink">Mobile number</p>

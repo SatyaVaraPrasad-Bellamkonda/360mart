@@ -323,13 +323,13 @@ function describedBy(id: string, error?: string, hint?: string): string | undefi
   return [error && `${id}-error`, hint && !error && `${id}-hint`].filter(Boolean).join(" ") || undefined;
 }
 
-export function SubmitButton({ pending, label, pendingLabel }: { pending: boolean; label: string; pendingLabel: string }) {
+export function SubmitButton({ pending, label, pendingLabel, disabled = false }: { pending: boolean; label: string; pendingLabel: string; disabled?: boolean }) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
-      className="flex min-h-12 w-full items-center justify-center rounded-full bg-ink px-6 font-semibold text-white transition hover:bg-ink/85 disabled:cursor-wait disabled:bg-ink/60"
+      className={`flex min-h-12 w-full items-center justify-center rounded-full bg-ink px-6 font-semibold text-white transition hover:bg-ink/85 disabled:bg-ink/60 ${pending ? "disabled:cursor-wait" : "disabled:cursor-not-allowed"}`}
     >
       {pending ? pendingLabel : label}
     </button>

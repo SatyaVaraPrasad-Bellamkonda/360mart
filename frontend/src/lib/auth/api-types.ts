@@ -3,8 +3,12 @@
 
 export type OtpPurpose = "SIGNUP" | "PASSWORD_RESET";
 
+// Every code now goes to the account's verified email ("EMAIL"); "SMS" may come back one day.
+export type OtpChannel = "EMAIL" | "SMS";
+
 export type OtpInfo = {
   otpId: string;
+  channel?: OtpChannel;
   expiresInSeconds: number;
   resendAfterSeconds: number;
   message: string;
@@ -32,8 +36,13 @@ export type UserResponse = {
   lastName: string | null;
   mobileNumber: string;
   email: string | null;
+  /** Proved with a code: only a verified email receives login / reset / deletion codes. */
+  emailVerified?: boolean;
+  /** An address waiting for its code (change started, not finished); left out of the JSON when null. */
+  pendingEmail?: string | null;
   profileImageUrl: string | null; // signed link, expires after ~1 hour; null = no picture
   role: ApiRole;
+  /** False for accounts made since codes go by email (the code proves the email, not the phone): never warn on it. */
   mobileVerified: boolean;
   lastLoginAt: string | null;
 };

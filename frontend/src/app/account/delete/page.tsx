@@ -39,5 +39,5 @@ async function Flow() {
   const token = await getSessionToken();
   const status = token ? await getDeletionStatus(token) : null;
   if (!status?.ok) return <FormMessage error={status?.error.message ?? "Please login to continue."} />;
-  return <DeleteAccountFlow status={status.data} mobileNumber={user.mobileNumber} />;
+  return <DeleteAccountFlow status={status.data} email={user.emailVerified ? user.email : null} />;
 }

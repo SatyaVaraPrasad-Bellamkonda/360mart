@@ -8,8 +8,8 @@ import { isUuid, otpError } from "@/lib/auth/validation";
 import { failWith, invalid, LOGIN_NEEDED, ok, sessionToken } from "@/lib/orders/action-helpers";
 import * as api from "./deletion";
 
-// The last two steps of deleting an account: text a code to the account's own
-// number, then delete with that code. The user is always the session's owner
+// The last two steps of deleting an account: email a code to the account's
+// verified email, then delete with that code. The user is always the session's owner
 // (nothing about who to delete comes from the browser).
 
 export async function sendDeletionCodeAction(): Promise<ActionResult<OtpInfo>> {

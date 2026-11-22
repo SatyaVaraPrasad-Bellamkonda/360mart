@@ -2,6 +2,7 @@ import { ArrowRight, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AddEmailPrompt } from "@/components/account/AddEmailPrompt";
 import { requireRole } from "@/lib/auth/dal";
 import { SHOPPERS } from "@/lib/auth/roles";
 import { AccountHero } from "./components/AccountHero";
@@ -27,6 +28,7 @@ async function ShopperAccount() {
   return (
     <div className="space-y-6">
       <AccountHero user={user} />
+      {!user.emailVerified && <AddEmailPrompt userId={user.userId} hasEmail={!!user.email} />}
       <ProfileProgress user={user} />
       {/* Shopkeepers shop here too; their store is one tap away. Customers never see this. */}
       {user.role === "seller" && (
