@@ -19,6 +19,8 @@ type Props = {
   styleUrl: string;
   libraryUrl: string;
   onFailed: () => void;
+  /** The box's size and frame; the address form's card by default. */
+  className?: string;
 };
 
 const INDIA_VIEW = { center: [79.0, 22.5] as [number, number], zoom: 3.6 };
@@ -36,7 +38,7 @@ function loadMapLibre(url: string): Promise<typeof MapLibre> {
   return library;
 }
 
-export default function LocationPicker({ value, onChange, styleUrl, libraryUrl, onFailed }: Props) {
+export default function LocationPicker({ value, onChange, styleUrl, libraryUrl, onFailed, className = "h-72 rounded-2xl border border-line sm:h-80" }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibre.Map | null>(null);
   const marker = useRef<MapLibre.Marker | null>(null);
@@ -126,7 +128,7 @@ export default function LocationPicker({ value, onChange, styleUrl, libraryUrl, 
   }, [value, ready]);
 
   return (
-    <div className="relative h-72 overflow-hidden rounded-2xl border border-line bg-surface sm:h-80">
+    <div className={`relative overflow-hidden bg-surface ${className}`}>
       {/* Sized with h-full, not absolute: MapLibre's CSS sets position: relative on it. */}
       <div ref={container} className="h-full w-full" role="region" aria-label="Map. Tap to drop the pin, drag the pin to adjust." />
       {!ready && (

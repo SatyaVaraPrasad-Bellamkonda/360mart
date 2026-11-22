@@ -25,7 +25,7 @@ export async function AccountLink() {
 function AccountButton({ user }: { user: CurrentUser | null }) {
   if (!user) {
     return (
-      <Link href="/login" className="flex min-h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/85">
+      <Link href="/login" className="flex min-h-10 items-center rounded-xl bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/90 md:min-h-11 md:rounded-[14px]">
         Login
       </Link>
     );
@@ -37,7 +37,7 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
   return (
     <div className="flex items-center gap-2">
       {user.role === "seller" && (
-        <NavPill href="/seller" area="/seller" label="Your store" className="size-10 justify-center xl:w-auto xl:px-4">
+        <NavPill href="/seller" area="/seller" label="Your store" shape="tile" className="size-10 justify-center md:size-11 xl:w-auto xl:px-4">
           <Store aria-hidden className="size-4 shrink-0" />
           <span className="hidden xl:inline">Your store</span>
         </NavPill>
@@ -51,13 +51,13 @@ function AccountChip({ user, href }: { user: CurrentUser; href: string }) {
   // Just the photo (or initials): the name isn't needed to know it's you, and anyone near the screen sees the header.
   const name = user.firstName ? `My account (${user.firstName})` : "My account";
   return (
-    <NavPill href={href} area={href} label={name} className="relative size-10 justify-center">
-      <Avatar user={user} size="sm" />
+    <NavPill href={href} area={href} label={name} shape="circle" className="relative size-10 justify-center md:size-11">
+      <Avatar user={user} size="fill" />
       {user.role === "seller" && <UnreadDot />}
     </NavPill>
   );
 }
 
 export function AccountLinkFallback() {
-  return <span aria-hidden className="inline-block size-10 rounded-full bg-surface" />;
+  return <span aria-hidden className="inline-block size-10 rounded-full bg-[#e9e4dc] md:size-11" />;
 }

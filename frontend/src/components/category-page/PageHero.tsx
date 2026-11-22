@@ -83,7 +83,7 @@ export function PageHero({
   const text = (dark: boolean, inline = false) => <HeroText hero={content} theme={theme} stats={shown} parent={parent ?? null} button={button ?? null} compact={compact} dark={dark} inlinePoints={inline} rise={m.text} />;
   // A card in the page, or a band across the whole width with the content in the page column.
   const shell = band ? "" : "rounded-3xl ring-1 ring-line";
-  const column = band ? `mx-auto w-full max-w-6xl px-4 ${compact ? "py-6 md:py-6" : "py-10 md:py-16"}` : "";
+  const column = band ? `mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8 ${compact ? "py-6 md:py-6" : "py-10 md:py-16"}` : "";
 
   if (layout === "IMAGE_BACKGROUND") {
     const hasPicture = !!(hero.imageUrl || hero.mobileImageUrl);
@@ -235,7 +235,7 @@ function HeroText({
 // The hero switched off: the page still has its one H1 (and the parent link on subcategory pages).
 function TitleOnly({ headline, theme, parent, band }: { headline: string; theme: FoodTheme; parent: Parent; band?: boolean }) {
   return (
-    <header className={band ? "mx-auto max-w-6xl px-4 pt-8" : ""}>
+    <header className={band ? "mx-auto max-w-page px-4 sm:px-6 lg:px-8 pt-8" : ""}>
       {parent && (
         <Link href={parent.href} className={`-my-2 inline-block py-2 text-xs font-bold uppercase tracking-wider hover:underline ${theme.text}`}>
           {parent.name}

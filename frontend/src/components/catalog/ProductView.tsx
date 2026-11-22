@@ -11,7 +11,6 @@ import { productJsonLdFrom } from "@/lib/catalog/seo";
 import type { Product } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
 import { seasonLabel } from "@/lib/catalog/season";
-import { mapConfig } from "@/lib/maps/config";
 import { CategoryBadge } from "./CategoryBadge";
 import { CategoryImage } from "./CategoryImage";
 import { FoodMark } from "./FoodMark";
@@ -35,7 +34,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
   ].filter((f) => !!f);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 py-5 sm:space-y-16 sm:py-6">
+    <div className="mx-auto max-w-page space-y-12 px-4 sm:px-6 lg:px-8 py-5 sm:space-y-16 sm:py-6">
       <JsonLd data={productJsonLdFrom(product, category, subcategory)} />
 
       <div className="space-y-4">
@@ -78,7 +77,7 @@ export function ProductView({ data }: { data: ShopSubcategory & { product: Produ
             {product.shortDescription && <p className="mt-4 break-words text-lg text-ink/80">{product.shortDescription}</p>}
 
             {/* Sizes, and the stores that deliver the chosen size to the shopper (live prices, never cached). */}
-            <StoreOffers productId={product.productId} productName={product.name} imageUrl={product.imageUrl} foodType={product.foodType} href={shopProductPath(category, subcategory, product)} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))} catalogShelfLife={product.shelfLife} theme={theme} map={mapConfig()} />
+            <StoreOffers productId={product.productId} productName={product.name} imageUrl={product.imageUrl} foodType={product.foodType} href={shopProductPath(category, subcategory, product)} sizes={sizes.map((v) => ({ variantId: v.variantId, label: v.label, quantity: v.quantity, unit: v.unit }))}catalogShelfLife={product.shelfLife} theme={theme} />
 
             {facts.length > 0 && (
               <dl className="mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">

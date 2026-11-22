@@ -21,7 +21,7 @@ export type HtmlPictures = {
 };
 
 type Device = "desktop" | "phone";
-const PAGE_WIDTH = 1152; // the shop's page column (max-w-6xl)
+const PAGE_WIDTH = 1176; // the shop's page column at desktop width (max-w-page 1240px minus lg:px-8)
 const PHONE_WIDTH = 360;
 
 // An HTML block in the home designer: starter templates, the code (and an
@@ -433,7 +433,7 @@ function Schedule({ section: s, at, errors, update }: { section: HtmlBlockSectio
   );
 }
 
-function DateTime({ label, value, onChange, error }: { label: string; value: string | null; onChange: (iso: string | null) => void; error?: string }) {
+export function DateTime({ label, value, onChange, error }: { label: string; value: string | null; onChange: (iso: string | null) => void; error?: string }) {
   const id = useId();
   return (
     <div className="min-w-0">

@@ -1,18 +1,16 @@
 "use client";
 
 import { ChevronDown, Clock, Info, MapPin } from "lucide-react";
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { setDeliveryLocation, useDeliveryLocation } from "@/components/location/delivery-location";
-import { DeliverToDialog } from "@/components/location/DeliverToDialog";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { openLocationPicker, useDeliveryLocation } from "@/components/location/delivery-location";
+import { useServiceability } from "@/components/location/serviceability";
+import { areaName } from "@/lib/location/types";
 import { AddToCart, type CartProduct } from "@/components/cart/AddToCart";
 import { RichText } from "@/components/RichText";
 import { toastError } from "@/components/Toaster";
 import type { FoodTheme } from "@/lib/catalog/food-theme";
 import type { FoodType, ProductUnit } from "@/lib/catalog/types";
 import { money } from "@/lib/inventory/validation";
-import { loadAddressChoicesAction } from "@/lib/location/actions";
-import type { MapConfig } from "@/lib/maps/config";
 import { loadOffers } from "@/lib/offers/client";
 import type { ProductStoreOffers, StoreOffer } from "@/lib/offers/types";
 
@@ -32,14 +30,12 @@ function unitPrice(price: number, quantity: number, unit: ProductUnit): string |
 // "Stores that deliver this to me": pick a size, see every store that delivers
 // it to the chosen location, best offer first (the backend's order). One call
 // per size + location (+1 per "Show more"), never cached: prices and stock are live.
-export function StoreOffers({ productId, productName, imageUrl, foodType, href, sizes, catalogShelfLife, theme, map }: { productId: number; productName: string; imageUrl: string | null; foodType: FoodType | null; href: string; sizes: Size[]; catalogShelfLife: string | null; theme: FoodTheme; map: MapConfig }) {
-  const { status } = useAuth();
+export function StoreOffers({ productId, productName, imageUrl, foodType, href, sizes, catalogShelfLife, theme }: { productId: number; productName: string; imageUrl: string | null; foodType: FoodType | null; href: string; sizes: Size[]; catalogShelfLife: string | null; theme: FoodTheme }) {
   const location = useDeliveryLocation();
+  const { result: area } = useServiceability();
   const [variantId, setVariantId] = useState(sizes[0]?.variantId ?? 0);
-  const [picking, setPicking] = useState(false);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [more, startMore] = useTransition();
-  const triedDefault = useRef(false);
 
   const size = sizes.find((s) => s.variantId === variantId);
   const product: CartProduct = { productId, productName, imageUrl, foodType, href, variantId, variantLabel: size?.label ?? "" };
@@ -47,16 +43,7 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
   const current = loaded && loaded.key === key ? loaded : null;
   const loading = !!key && !current;
 
-  // Signed in, nothing chosen yet: use the default address that has a map pin (one call, once).
-  useEffect(() => {
-    if (location || status !== "authenticated" || triedDefault.current) return;
-    triedDefault.current = true;
-    loadAddressChoicesAction().then((res) => {
-      if (!res.ok) return;
-      const a = res.data.find((x) => x.isDefault && x.latitude != null) ?? res.data.find((x) => x.latitude != null);
-      if (a && a.latitude != null && a.longitude != null) setDeliveryLocation({ latitude: a.latitude, longitude: a.longitude, label: a.line || a.title, source: "address", addressId: a.addressId });
-    });
-  }, [location, status]);
+  // Nothing chosen yet: the shared location sheet (LocationHost) offers it, or uses a signed-in shopper's default address.
 
   // A new size or location: the first page of stores for it.
   useEffect(() => {
@@ -104,7 +91,7 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
     ) : null;
 
   const deliverTo = (
-    <button type="button" onClick={() => setPicking(true)} className="group -my-1 flex min-h-10 max-w-full items-center gap-1.5 text-sm">
+    <button type="button" onClick={() => openLocationPicker()} className="group -my-1 flex min-h-10 max-w-full items-center gap-1.5 text-sm">
       <MapPin aria-hidden className="size-4 shrink-0 text-brand-deep" />
       <span className="min-w-0 truncate text-muted">
         {location ? (
@@ -143,16 +130,20 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
       ) : (
         <div className="space-y-6">
           {!location ? (
-            <Notice title="Set your location to see prices" text={`Prices come from the stores that deliver ${productName} to you.`} action="Set location" onAction={() => setPicking(true)} />
+            <Notice title="Set your location to see prices" text={`Prices come from the stores that deliver ${productName} to you.`} action="Set location" onAction={() => openLocationPicker()} />
           ) : loading ? (
             <div aria-hidden className="space-y-2">
               <div className="h-10 w-48 animate-pulse rounded-xl bg-line/60" />
               <div className="h-4 w-64 animate-pulse rounded bg-line/50" />
             </div>
           ) : current?.error ? (
-            <Notice title="Couldn't load prices" text={current.error} action="Change location" onAction={() => setPicking(true)} tone="error" />
+            <Notice title="Couldn't load prices" text={current.error} action="Change location" onAction={() => openLocationPicker()} tone="error" />
           ) : (
-            <Notice title={`Not available near ${location.label} right now`} text="No store delivers this size there yet. Try another size, or a different location." action="Change location" onAction={() => setPicking(true)} />
+            area && !area.serviceable ? (
+              <Notice title={`We're not in ${areaName(location.label)} yet`} text="No store delivers to this point right now. Try a nearby spot or another address." action="Try another location" onAction={() => openLocationPicker()} />
+            ) : (
+              <Notice title={`Not available near ${location.label} right now`} text="No store delivers this size there yet. Try another size, or a different location." action="Change location" onAction={() => openLocationPicker()} />
+            )
           )}
           {sizeChips}
           {location && deliverTo}
@@ -168,7 +159,6 @@ export function StoreOffers({ productId, productName, imageUrl, foodType, href, 
           <PriceNote />
         </div>
       )}
-      <DeliverToDialog open={picking} onClose={() => setPicking(false)} map={map} />
     </section>
   );
 }

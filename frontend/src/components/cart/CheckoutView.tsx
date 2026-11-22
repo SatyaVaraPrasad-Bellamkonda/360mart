@@ -246,7 +246,7 @@ export function CheckoutView({ initialCart, addresses, initialAddressId, wantedS
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
-        <div className="mx-auto max-w-6xl space-y-2">
+        <div className="mx-auto max-w-page space-y-2">
           <div className="flex items-baseline justify-between text-sm">
             <span className="text-muted">
               {itemCount} {itemCount === 1 ? "item" : "items"} · cash on delivery

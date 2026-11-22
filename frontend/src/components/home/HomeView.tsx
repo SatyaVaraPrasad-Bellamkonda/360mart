@@ -42,12 +42,12 @@ export function HomeView({ data, minute, now, parents, preview }: { data: HomePa
       {/* Each section in the page column, except edge-to-edge HTML blocks. An empty wrapper (a guest's Buy again) takes no room. */}
       <div className="space-y-12 py-10 sm:space-y-16 sm:py-14">
         {sections.map((s) => (
-          <div key={s.id} className={s.type === "HTML_BLOCK" && s.width === "FULL" ? "empty:hidden" : "mx-auto max-w-6xl px-4 empty:hidden"}>
+          <div key={s.id} className={s.type === "HTML_BLOCK" && s.width === "FULL" ? "empty:hidden" : "mx-auto max-w-page px-4 sm:px-6 lg:px-8 empty:hidden"}>
             <Section section={s} data={data} minute={minute} now={now} parents={parents} anchor={s.id === firstGrid} preview={preview} />
           </div>
         ))}
         {sections.length === 0 && (
-          <div className="mx-auto flex max-w-6xl flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+          <div className="mx-auto flex max-w-page flex-col items-center rounded-3xl border border-dashed border-line bg-surface px-6 py-12 text-center">
             <Store aria-hidden className="size-8 text-brand-deep" />
             <p className="mt-3 font-bold text-ink">Stores are getting ready</p>
             <p className="mt-1 max-w-sm text-sm text-muted">Local shops are adding their products. Check back soon.</p>

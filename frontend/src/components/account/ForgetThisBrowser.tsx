@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { forgetCart } from "@/components/cart/cart-store";
-import { setDeliveryLocation } from "@/components/location/delivery-location";
+import { forgetDeliveryLocations } from "@/components/location/delivery-location";
 import { resetUnread } from "@/components/notifications/unread-store";
 import { clearRecent } from "@/lib/search/recent";
 
@@ -12,7 +12,7 @@ import { clearRecent } from "@/lib/search/recent";
 export function ForgetThisBrowser() {
   useEffect(() => {
     forgetCart();
-    setDeliveryLocation(null);
+    forgetDeliveryLocations();
     clearRecent();
     resetUnread();
     try {

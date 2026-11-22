@@ -28,3 +28,31 @@ export function readLocation(input: unknown): DeliveryLocation | null {
   const label = typeof r.label === "string" && r.label.trim() ? r.label.trim().slice(0, 80) : "Selected location";
   return { latitude: round6(lat), longitude: round6(lng), label, source, ...(typeof r.addressId === "string" ? { addressId: r.addressId } : {}) };
 }
+
+/** Within about 100 m: the same place for "recent places" and for marking the current choice. */
+export function sameSpot(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): boolean {
+  return Math.abs(a.latitude - b.latitude) < 0.001 && Math.abs(a.longitude - b.longitude) < 0.001;
+}
+
+/** The first part of a label ("Kukatpally" from "Kukatpally, Hyderabad"), for tight spaces like the phone header. */
+export const shortLabel = (label: string) => label.split(",")[0].trim() || label;
+
+/** GET /serviceability: do live stores deliver to this point? Counts only, never store names. */
+export type Serviceability = {
+  serviceable: boolean;
+  storeCount: number;
+  openNowCount: number;
+  /** null when not serviceable. */
+  nearestStoreKm: number | null;
+  /** The lowest fee among those stores (0 = some store delivers free), not a promise for every store. */
+  lowestDeliveryFee: number | null;
+  lowestMinOrderAmount: number | null;
+};
+
+/** Nobody delivers there (also used for a point the backend refuses). */
+export const NOT_SERVICEABLE: Serviceability = { serviceable: false, storeCount: 0, openNowCount: 0, nearestStoreKm: null, lowestDeliveryFee: null, lowestMinOrderAmount: null };
+
+/** How to name a place in a sentence: "Ameerpet", or "your area" for an unnamed point ("Your location", "Pinned location"). */
+export function areaName(label: string): string {
+  return ["Your location", "Pinned location", "Selected location", "Current location"].includes(label) ? "your area" : shortLabel(label);
+}

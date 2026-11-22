@@ -53,7 +53,7 @@ export function HtmlBlock({ section: s, id, serverNow, preview }: { section: Htm
   );
 
   const heading = s.title ? (
-    <div className={full ? "mx-auto max-w-6xl px-4" : ""}>
+    <div className={full ? "mx-auto max-w-page px-4 sm:px-6 lg:px-8" : ""}>
       <SectionHeading id={id} title={s.title} subtitle={s.subtitle || undefined} />
     </div>
   ) : null;

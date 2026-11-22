@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Checkout", robots: { index: false, f
 export default function CheckoutPage({ searchParams }: PageProps<"/checkout">) {
   return (
     <div className="min-h-[70vh] bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <Suspense fallback={<div aria-hidden className="h-96 animate-pulse rounded-3xl bg-line/50" />}>
           <Checkout searchParams={searchParams} />
         </Suspense>

@@ -5,13 +5,12 @@
 // helpers the shop uses to pick the current row. Safe for client components.
 
 import type { Category } from "@/lib/catalog/types";
-import { heroDisplay, HERO_ANIMATIONS, HERO_LAYOUTS, HERO_SIZES } from "@/lib/category-page/types";
 import {
-  cleanBlock, cleanContentSection, cleanLine, CONTENT_TYPES, contentSectionErrors, editableSection, isContentSection, newContentSection, oneOf,
-  readContentSection, readSectionBase, str, text, type PageErrors,
+  cleanContentSection, cleanLine, CONTENT_TYPES, contentSectionErrors, editableSection, isContentSection, newContentSection, text, type PageErrors,
 } from "@/lib/category-page/validation";
+import { cleanHero, editableHero, heroErrors } from "./hero";
 import { HTML_BLOCK_LINK, HTML_LIMITS, HTML_TEMPLATES, htmlProblem } from "./html-block";
-import { HOME_SCHEMA_VERSION, STANDARD_FLOATING_LABELS, type HtmlBlockSection, type HomeHeroDoc, type HomePageDocument, type HomeSection, type HomeSectionType, type RailSource, type TimeSlot } from "./types";
+import { HOME_SCHEMA_VERSION, type HtmlBlockSection, type HomePageDocument, type HomeSection, type HomeSectionType, type RailSource, type TimeSlot } from "./types";
 
 export const HOME_LIMITS = {
   headline: 60,
@@ -76,7 +75,6 @@ export const RAIL_SOURCES: { value: RailSource; label: string; text: string; tit
   { value: "FEATURED", label: "Featured", text: "Products marked featured, across the catalogue", title: "Featured picks" },
 ];
 export const railSourceInfo = (s: RailSource) => RAIL_SOURCES.find((r) => r.value === s) ?? RAIL_SOURCES[0];
-const SOURCES = RAIL_SOURCES.map((r) => r.value);
 const isSlotRail = (s: HomeSection) => s.type === "PRODUCT_RAIL" && (s.source === "TIME_OF_DAY" || s.source === "POPULAR_NOW");
 
 // ---- time slots ----
@@ -141,23 +139,7 @@ export function suggestedSlots(categories: Category[]): TimeSlot[] {
 
 export function homeErrors(doc: HomePageDocument): PageErrors {
   const e: PageErrors = {};
-  const h = doc.hero;
-  text(e, "hero.headline", h.headline, HOME_LIMITS.headline, "Headline");
-  text(e, "hero.accentLine", h.accentLine, HOME_LIMITS.accentLine, "Second line");
-  text(e, "hero.intro", h.intro, HOME_LIMITS.intro, "Intro", true);
-  text(e, "hero.badge", h.badge, HOME_LIMITS.badge, "Badge");
-  text(e, "hero.buttonLabel", h.buttonLabel, HOME_LIMITS.buttonLabel, "Button text");
-  text(e, "hero.imageAlt", h.imageAlt, HOME_LIMITS.imageAlt, "Picture description");
-  const link = h.buttonLink?.trim();
-  if (link && !SITE_LINK.test(link)) e["hero.buttonLink"] = "Use a link on 360mart, like /fruits or /#categories";
-  else if (link && !h.buttonLabel?.trim()) e["hero.buttonLabel"] = "Add the button text";
-  if (h.visual === "PHOTO" && !h.imageId) e["hero.imageId"] = "Add a picture, or choose the animated cart";
-  const labels = h.floatingLabels ?? [];
-  if (labels.length > HOME_LIMITS.floatingLabels) e["hero.floatingLabels"] = `Add at most ${HOME_LIMITS.floatingLabels} floating labels`;
-  labels.forEach((l, i) => {
-    if (!l.trim()) e[`hero.floatingLabels[${i}]`] = "Enter the label, or remove it";
-    else text(e, `hero.floatingLabels[${i}]`, l, HOME_LIMITS.floatingLabel, "Label");
-  });
+  heroErrors(doc.hero, e);
 
   const slots = doc.timeSlots;
   if (slots.length > HOME_LIMITS.slots) e.timeSlots = `Add at most ${HOME_LIMITS.slots} time slots`;
@@ -235,26 +217,7 @@ export function homeErrors(doc: HomePageDocument): PageErrors {
 
 /** The document as the backend wants it: trimmed text, empty text as null, each section with only its own fields. */
 export function cleanHomeDocument(doc: HomePageDocument): HomePageDocument {
-  const h = doc.hero;
-  const display = heroDisplay(h);
-  const hero: HomeHeroDoc = {
-    headline: cleanLine(h.headline),
-    accentLine: cleanLine(h.accentLine),
-    intro: cleanBlock(h.intro),
-    badge: cleanLine(h.badge),
-    buttonLabel: cleanLine(h.buttonLabel),
-    buttonLink: (h.buttonLink ?? "").trim() || null,
-    visual: h.visual === "PHOTO" ? "PHOTO" : "CART_ANIMATION",
-    imageId: h.imageId || null,
-    mobileImageId: h.mobileImageId || null,
-    imageAlt: cleanLine(h.imageAlt),
-    floatingLabels: h.floatingLabels == null ? null : h.floatingLabels.map((l) => cleanLine(l) ?? ""),
-    enabled: display.enabled,
-    layout: display.layout,
-    size: display.size,
-    showBadge: display.showBadge,
-    animation: display.animation,
-  };
+  const hero = cleanHero(doc.hero);
   const timeSlots = doc.timeSlots.map((s) => ({
     id: s.id,
     label: cleanLine(s.label) ?? "",
@@ -305,23 +268,9 @@ export function cleanHomeDocument(doc: HomePageDocument): HomePageDocument {
 
 /** The designer's working copy: every field present, so the form is always controlled. */
 export function toEditableHome(doc: HomePageDocument): HomePageDocument {
-  const h = doc.hero ?? {};
   return {
     schemaVersion: HOME_SCHEMA_VERSION,
-    hero: {
-      headline: h.headline ?? "",
-      accentLine: h.accentLine ?? "",
-      intro: h.intro ?? "",
-      badge: h.badge ?? "",
-      buttonLabel: h.buttonLabel ?? "",
-      buttonLink: h.buttonLink ?? "",
-      visual: h.visual === "PHOTO" ? "PHOTO" : "CART_ANIMATION",
-      imageId: h.imageId ?? null,
-      mobileImageId: h.mobileImageId ?? null,
-      imageAlt: h.imageAlt ?? "",
-      floatingLabels: h.floatingLabels ?? null,
-      ...heroDisplay(h),
-    },
+    hero: editableHero(doc.hero ?? {}),
     timeSlots: (doc.timeSlots ?? []).map((s) => ({ ...s, subtitle: s.subtitle ?? "", categoryIds: s.categoryIds ?? [], productIds: s.productIds ?? [] })),
     // Types this designer doesn't know yet (a newer backend) are left out rather than broken.
     sections: (doc.sections ?? [])
@@ -331,9 +280,6 @@ export function toEditableHome(doc: HomePageDocument): HomePageDocument {
 }
 
 export const sameHome = (a: HomePageDocument, b: HomePageDocument) => JSON.stringify(cleanHomeDocument(a)) === JSON.stringify(cleanHomeDocument(b));
-
-/** The floating labels shown for a hero (null = the standard ones). */
-export const floatingLabelsOf = (h: Pick<HomeHeroDoc, "floatingLabels">) => (h.floatingLabels == null ? STANDARD_FLOATING_LABELS : h.floatingLabels.filter((l) => l.trim()));
 
 // ---- new sections ----
 
@@ -386,73 +332,3 @@ export function addableHomeSections(sections: HomeSection[]): HomeSectionType[] 
 }
 
 export const canAddSlotRail = (sections: HomeSection[]) => sections.filter(isSlotRail).length < HOME_LIMITS.slotRails;
-
-// ---- reading untrusted input (server action arguments) ----
-
-const ids = (v: unknown): number[] | null => (Array.isArray(v) && v.every((n) => Number.isInteger(n) && n > 0 && n < 1e15) ? (v as number[]) : null);
-
-/** A document from the browser, rebuilt from known fields only; null when it isn't shaped like one. */
-export function readHomeDocument(input: unknown): HomePageDocument | null {
-  if (!input || typeof input !== "object") return null;
-  const raw = input as Record<string, unknown>;
-  const hero = raw.hero as Record<string, unknown> | undefined;
-  if (!hero || typeof hero !== "object" || !Array.isArray(raw.sections) || !Array.isArray(raw.timeSlots)) return null;
-
-  const h: HomeHeroDoc = {};
-  for (const f of ["headline", "accentLine", "intro", "badge", "buttonLabel", "buttonLink", "imageId", "mobileImageId", "imageAlt"] as const) {
-    const v = str(hero[f]);
-    if (v === undefined) return null;
-    h[f] = v;
-  }
-  if (hero.visual !== "PHOTO" && hero.visual !== "CART_ANIMATION") return null;
-  h.visual = hero.visual;
-  const labels = hero.floatingLabels;
-  if (labels != null && (!Array.isArray(labels) || labels.some((l) => typeof l !== "string"))) return null;
-  h.floatingLabels = labels == null ? null : (labels as string[]);
-  for (const f of ["enabled", "showBadge"] as const) if (hero[f] !== undefined && typeof hero[f] !== "boolean") return null;
-  if (hero.layout !== undefined && !oneOf(HERO_LAYOUTS, hero.layout)) return null;
-  if (hero.size !== undefined && !oneOf(HERO_SIZES, hero.size)) return null;
-  if (hero.animation !== undefined && !oneOf(HERO_ANIMATIONS, hero.animation)) return null;
-  Object.assign(h, heroDisplay(hero));
-
-  const timeSlots: TimeSlot[] = [];
-  for (const item of raw.timeSlots) {
-    if (!item || typeof item !== "object") return null;
-    const s = item as Record<string, unknown>;
-    const [id, label, start, end, title, subtitle] = [str(s.id), str(s.label), str(s.start), str(s.end), str(s.title), str(s.subtitle)];
-    const categoryIds = ids(s.categoryIds ?? []);
-    const productIds = ids(s.productIds ?? []);
-    if (!id || label == null || start == null || end == null || title == null || subtitle === undefined || !categoryIds || !productIds) return null;
-    timeSlots.push({ id, label, start, end, title, subtitle, categoryIds, productIds });
-  }
-
-  const sections: HomeSection[] = [];
-  for (const item of raw.sections) {
-    if (!item || typeof item !== "object") return null;
-    const s = item as Record<string, unknown>;
-    const base = readSectionBase(s);
-    if (!base) return null;
-    let section: HomeSection | null = null;
-    if ((CONTENT_TYPES as readonly unknown[]).includes(s.type)) section = readContentSection(s, base);
-    else if (s.type === "CATEGORY_GRID") {
-      const categoryIds = ids(s.categoryIds ?? []);
-      if ((s.mode === "ALL" || s.mode === "FEATURED" || s.mode === "PICKED") && categoryIds && typeof s.limit === "number")
-        section = { ...base, type: s.type, mode: s.mode, categoryIds, limit: s.limit, layout: s.layout === "CHIPS" ? "CHIPS" : "TILES" };
-    } else if (s.type === "PRODUCT_RAIL") {
-      const productIds = ids(s.productIds ?? []);
-      if (oneOf(SOURCES, s.source) && productIds && typeof s.limit === "number")
-        section = { ...base, type: s.type, source: s.source, limit: s.limit, productIds, windowDays: s.windowDays === 30 ? 30 : 7 };
-    } else if (s.type === "TRENDING_SEARCHES" && typeof s.limit === "number") section = { ...base, type: s.type, limit: s.limit };
-    else if (s.type === "BUY_AGAIN" && (s.limit === undefined || typeof s.limit === "number")) section = { ...base, type: s.type, limit: (s.limit as number | undefined) ?? HOME_LIMITS.buyAgainDefault };
-    else if (s.type === "HTML_BLOCK") {
-      const [html, mobileHtml, linkPath, linkLabel, startsAt, endsAt] = [str(s.html), str(s.mobileHtml), str(s.linkPath), str(s.linkLabel), str(s.startsAt), str(s.endsAt)];
-      const dates = [startsAt, endsAt].every((d) => d == null || !Number.isNaN(Date.parse(d)));
-      if (typeof html === "string" && ![mobileHtml, linkPath, linkLabel].includes(undefined) && dates && (s.width === undefined || s.width === "CONTAINED" || s.width === "FULL"))
-        section = { ...base, type: s.type, html, mobileHtml, linkPath, linkLabel, width: s.width === "FULL" ? "FULL" : "CONTAINED", startsAt: startsAt ?? null, endsAt: endsAt ?? null };
-    }
-    if (!section) return null;
-    sections.push(section);
-  }
-  return { schemaVersion: HOME_SCHEMA_VERSION, hero: h, timeSlots, sections };
-}
-

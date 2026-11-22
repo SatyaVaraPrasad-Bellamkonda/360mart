@@ -14,7 +14,7 @@ import { PolicyMarkdown } from "./PolicyMarkdown";
 export function PolicyPage({ type, version }: { type: PolicyType; version?: number }) {
   return (
     <div className="bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <Suspense fallback={<PolicySkeleton />}>
           <PolicyBody type={type} version={version} />
         </Suspense>
@@ -182,7 +182,7 @@ function Notice({ icon: Icon, title, text, href, label }: { icon: typeof FileTex
 export function PolicyFrame() {
   return (
     <div className="bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <PolicySkeleton />
       </div>
     </div>

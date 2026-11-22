@@ -8,7 +8,7 @@ type Props = { badge: string; title: string; subtitle: string; children: ReactNo
 // Common frame for the customer, shopkeeper and admin dashboards.
 export function DashboardShell({ badge, title, subtitle, children }: Props) {
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
+    <div className="mx-auto max-w-page space-y-8 px-4 sm:px-6 lg:px-8 py-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="inline-block rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-deep">{badge}</p>
@@ -52,5 +52,5 @@ export function ComingSoonGrid({ items }: { items: { icon: LucideIcon; title: st
 }
 
 export function DashboardSkeleton() {
-  return <div aria-hidden className="mx-auto h-64 max-w-6xl animate-pulse rounded-3xl bg-surface" />;
+  return <div aria-hidden className="mx-auto h-64 max-w-page animate-pulse rounded-3xl bg-surface" />;
 }

@@ -4,22 +4,22 @@ import { categoryPicture } from "@/lib/categories";
 import { getShopCategoriesNow } from "@/lib/catalog/data";
 import { categoryPath } from "@/lib/catalog/validation";
 import { CategoryImage } from "./catalog/CategoryImage";
-import { CategoryMenu } from "./CategoryMenu";
+import { CategoryLinks } from "./CategoryLinks";
 import { SearchLauncher } from "./search/SearchLauncher";
 
-// Header categories. Not the Featured ones: the list grows, so the desktop
-// header has one "Categories" button opening every category (CategoryMenu),
-// and the phone strip under the header scrolls through all of them. Order =
-// the admin's display order; names only (badges show on the category cards).
+// Header categories. Not only the Featured ones: every category, in the
+// admin's display order. Desktop = a second header row of text links
+// (CategoryLinks, scrolls sideways + "All categories"); phones = the strip
+// under the header with pictures. Names only (badges show on the cards).
 
 async function all() {
   const loaded = await getShopCategoriesNow();
   return loaded.ok ? loaded.data : [];
 }
 
-export async function DesktopCategoryNav() {
+export async function DesktopCategoryLinks() {
   const items = await all();
-  return <CategoryMenu categories={items.map((c) => ({ id: c.categoryId, name: c.name, href: categoryPath(c), image: categoryPicture(c) }))} />;
+  return <CategoryLinks items={items.map((c) => ({ id: c.categoryId, name: c.name, href: categoryPath(c) }))} />;
 }
 
 /** The header search, with the shop's own category names as its live hint (same cached list, no extra call). */
@@ -52,8 +52,14 @@ export async function PhoneCategoryStrip() {
   );
 }
 
-export function DesktopCategoryNavFallback() {
-  return <span aria-hidden className="block size-10 animate-pulse rounded-full bg-surface lg:w-36" />;
+export function DesktopCategoryLinksFallback() {
+  return (
+    <div aria-hidden className="flex gap-6 pb-3 pt-3">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span key={i} className="h-4 w-20 animate-pulse rounded-full bg-[#f4f1ec]" />
+      ))}
+    </div>
+  );
 }
 
 export function PhoneCategoryStripFallback() {

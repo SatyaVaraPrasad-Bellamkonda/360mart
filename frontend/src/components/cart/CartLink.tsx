@@ -28,11 +28,11 @@ export function CartLink() {
       href="/cart"
       aria-label={count ? `Cart, ${count} ${count === 1 ? "item" : "items"}` : "Cart"}
       aria-current={active ? "page" : undefined}
-      className={`relative flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition ${active ? "bg-brand-soft text-brand-deep ring-brand/50" : "bg-white text-ink ring-line hover:ring-ink"}`}
+      className={`relative flex size-10 shrink-0 items-center justify-center rounded-xl transition md:size-11 md:rounded-[14px] ${active ? "bg-brand-soft text-brand-deep" : "text-ink hover:bg-[#f4f1ec]"}`}
     >
-      <ShoppingCart aria-hidden className="size-5" />
+      <ShoppingCart aria-hidden strokeWidth={1.9} className="size-5" />
       {!!count && (
-        <span key={count} className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-extrabold text-ink ring-2 ring-white motion-safe:animate-pop-in">
+        <span key={count} className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ea6a0a] px-1 text-[10px] font-extrabold text-white ring-2 ring-white motion-safe:animate-pop-in">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -42,8 +42,8 @@ export function CartLink() {
 
 export function CartLinkFallback() {
   return (
-    <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-ink ring-1 ring-line">
-      <ShoppingCart className="size-5" />
+    <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl text-ink md:size-11 md:rounded-[14px]">
+      <ShoppingCart strokeWidth={1.9} className="size-5" />
     </span>
   );
 }

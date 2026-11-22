@@ -38,11 +38,11 @@ export function NotificationBell() {
       href={INBOX}
       aria-label={count ? `Notifications, ${count} new` : "Notifications"}
       aria-current={active ? "page" : undefined}
-      className={`relative size-10 shrink-0 items-center justify-center rounded-full ring-1 transition ${user.role === "seller" ? "hidden sm:flex" : "flex"} ${active ? "bg-brand-soft text-brand-deep ring-brand/50" : "bg-white text-ink ring-line hover:ring-ink"}`}
+      className={`relative size-10 shrink-0 items-center justify-center rounded-xl transition md:size-11 md:rounded-[14px] ${user.role === "seller" ? "hidden sm:flex" : "flex"} ${active ? "bg-brand-soft text-brand-deep" : "text-ink hover:bg-[#f4f1ec]"}`}
     >
-      <Bell aria-hidden className={`size-5 ${count ? "origin-top motion-safe:animate-bell-ring" : ""}`} />
+      <Bell aria-hidden strokeWidth={1.9} className={`size-5 ${count ? "origin-top motion-safe:animate-bell-ring" : ""}`} />
       {!!count && (
-        <span key={count} className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-extrabold text-white ring-2 ring-white motion-safe:animate-pop-in">
+        <span key={count} className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ea6a0a] px-1 text-[10px] font-extrabold text-white ring-2 ring-white motion-safe:animate-pop-in">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -55,6 +55,6 @@ export function UnreadDot() {
   const count = useUnreadCount();
   if (!count) return null;
   return (
-    <span aria-hidden className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-red-600 ring-2 ring-white sm:hidden" />
+    <span aria-hidden className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-[#ea6a0a] ring-2 ring-white sm:hidden" />
   );
 }

@@ -22,7 +22,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/search">): 
 // never cached (the first page also counts towards trending searches).
 export default function SearchPage({ searchParams }: PageProps<"/search">) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+    <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       <Suspense fallback={<ResultsSkeleton />}>
         <Results searchParams={searchParams} />
       </Suspense>

@@ -35,7 +35,7 @@ export function CatalogUnavailable({ message }: { message: string }) {
 
 export function ShopPageSkeleton() {
   return (
-    <div aria-hidden className="mx-auto max-w-6xl space-y-8 px-4 py-5 sm:py-6">
+    <div aria-hidden className="mx-auto max-w-page space-y-8 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
       <div className="h-5 w-40 animate-pulse rounded bg-line/60" />
       <div className="h-80 animate-pulse rounded-3xl bg-line/60" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">

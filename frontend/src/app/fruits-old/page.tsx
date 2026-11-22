@@ -43,7 +43,7 @@ export default async function FruitsPage() {
   const countFor = (slug: string) => products.filter((p) => p.subcategory === slug).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 py-5 sm:space-y-16 sm:py-6">
+    <div className="mx-auto max-w-page space-y-12 px-4 sm:px-6 lg:px-8 py-5 sm:space-y-16 sm:py-6">
       <JsonLd data={itemListJsonLd("Fresh fruits", products)} />
 
       <div className="space-y-4">

@@ -76,7 +76,7 @@ export function GuestCartView() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
+        <div className="mx-auto flex max-w-page items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-lg font-extrabold text-ink">{money(total)}</p>
             <p className="truncate text-xs text-muted">+ delivery, at checkout</p>

@@ -10,7 +10,7 @@ import { getHomePageNow, getShopCategoriesNow } from "@/lib/catalog/data";
 import { categoryListJsonLd } from "@/lib/catalog/seo";
 import type { Category } from "@/lib/catalog/types";
 import { categoryPath } from "@/lib/catalog/validation";
-import { HOME_DEFAULTS, STANDARD_FLOATING_LABELS, type HomeHeroView } from "@/lib/home-page/types";
+import { standardHero } from "@/lib/home-page/hero";
 import { indiaMinutes } from "@/lib/home-page/validation";
 import { SITE } from "@/lib/site";
 
@@ -42,26 +42,7 @@ const homeJsonLd = {
 };
 
 /** The standard hero: shown when the design can't be loaded. */
-const STANDARD_HERO: HomeHeroView = {
-  headline: HOME_DEFAULTS.headline,
-  accentLine: HOME_DEFAULTS.accentLine,
-  intro: HOME_DEFAULTS.intro,
-  badge: HOME_DEFAULTS.badge,
-  buttonLabel: HOME_DEFAULTS.buttonLabel,
-  buttonLink: HOME_DEFAULTS.buttonLink,
-  visual: "CART_ANIMATION",
-  imageId: null,
-  imageUrl: null,
-  mobileImageId: null,
-  mobileImageUrl: null,
-  imageAlt: null,
-  floatingLabels: STANDARD_FLOATING_LABELS,
-  enabled: true,
-  layout: "IMAGE_RIGHT",
-  size: "LARGE",
-  showBadge: true,
-  animation: "NONE",
-};
+const STANDARD_HERO = standardHero();
 
 // The home page as the admin designed it (/admin/home), from one cached call.
 export default function HomePage() {
@@ -88,7 +69,7 @@ function StandardHome({ categories }: { categories: Category[] | null }) {
   return (
     <>
       <HomeHero hero={STANDARD_HERO} />
-      <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-6xl scroll-mt-32 px-4 py-12 md:scroll-mt-24">
+      <section id="categories" aria-labelledby="categories-heading" className="mx-auto max-w-page scroll-mt-32 px-4 sm:px-6 lg:px-8 py-12 md:scroll-mt-24">
         <SectionHeading id="categories-heading" title="Shop by category" />
         {!categories ? (
           <p role="alert" className="rounded-2xl bg-surface px-5 py-6 text-sm text-muted ring-1 ring-line">
@@ -122,12 +103,12 @@ function StandardHome({ categories }: { categories: Category[] | null }) {
 function HomeSkeleton() {
   return (
     <div role="status" aria-label="Loading">
-      <div aria-hidden className="mx-auto max-w-6xl px-4 pt-8">
+      <div aria-hidden className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 pt-8">
         <div className="h-4 w-40 animate-pulse rounded-full bg-surface" />
         <div className="mt-4 h-9 w-full max-w-md animate-pulse rounded-xl bg-surface sm:h-11" />
         <div className="mt-3 h-4 w-full max-w-lg animate-pulse rounded-full bg-surface" />
       </div>
-      <div aria-hidden className="mx-auto max-w-6xl px-4 py-10">
+      <div aria-hidden className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-6 h-7 w-48 animate-pulse rounded-lg bg-surface" />
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-5 lg:grid-cols-6">
           {Array.from({ length: 4 }, (_, i) => (

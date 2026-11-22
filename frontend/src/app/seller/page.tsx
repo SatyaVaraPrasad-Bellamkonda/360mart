@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Your Store", robots: { index: false,
 export default function SellerDashboardPage() {
   return (
     <div className="min-h-full bg-surface">
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:space-y-8 sm:py-10">
+      <div className="mx-auto max-w-page space-y-6 px-4 sm:px-6 lg:px-8 py-6 sm:space-y-8 sm:py-10">
         <Suspense fallback={<DashboardSkeleton />}>
           <SellerDashboard />
         </Suspense>

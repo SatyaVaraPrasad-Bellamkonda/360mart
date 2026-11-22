@@ -26,26 +26,99 @@ export const HOME_DEFAULTS = {
 
 // ---- what the admin edits (HomePageDocument) ----
 
-export type HomeHeroDoc = {
+// ---- the banner (format 3: slides) ----
+
+export const HERO_SLIDE_KINDS = ["PHOTO", "VIDEO", "CART", "COLOUR"] as const;
+export type HeroSlideKind = (typeof HERO_SLIDE_KINDS)[number];
+export const HERO_FOCUSES = ["CENTER", "LEFT", "RIGHT", "TOP", "BOTTOM"] as const;
+export type HeroFocus = (typeof HERO_FOCUSES)[number];
+export const HERO_BACKGROUNDS = ["AMBER", "INK", "FOREST", "BERRY", "SKY", "SAND"] as const;
+export type HeroBackground = (typeof HERO_BACKGROUNDS)[number];
+export const HERO_TEXT_POSITIONS = ["LEFT", "CENTER", "BOTTOM_LEFT"] as const;
+export type HeroTextPosition = (typeof HERO_TEXT_POSITIONS)[number];
+export const HERO_TEXT_TONES = ["LIGHT", "DARK"] as const;
+export type HeroTextTone = (typeof HERO_TEXT_TONES)[number];
+export const HERO_OVERLAYS = ["NONE", "LEFT_FADE", "BOTTOM_FADE", "EVEN"] as const;
+export type HeroOverlay = (typeof HERO_OVERLAYS)[number];
+export const HERO_FRAMES = ["CARD", "FULL_WIDTH"] as const;
+export type HeroFrame = (typeof HERO_FRAMES)[number];
+export const HERO_HEIGHTS = ["COMPACT", "MEDIUM", "TALL"] as const;
+export type HeroHeight = (typeof HERO_HEIGHTS)[number];
+export const HERO_MOBILE_SHAPES = ["SQUARE", "PORTRAIT", "WIDE"] as const;
+export type HeroMobileShape = (typeof HERO_MOBILE_SHAPES)[number];
+export const SIDE_CARD_TONES = ["PEACH", "MINT", "SKY", "SAND"] as const;
+export type SideCardTone = (typeof SIDE_CARD_TONES)[number];
+
+/** One slide of the home banner. PHOTO needs imageId; VIDEO needs videoId + a poster in imageId. */
+export type HeroSlide = {
+  id: string;
+  kind: HeroSlideKind;
+  imageId?: string | null;
+  mobileImageId?: string | null;
+  videoId?: string | null;
+  mobileVideoId?: string | null;
+  /** VIDEO: false = phones show only the poster (saves their data). */
+  videoOnPhones?: boolean;
+  imageAlt?: string | null;
+  focus?: HeroFocus;
+  /** COLOUR and CART slides. */
+  background?: HeroBackground;
+  badge?: string | null;
+  /** Required for CART and COLOUR slides; a photo or video can go without words. */
+  headline?: string | null;
+  accentLine?: string | null;
+  intro?: string | null;
+  buttonLabel?: string | null;
+  buttonLink?: string | null;
+  secondaryLabel?: string | null;
+  secondaryLink?: string | null;
+  textPosition?: HeroTextPosition;
+  textTone?: HeroTextTone;
+  overlay?: HeroOverlay;
+  /** 0–80 (%). */
+  overlayStrength?: number;
+  /** CART only: null = the standard labels, [] = none. */
+  floatingLabels?: string[] | null;
+  /** UTC; shown only in this window. */
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+
+/** The card beside the banner on wide screens (under it on phones). */
+export type HeroSideCard = { imageId?: string | null; eyebrow?: string | null; title: string; text?: string | null; linkPath: string; tone?: SideCardTone };
+
+/** The single banner of page formats 1–2 (read only: turned into one slide). */
+export type LegacyHomeHero = {
   headline?: string | null;
   accentLine?: string | null;
   intro?: string | null;
   badge?: string | null;
   buttonLabel?: string | null;
-  /** "/", "/fruits", "/#categories": always our own site. */
   buttonLink?: string | null;
   visual?: HeroVisual;
   imageId?: string | null;
   mobileImageId?: string | null;
   imageAlt?: string | null;
-  /** null = the standard labels, [] = none. */
   floatingLabels?: string[] | null;
-  enabled?: boolean;
   layout?: HeroLayout;
   size?: HeroSize;
   showBadge?: boolean;
   animation?: HeroAnimation;
 };
+
+export type HomeHeroDoc = {
+  enabled?: boolean;
+  frame?: HeroFrame;
+  /** Desktop height. */
+  height?: HeroHeight;
+  /** Phones: 1:1, 4:5 or 16:9. */
+  mobileShape?: HeroMobileShape;
+  autoplay?: boolean;
+  /** 4–12. */
+  intervalSeconds?: number;
+  slides?: HeroSlide[];
+  sideCard?: HeroSideCard | null;
+} & LegacyHomeHero;
 
 /** A part of the day with its own product row ("05:00"–"11:00", India time; an end before the start runs past midnight). */
 export type TimeSlot = {
@@ -92,11 +165,11 @@ export type HtmlBlockSection = Base & {
 export type HomeSection = CategoryGridSection | HomeRailSection | TrendingSearchesSection | BuyAgainSection | HtmlBlockSection | PromoBannerSection | TextBlockSection | TrustStripSection | FaqPageSection;
 export type HomeSectionType = HomeSection["type"];
 
-/** 2 = the sections are saved exactly as sent (1 put a missing "Buy again" back at the top). */
-export const HOME_SCHEMA_VERSION = 2;
+/** 3 = the banner is slides (2 = sections saved exactly as sent; 1 put a missing "Buy again" back at the top). */
+export const HOME_SCHEMA_VERSION = 3;
 
 export type HomePageDocument = {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   hero: HomeHeroDoc;
   timeSlots: TimeSlot[];
   sections: HomeSection[];
@@ -104,26 +177,28 @@ export type HomePageDocument = {
 
 // ---- the shop page (HomePageResponse) ----
 
-/** The hero with every field resolved (empty texts already hold the standard copy). */
-export type HomeHeroView = {
-  headline: string;
-  accentLine: string | null;
-  intro: string | null;
-  badge: string | null;
-  buttonLabel: string | null;
-  buttonLink: string | null;
-  visual: HeroVisual;
-  imageId: string | null;
+/** A slide as the shop gets it: every option resolved, with permanent links. */
+export type HeroSlideView = Required<Omit<HeroSlide, "floatingLabels">> & {
   imageUrl: string | null;
-  mobileImageId: string | null;
   mobileImageUrl: string | null;
-  imageAlt: string | null;
+  videoUrl: string | null;
+  mobileVideoUrl: string | null;
+  posterUrl: string | null;
   floatingLabels: string[];
+};
+
+export type HeroSideCardView = Required<HeroSideCard> & { imageUrl: string | null };
+
+/** The banner as the shop gets it (only the slides showing now). The old flat fields still come too, for older apps. */
+export type HomeHeroView = {
   enabled: boolean;
-  layout: HeroLayout;
-  size: HeroSize;
-  showBadge: boolean;
-  animation: HeroAnimation;
+  frame: HeroFrame;
+  height: HeroHeight;
+  mobileShape: HeroMobileShape;
+  autoplay: boolean;
+  intervalSeconds: number;
+  slides: HeroSlideView[];
+  sideCard: HeroSideCardView | null;
 };
 
 /** SALES = what really sells at this time of day; PICKED = the admin's picks for the slot. */
@@ -160,6 +235,11 @@ export type AdminHomePage = {
   updatedBy: string | null;
   hasUnpublishedChanges: boolean;
   images: PageImage[];
+  /** Finished video uploads, for the slide picker. */
+  videos?: PageVideo[];
 };
+
+export type PageVideoPurpose = "HERO" | "HERO_MOBILE";
+export type PageVideo = { videoId: string; url: string; purpose: PageVideoPurpose; contentType: string | null; sizeBytes: number | null; createdAt: string };
 
 export type HomeHistoryItem = Pick<PageHistoryItem, "version" | "publishedAt" | "publishedBy">;

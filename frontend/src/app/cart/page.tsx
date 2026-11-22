@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Your cart", robots: { index: false, 
 export default function CartPage({ searchParams }: PageProps<"/cart">) {
   return (
     <div className="min-h-[70vh] bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <Suspense fallback={<CartSkeleton />}>
           <Cart searchParams={searchParams} />
         </Suspense>

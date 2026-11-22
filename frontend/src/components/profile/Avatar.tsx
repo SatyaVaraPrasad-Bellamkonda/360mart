@@ -9,11 +9,12 @@ import { refreshUserAction } from "@/lib/profile/actions";
 type Props = {
   // The server's copy, used until useAuth() has the live userSession.
   user: Pick<CurrentUser, "firstName" | "lastName" | "profileImageUrl">;
-  size: "sm" | "lg";
+  /** "fill" = fills its parent (the header tile) with no circle of its own. */
+  size: "sm" | "lg" | "fill";
   previewUrl?: string | null; // a just-picked file, shown while it uploads
 };
 
-const SIZE = { sm: "size-7 text-xs", lg: "size-24 text-3xl" };
+const SIZE = { sm: "size-7 rounded-full bg-brand-soft text-xs text-brand-deep", lg: "size-24 rounded-full bg-brand-soft text-3xl text-brand-deep", fill: "size-full rounded-[inherit] text-sm text-ink" };
 
 // Several avatars on one page (header + profile) may fail together when the
 // link expires; they share one refresh instead of each calling /users/me.
@@ -24,7 +25,7 @@ function refreshOnce() {
   });
   return refreshing;
 }
-const ICON = { sm: "size-4", lg: "size-10" };
+const ICON = { sm: "size-4", lg: "size-10", fill: "size-5" };
 
 // Round profile picture, or the user's initials / an icon when there is none.
 // Picture links are signed and expire after ~1 hour: if one fails to load,
@@ -59,7 +60,7 @@ export function Avatar({ user: serverUser, size, previewUrl }: Props) {
 
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft font-bold text-brand-deep ${SIZE[size]}`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden font-bold ${SIZE[size]}`}
     >
       {url ? (
         // Plain <img>, not next/image: the link is short-lived and already a small

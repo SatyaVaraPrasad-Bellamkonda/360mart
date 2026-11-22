@@ -5,8 +5,9 @@ import { categoryImageError } from "@/lib/catalog/validation";
 import type { PageImagePurpose, ProductCard } from "@/lib/category-page/types";
 import type { Page } from "@/lib/inventory/types";
 import type { SearchResult } from "./service";
-import type { AdminHomePage, HomeHistoryItem } from "./types";
-import { cleanHomeDocument, homeErrors, readHomeDocument } from "./validation";
+import { VIDEO_MAX_BYTES, VIDEO_TYPES } from "./hero";
+import type { AdminHomePage, HomeHistoryItem, HomePageDocument, PageVideoPurpose } from "./types";
+import { cleanHomeDocument, homeErrors } from "./validation";
 
 // The admin home page designer's calls, straight from the browser to
 // /api/v1/admin/home-page/... (each shows in DevTools → Network). Checked here
@@ -24,9 +25,8 @@ export async function loadHomeAdmin(): Promise<ActionResult<AdminHomePage>> {
 }
 
 /** Save the whole draft. Field problems come back keyed by the backend's paths ("timeSlots[1].start"). */
-export async function saveHomeDraft(version: number, input: unknown): Promise<Written> {
-  const doc = readHomeDocument(input);
-  if (!doc || !Number.isInteger(version) || version < 0) return unexpected();
+export async function saveHomeDraft(version: number, doc: HomePageDocument): Promise<Written> {
+  if (!Number.isInteger(version) || version < 0) return unexpected();
   const clean = cleanHomeDocument(doc);
   const problems = homeErrors(clean);
   if (Object.keys(problems).length) return invalid(problems);
@@ -71,6 +71,54 @@ export async function uploadHomeImage(form: FormData): Promise<ActionResult<{ im
   if (!res.ok) return uploadFailed(res.error, FORBIDDEN);
   if (!res.data?.id) return unexpected();
   return { ok: true, data: { imageId: res.data.id, url: res.data.url ?? null } };
+}
+
+type UploadUrl = { videoId: string; uploadUrl: string; method: string; headers: Record<string, string> | null; expiresAt: string; maxSizeBytes: number };
+
+/**
+ * Upload a banner video (MP4/WebM; 20 MB, or 8 MB for the phone version) in
+ * three steps, so the file never passes through our servers (Vercel and Spring
+ * both cap request sizes far below a video):
+ * 1. POST …/videos/upload-url → a 10-minute signed link and a new id;
+ * 2. PUT the file itself straight to storage (progress 0–1 reported);
+ * 3. POST …/videos/{id}/complete → the backend checks the stored file (real size, type, first bytes).
+ * Answers with the id for slides[i].videoId / mobileVideoId and its permanent link.
+ */
+export async function uploadHomeVideo(file: File, purpose: PageVideoPurpose, onProgress: (share: number) => void): Promise<ActionResult<{ videoId: string; url: string }>> {
+  if (!(VIDEO_TYPES as readonly string[]).includes(file.type)) return failure("VALIDATION_FAILED", "Choose an MP4 or WebM video.");
+  const max = VIDEO_MAX_BYTES[purpose];
+  if (file.size === 0) return failure("VALIDATION_FAILED", "That file is empty. Choose another video.");
+  if (file.size > max) return failure("FILE_TOO_LARGE", `The video must be at most ${max / 1024 / 1024} MB. Shorten it, or export it at 720p.`);
+
+  const link = await api<UploadUrl>(`${BASE}/videos/upload-url`, { method: "POST", body: { purpose, fileName: file.name.slice(0, 200) || "banner-video", contentType: file.type, sizeBytes: file.size } });
+  if (!link.ok) {
+    if (link.error.status === 413 || link.error.code === "FILE_TOO_LARGE") return failure("FILE_TOO_LARGE", `The video must be at most ${max / 1024 / 1024} MB.`);
+    return uploadFailed(link.error, FORBIDDEN);
+  }
+
+  const sent = await putFile(link.data, file, onProgress);
+  if (!sent) return failure("STORAGE_UNAVAILABLE", "The video couldn't be uploaded. Check your connection and try again.");
+
+  const done = await api<{ success: boolean; message: string; id: string; url: string }>(`${BASE}/videos/${encodeURIComponent(link.data.videoId)}/complete`, { method: "POST" });
+  if (!done.ok) {
+    if (done.error.code === "UPLOAD_EXPIRED" || done.error.status === 410) return failure("UPLOAD_EXPIRED", "The upload took too long. Please upload the video again.");
+    return failed(done.error, FORBIDDEN);
+  }
+  return { ok: true, data: { videoId: done.data.id || link.data.videoId, url: done.data.url } };
+}
+
+/** The file straight to storage with the headers the backend asked for. XHR, not fetch: fetch can't report upload progress. */
+function putFile(link: UploadUrl, file: File, onProgress: (share: number) => void): Promise<boolean> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(link.method || "PUT", link.uploadUrl);
+    for (const [name, value] of Object.entries(link.headers ?? {})) xhr.setRequestHeader(name, value);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+    xhr.onerror = () => resolve(false);
+    xhr.ontimeout = () => resolve(false);
+    xhr.send(file);
+  });
 }
 
 /** The designer's product picker: products on sale matching the text (a type-ahead call, so not counted as a search). */

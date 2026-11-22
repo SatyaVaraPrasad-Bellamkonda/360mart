@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { BackendCallConsole } from "@/components/dev/BackendCallConsole";
 import { ConsentGate } from "@/components/legal/ConsentGate";
+import { LocationHost } from "@/components/location/LocationHost";
+import { LocationNotice } from "@/components/location/LocationNotice";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/Toaster";
 import { SiteHeader } from "@/components/SiteHeader";
+import { mapConfig } from "@/lib/maps/config";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -44,10 +48,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <AuthProvider>
           <SiteHeader />
+          <Suspense fallback={null}>
+            <LocationNotice />
+          </Suspense>
           <main className="flex-1">{children}</main>
           <SiteFooter />
           <Toaster />
           <ConsentGate />
+          {/* The one "Deliver to" sheet + the first-visit rule (reads the URL, so it has its own boundary). */}
+          <Suspense fallback={null}>
+            <LocationHost map={mapConfig()} />
+          </Suspense>
           {process.env.NODE_ENV === "development" && <BackendCallConsole />}
         </AuthProvider>
       </body>

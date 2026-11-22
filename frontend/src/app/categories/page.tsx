@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function AllCategoriesPage() {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-5 sm:py-6">
+    <div className="mx-auto max-w-page space-y-6 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
       <Breadcrumbs items={[{ name: "All categories", href: "/categories" }]} />
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">All categories</h1>

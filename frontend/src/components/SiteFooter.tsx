@@ -12,7 +12,7 @@ const FOOTER_MAX = 8;
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-surface">
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-page grid-cols-2 gap-8 px-4 sm:px-6 lg:px-8 py-10 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <div className="col-span-2 space-y-3 sm:col-span-1">
           <Logo />
           <p className="max-w-sm text-sm text-muted">

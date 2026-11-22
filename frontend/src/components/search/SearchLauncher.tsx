@@ -7,8 +7,8 @@ import { SearchPanel } from "./SearchPanel";
 
 const HINT_EVERY_MS = 2600;
 
-// The header's search button: an icon on phones, a wide search box in the
-// middle of the header on bigger screens, whose hint cycles through real
+// The header's search button: an icon on phones and tablets, a wide search
+// box in the middle of the header from 1024px, whose hint cycles through real
 // category names ("Search for "fruits""). Also opens with "/" or Ctrl/Cmd + K
 // (not while typing elsewhere); the shortcut isn't printed on the box.
 export function SearchLauncher({ hints = [], parents = [] }: { hints?: string[]; parents?: ParentCategory[] }) {
@@ -49,10 +49,10 @@ export function SearchLauncher({ hints = [], parents = [] }: { hints?: string[];
         onClick={show}
         aria-label="Search products"
         aria-keyshortcuts="/ Control+K Meta+K"
-        className="group flex size-10 shrink-0 items-center justify-center rounded-full text-ink ring-1 ring-line transition hover:bg-surface hover:ring-ink/30 md:h-11 md:w-full md:max-w-xl md:justify-start md:gap-2.5 md:bg-surface/70 md:px-4 md:text-muted md:hover:bg-white md:hover:shadow-sm"
+        className="group flex size-10 shrink-0 items-center justify-center rounded-xl text-ink transition hover:bg-[#f4f1ec] md:size-11 md:rounded-[14px] lg:h-12 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-2xl lg:border-[1.5px] lg:border-transparent lg:bg-[#f4f1ec] lg:pl-4 lg:pr-2 lg:text-[#7a8294] lg:hover:border-[#e4dfd7] lg:hover:bg-[#f0ece5]"
       >
-        <Search aria-hidden className="size-[18px] shrink-0 md:text-ink/60 md:group-hover:text-ink" />
-        <span aria-hidden className="hidden min-w-0 items-center gap-1 overflow-hidden text-sm md:flex">
+        <Search aria-hidden className="size-[18px] shrink-0 lg:text-[#7a8294] lg:group-hover:text-ink" />
+        <span aria-hidden className="hidden min-w-0 flex-1 items-center gap-1 overflow-hidden text-[15px] lg:flex">
           <span className="shrink-0">{word ? "Search for" : "Search products"}</span>
           {word && (
             <span className="relative inline-flex h-5 min-w-0 overflow-hidden">

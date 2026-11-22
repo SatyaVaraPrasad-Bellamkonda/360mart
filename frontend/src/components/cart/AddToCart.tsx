@@ -78,12 +78,12 @@ export function AddToCart({ offer, product }: { offer: StoreOffer | null; produc
   );
 }
 
-/** − n + with 48px buttons; 0 removes the item. */
-export function Stepper({ value, max, busy, onChange, label, size = "lg" }: { value: number; max: number; busy: boolean; onChange: (n: number) => void; label: string; size?: "lg" | "sm" }) {
-  const box = size === "lg" ? "min-h-12 rounded-full" : "min-h-10 rounded-xl";
+/** − n + with 48px buttons (40px for "sm"); 0 removes the item. "ink" = navy (Buy again cards), else green. */
+export function Stepper({ value, max, busy, onChange, label, size = "lg", tone = "fresh" }: { value: number; max: number; busy: boolean; onChange: (n: number) => void; label: string; size?: "lg" | "sm"; tone?: "fresh" | "ink" }) {
+  const box = `${size === "lg" ? "min-h-12 rounded-full" : "min-h-10 rounded-xl"} ${tone === "ink" ? "bg-ink" : "bg-fresh"}`;
   const btn = size === "lg" ? "size-12" : "size-10";
   return (
-    <div role="group" aria-label={`Quantity of ${label}`} className={`flex shrink-0 items-center bg-fresh text-white ${box}`}>
+    <div role="group" aria-label={`Quantity of ${label}`} className={`flex shrink-0 items-center text-white ${box}`}>
       <button type="button" onClick={() => onChange(value - 1)} disabled={busy} aria-label={value === 1 ? `Remove ${label}` : "One less"} className={`flex ${btn} items-center justify-center rounded-full transition hover:bg-white/15 disabled:opacity-60`}>
         <Minus aria-hidden className="size-4" />
       </button>

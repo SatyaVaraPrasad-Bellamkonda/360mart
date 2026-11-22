@@ -9,11 +9,12 @@ import { HomeHero } from "@/components/home/HomeHero";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import type { ActionError } from "@/lib/auth/actions";
 import type { Category } from "@/lib/catalog/types";
-import { heroDisplay, type PageImagePurpose } from "@/lib/category-page/types";
+import type { PageImagePurpose } from "@/lib/category-page/types";
 import { htmlBlockState } from "@/lib/home-page/html-block";
-import { discardHomeDraft, homeHistory, loadHomeAdmin, publishHome, restoreHome, saveHomeDraft, uploadHomeImage } from "@/lib/home-page/admin-client";
-import { HOME_DEFAULTS, isSlotSource, type AdminHomePage, type HomeHeroDoc, type HomeHeroView, type HomePage, type HomePageDocument, type HomeSection, type TimeSlot } from "@/lib/home-page/types";
-import { cleanHomeDocument, floatingLabelsOf, homeErrors, indiaMinutes, sameHome, slotAt, timeLabel, toEditableHome } from "@/lib/home-page/validation";
+import { discardHomeDraft, homeHistory, loadHomeAdmin, publishHome, restoreHome, saveHomeDraft, uploadHomeImage, uploadHomeVideo } from "@/lib/home-page/admin-client";
+import { heroView } from "@/lib/home-page/hero";
+import { isSlotSource, type AdminHomePage, type HomeHeroDoc, type HomeHeroView, type HomePage, type HomePageDocument, type HomeSection, type PageVideoPurpose, type TimeSlot } from "@/lib/home-page/types";
+import { cleanHomeDocument, homeErrors, indiaMinutes, sameHome, slotAt, timeLabel, toEditableHome } from "@/lib/home-page/validation";
 import { dateTimeText } from "@/lib/stores/validation";
 import { HomeHeroFields } from "./HomeHeroFields";
 import { homeTitle, HomeSectionsEditor } from "./HomeSectionsEditor";
@@ -35,6 +36,9 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
   const [unpublished, setUnpublished] = useState(initial.hasUnpublishedChanges);
   const [images, setImages] = useState(initial.images);
   const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
+  const [videos, setVideos] = useState(initial.videos ?? []);
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+  const [slide, setSlide] = useState(0);
   const [errors, setErrors] = useState<Errors>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [busy, setBusy] = useState<"save" | "publish" | "preview" | "discard" | "load" | null>(null);
@@ -57,6 +61,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
   }, [dirty]);
 
   const urlOf = (imageId: string | null | undefined) => (imageId ? (localUrls[imageId] ?? images.find((i) => i.imageId === imageId)?.url ?? null) : null);
+  const videoUrlOf = (videoId: string | null | undefined) => (videoId ? (videos.find((v) => v.videoId === videoId)?.url ?? null) : null);
 
   function reset(data: AdminHomePage) {
     const fresh = toEditableHome(data.effectiveDraft);
@@ -66,6 +71,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
     setVersion(data.version);
     setUnpublished(data.hasUnpublishedChanges);
     setImages(data.images);
+    setVideos(data.videos ?? []);
     setErrors({});
   }
 
@@ -215,7 +221,17 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
     reader.readAsDataURL(file);
   }
 
-  const uploadHero = (slot: "HERO" | "HERO_MOBILE", file: File) => upload(slot, slot, file, (imageId) => setHero(slot === "HERO_MOBILE" ? { mobileImageId: imageId } : { imageId }));
+  /** A banner video straight to storage (progress shown on its slot), then `apply` puts its id in the slide. */
+  function uploadVideo(purpose: PageVideoPurpose, slot: string, file: File, apply: (videoId: string) => void) {
+    setVideoProgress((p) => ({ ...p, [slot]: 0 }));
+    void uploadHomeVideo(file, purpose, (share) => setVideoProgress((p) => ({ ...p, [slot]: share }))).then((res) => {
+      setVideoProgress((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== slot)));
+      if (!res.ok) return failed(res.error);
+      setVideos((list) => [{ videoId: res.data.videoId, url: res.data.url, purpose, contentType: file.type, sizeBytes: file.size, createdAt: new Date().toISOString() }, ...list]);
+      apply(res.data.videoId);
+      toastSuccess("Video uploaded. Save the draft to keep it on the page.");
+    });
+  }
   const uploadBanner = (sectionId: string, mobile: boolean, file: File) =>
     upload("BANNER", `${mobile ? "banner-mobile" : "banner"}:${sectionId}`, file, (imageId) => {
       setDoc((d) => ({ ...d, sections: d.sections.map((x) => (x.id === sectionId && x.type === "PROMO_BANNER" ? { ...x, [mobile ? "mobileImageId" : "imageId"]: imageId } : x)) }));
@@ -281,7 +297,22 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div ref={formRef} className="min-w-0 space-y-5">
             <Panel title="Banner" text="The top of the home page. Empty fields use the standard words.">
-              <HomeHeroFields hero={doc.hero} onChange={setHero} errors={errors} categories={categories} images={images} urlOf={urlOf} uploading={uploading} onUpload={uploadHero} />
+              <HomeHeroFields
+                hero={doc.hero}
+                onChange={setHero}
+                errors={errors}
+                categories={categories}
+                images={images}
+                videos={videos}
+                imageUrl={urlOf}
+                videoUrl={videoUrlOf}
+                uploading={uploading}
+                progress={videoProgress}
+                onUpload={upload}
+                onUploadVideo={uploadVideo}
+                selected={slide}
+                onSelect={setSlide}
+              />
             </Panel>
             <Panel title="Times of day" text="Split the day and choose what each part shows. A time-of-day row (under Sections) shows the products of the part that's on now, India time.">
               <TimeSlotsEditor slots={doc.timeSlots} onChange={setSlots} errors={errors} categories={categories} />
@@ -305,7 +336,7 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
           </div>
 
           <aside aria-label="Live preview" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-            <LivePreview hero={heroView(doc.hero, urlOf)} doc={doc} live={live} onFullPreview={() => showPreview()} previewBusy={busy === "preview"} />
+            <LivePreview hero={heroView(doc.hero, urlOf, videoUrlOf)} slide={slide} doc={doc} live={live} onFullPreview={() => showPreview()} previewBusy={busy === "preview"} />
           </aside>
         </div>
 
@@ -368,31 +399,6 @@ export function HomeEditor({ initial, preview, categories }: { initial: AdminHom
       </div>
     </NamesContext.Provider>
   );
-}
-
-/** The hero as shoppers will see it: empty fields show the standard words. */
-function heroView(h: HomeHeroDoc, urlOf: (id: string | null | undefined) => string | null): HomeHeroView {
-  const d = heroDisplay(h);
-  return {
-    headline: h.headline?.trim() || HOME_DEFAULTS.headline,
-    accentLine: h.accentLine?.trim() || HOME_DEFAULTS.accentLine,
-    intro: h.intro?.trim() || HOME_DEFAULTS.intro,
-    badge: h.badge?.trim() || HOME_DEFAULTS.badge,
-    buttonLabel: h.buttonLabel?.trim() || HOME_DEFAULTS.buttonLabel,
-    buttonLink: h.buttonLink?.trim() || HOME_DEFAULTS.buttonLink,
-    visual: h.visual === "PHOTO" ? "PHOTO" : "CART_ANIMATION",
-    imageId: h.imageId ?? null,
-    imageUrl: urlOf(h.imageId),
-    mobileImageId: h.mobileImageId ?? null,
-    mobileImageUrl: urlOf(h.mobileImageId),
-    imageAlt: h.imageAlt?.trim() || null,
-    floatingLabels: floatingLabelsOf(h),
-    enabled: d.enabled,
-    layout: d.layout,
-    size: d.size,
-    showBadge: d.showBadge,
-    animation: d.animation,
-  };
 }
 
 /** What each section of the saved page shows now, from the preview ("8 products now", "empty now, hidden"). */
@@ -471,7 +477,7 @@ const clock = {
 // The banner as shoppers see it, updated while typing (on a computer: the
 // desktop layout scaled to the column), then the sections in order with what
 // each shows now. "Full page" saves the draft and opens the real page.
-function LivePreview({ hero, doc, live, onFullPreview, previewBusy }: { hero: HomeHeroView; doc: HomePageDocument; live: Record<string, string>; onFullPreview: () => void; previewBusy: boolean }) {
+function LivePreview({ hero, slide, doc, live, onFullPreview, previewBusy }: { hero: HomeHeroView; slide: number; doc: HomePageDocument; live: Record<string, string>; onFullPreview: () => void; previewBusy: boolean }) {
   const isWide = useSyncExternalStore(wide.subscribe, wide.get, () => false);
   const now = useSyncExternalStore(clock.subscribe, clock.get, () => null);
   const slot = now === null ? undefined : slotAt(doc.timeSlots, now);
@@ -486,7 +492,8 @@ function LivePreview({ hero, doc, live, onFullPreview, previewBusy }: { hero: Ho
   }, [isWide]);
 
   // Keyed by the look, so a new layout or animation plays again.
-  const banner = <HomeHero key={`${hero.layout}-${hero.animation}-${hero.size}-${hero.enabled}-${hero.visual}`} hero={hero} />;
+  // Keyed by the frame and sizes, so a change re-lays it out; the slide being edited is the one shown.
+  const banner = <HomeHero key={`${hero.frame}-${hero.height}-${hero.mobileShape}-${hero.slides.length}-${!!hero.sideCard}`} hero={hero} showSlide={slide} />;
   return (
     <div className="space-y-3 rounded-3xl bg-surface p-3 ring-1 ring-line sm:p-4">
       <div className="flex items-center justify-between gap-2">
@@ -500,7 +507,7 @@ function LivePreview({ hero, doc, live, onFullPreview, previewBusy }: { hero: Ho
         </button>
       </div>
       <div ref={boxRef} aria-hidden className="pointer-events-none overflow-hidden rounded-2xl bg-white">
-        {!hero.enabled ? (
+        {!hero.enabled || hero.slides.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-muted">Banner off: the page starts with your sections.</p>
         ) : isWide ? (
           <div style={{ width: DESKTOP_WIDTH, zoom: scale }}>{banner}</div>

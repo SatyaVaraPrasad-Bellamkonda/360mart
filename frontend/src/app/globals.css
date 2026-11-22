@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
+  /* The site's page column (header, pages, footer): max-w-page = 1240px with px-4 / sm:px-6 / lg:px-8. */
+  --container-page: 77.5rem;
   --color-brand: #f59e0b;
   --color-brand-deep: #b45309;
   --color-brand-soft: #fef3c7;
@@ -24,6 +26,7 @@
   --animate-sheen: sheen 14s ease-in-out infinite;
   --animate-pop-in: pop-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-fade-in: fade-in 0.9s ease-out both;
+  --animate-sheet-up: sheet-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-slide-from-left: slide-from-left 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-slide-from-right: slide-from-right 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
   /* Category hero photo: shown once it has loaded (photo-in), or after 2.5 s
@@ -106,6 +109,26 @@ body {
 }
 
 /* Content gently rising into place (page load and scroll reveal) */
+/* The home banner's current-slide dot filling up until the next slide. */
+@keyframes hero-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* A bottom sheet rising into place (phones). */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;

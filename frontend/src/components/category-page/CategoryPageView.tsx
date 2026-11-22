@@ -32,7 +32,7 @@ export function CategoryPageView({ data, preview }: { data: CategoryPage; previe
   const faq = sections.find((s) => s.type === "FAQ");
 
   return (
-    <div style={themeStyle(data.customColour)} className={`mx-auto max-w-6xl space-y-10 px-4 py-5 sm:space-y-14 sm:py-6 ${preview ? "[&_a]:pointer-events-none" : ""}`}>
+    <div style={themeStyle(data.customColour)} className={`mx-auto max-w-page space-y-10 px-4 sm:px-6 lg:px-8 py-5 sm:space-y-14 sm:py-6 ${preview ? "[&_a]:pointer-events-none" : ""}`}>
       {!preview &&
         (isSub
           ? products.length > 0 && <JsonLd data={categoryListJsonLd(category.name, products.map((p) => ({ name: p.name, path: `${path}/${p.slug}` })))} />
