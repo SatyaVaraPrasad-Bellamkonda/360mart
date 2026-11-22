@@ -24,10 +24,11 @@ export function categoryDescription(c: Text, parentName?: string): string {
   return `Shop ${c.name}${parentName ? ` in ${parentName}` : ""} from local stores near you on ${SITE.name}.`;
 }
 
-// Master switch for category pages in Google (off while the site is in preview).
-// Even when on, a page is only indexed once it has products: an empty category
-// would be a thin page. Add them to app/sitemap.ts when this goes on.
-export const CATEGORY_PAGES_INDEXABLE = false;
+// Master switch for the shop pages in Google (categories, subcategories,
+// products, /categories). Even when on, a category page is only indexed once it
+// has products: an empty one would be a thin page. app/sitemap.ts follows the
+// same rules, and lists nothing from the catalogue while this is off.
+export const CATEGORY_PAGES_INDEXABLE = true;
 
 /** schema.org ItemList of the subcategories on a category page. */
 export function categoryListJsonLd(name: string, items: { name: string; path: string }[]) {

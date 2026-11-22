@@ -189,7 +189,7 @@ export async function getShopSubcategory(parentSlug: string, slug: string): Prom
 // The product list is paged and there's no "product by slug" endpoint yet: a
 // product page looks in the page's first products, then in the first 100 (one
 // cached call). Products further down need GET /products/by-slug (asked for).
-const PRODUCT_LOOKUP_SIZE = 100;
+export const PRODUCT_LOOKUP_SIZE = 100;
 
 /** A product page: the product with its subcategory (and the others in it), or data: null when it isn't shown in the shop. */
 export async function getShopProduct(parentSlug: string, subSlug: string, slug: string): Promise<Loaded<(ShopSubcategory & { product: Product }) | null>> {
