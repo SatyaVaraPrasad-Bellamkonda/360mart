@@ -1,4 +1,4 @@
-import { ClipboardList, FileSpreadsheet, FolderTree, House, LifeBuoy, Megaphone, Package, Scale, Search, Store, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
+import { Bike, ClipboardList, FileSpreadsheet, FolderTree, House, LifeBuoy, Megaphone, Package, Scale, Search, Settings2, Store, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type AdminSection = {
   href: string;
@@ -23,6 +23,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { href: "/admin/products/sheet", title: "Bulk edit products", text: "Change or add many products and sizes at once in Excel.", icon: FileSpreadsheet, tone: "bg-lime-100 text-lime-700", ready: true },
   { href: "/admin/stores", title: "Stores", text: "Review store applications: documents, approval and live stores.", icon: Store, tone: "bg-violet-100 text-violet-700", ready: true },
   { href: "/admin/support", title: "Support queue", text: "Customer requests and complaints, with their 48-hour and 30-day deadlines.", icon: LifeBuoy, tone: "bg-red-100 text-red-700", ready: true },
+  { href: "/admin/riders", title: "Delivery partners", text: "Review rider applications, suspend riders and record cash they hand in.", icon: Bike, tone: "bg-orange-100 text-orange-700", ready: true },
+  { href: "/admin/delivery", title: "Delivery settings", text: "Offer time, search radius, cash limit and the rules for each vehicle.", icon: Settings2, tone: "bg-teal-100 text-teal-700", ready: true },
   { href: "/admin/orders", title: "Orders", text: "Every order across stores; cancel when needed.", icon: ClipboardList, tone: "bg-rose-100 text-rose-700", ready: true },
   { href: "/admin/ledger", title: "Ledger", text: "What stores owe and settlements received.", icon: Wallet, tone: "bg-emerald-100 text-emerald-700", ready: true },
   { href: "/admin/legal", title: "Legal pages", text: "Terms, privacy, refund policy and seller agreement: publish new versions.", icon: Scale, tone: "bg-indigo-100 text-indigo-700", ready: true },

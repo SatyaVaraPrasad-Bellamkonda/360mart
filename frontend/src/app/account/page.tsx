@@ -1,4 +1,4 @@
-import { ArrowRight, Store } from "lucide-react";
+import { ArrowRight, Bike, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -41,6 +41,31 @@ async function ShopperAccount() {
             <span className="block text-sm text-white/75">Registration, documents and store details</span>
           </span>
           <ArrowRight aria-hidden className="size-5 shrink-0" />
+        </Link>
+      )}
+      {user.role === "rider" && (
+        <Link href="/rider" className="flex items-center gap-4 rounded-3xl bg-ink p-5 text-white transition hover:bg-ink/90">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink">
+            <Bike aria-hidden className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Your deliveries</span>
+            <span className="block text-sm text-white/75">Application, past deliveries and cash in hand</span>
+          </span>
+          <ArrowRight aria-hidden className="size-5 shrink-0" />
+        </Link>
+      )}
+      {/* Customers can deliver too: one tap to apply (shopkeepers and admins can't). */}
+      {user.role === "customer" && (
+        <Link href="/account/deliver" className="group flex items-center gap-4 rounded-3xl bg-white p-5 ring-1 ring-line transition hover:ring-ink/40">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand-deep">
+            <Bike aria-hidden className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold text-ink">Deliver with 360mart</span>
+            <span className="block text-sm text-muted">Earn by delivering orders from stores near you, with the same account</span>
+          </span>
+          <ArrowRight aria-hidden className="size-5 shrink-0 text-muted transition group-hover:translate-x-0.5" />
         </Link>
       )}
       {/* Phones: one column. Desktop: activity on the left, settings in a sidebar. */}

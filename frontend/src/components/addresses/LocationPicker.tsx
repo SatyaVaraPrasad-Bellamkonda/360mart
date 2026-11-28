@@ -5,6 +5,7 @@ import type * as MapLibre from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import { INDIA_BOUNDS, type Coordinates } from "@/lib/addresses/types";
 import { round6 } from "@/lib/addresses/validation";
+import { loadMapLibre } from "@/components/maps/load-maplibre";
 
 // The interactive map inside the address form: tap to drop the pin, drag it to
 // adjust. MapLibre (open source) with OpenFreeMap tiles, no API key.
@@ -28,15 +29,6 @@ const PIN_ZOOM = 16.5;
 const PIN_COLOR = "#b45309"; // brand-deep
 const LOAD_TIMEOUT_MS = 20_000; // slow 3G still makes it; a dead connection doesn't spin forever
 
-let library: Promise<typeof MapLibre> | null = null;
-function loadMapLibre(url: string): Promise<typeof MapLibre> {
-  // Loaded as-is from our own site, not bundled (see the note above).
-  library ??= import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url).catch((error) => {
-    library = null; // let a later attempt retry
-    throw error;
-  });
-  return library;
-}
 
 export default function LocationPicker({ value, onChange, styleUrl, libraryUrl, onFailed, className = "h-72 rounded-2xl border border-line sm:h-80" }: Props) {
   const container = useRef<HTMLDivElement>(null);

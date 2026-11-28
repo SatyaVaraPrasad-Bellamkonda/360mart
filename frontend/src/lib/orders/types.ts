@@ -67,7 +67,7 @@ export const MAX_QUANTITY = 99;
 export type OrderStatus = "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PACKED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED" | "UNDELIVERED";
 export type PaymentMethod = "COD";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
-export type OrderActor = "CUSTOMER" | "STORE" | "ADMIN" | "SYSTEM";
+export type OrderActor = "CUSTOMER" | "STORE" | "ADMIN" | "SYSTEM" | "DELIVERY_PARTNER";
 export type UndeliveredReason = "CUSTOMER_UNAVAILABLE" | "REFUSED" | "WRONG_ADDRESS" | "OTHER";
 export type OrderAction = "ACCEPT" | "REJECT" | "PACK" | "DISPATCH" | "DELIVER" | "MARK_UNDELIVERED" | "CANCEL";
 

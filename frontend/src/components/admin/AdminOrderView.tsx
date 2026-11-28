@@ -2,8 +2,10 @@
 
 import { ExternalLink, FileText, MessageSquareText, Store, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useId, useState, useTransition } from "react";
+import { useCallback, useId, useState, useTransition } from "react";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
 import { Dialog } from "@/components/Dialog";
 import { AddressBlock, OrderItems, OrderTotals, Panel, ProgressTracker, StatusPill, Timeline } from "@/components/orders/OrderParts";
 import { toastError, toastSuccess } from "@/components/Toaster";
@@ -19,6 +21,11 @@ export function AdminOrderView({ initial }: { initial: StoreOrder }) {
   const [cancelling, setCancelling] = useState(false);
   const ended = endedReason(order, "store");
   const canCancel = order.allowedActions.includes("CANCEL");
+  // A delivery change can move the order (picked up, returned): read it again.
+  const reloadOrder = useCallback(async () => {
+    const res = await api<StoreOrder>(`/admin/orders/${encodeURIComponent(order.orderId)}`);
+    if (res.ok) setOrder(res.data);
+  }, [order.orderId]);
 
   return (
     <div className="space-y-4">
@@ -37,6 +44,8 @@ export function AdminOrderView({ initial }: { initial: StoreOrder }) {
           </button>
         )}
       </div>
+
+      <DeliveryPanel owner="admin" orderId={order.orderId} orderStatus={order.status} onOrderChanged={reloadOrder} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-4">

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CustomerOrderView } from "@/components/orders/CustomerOrderView";
 import { requireRole } from "@/lib/auth/dal";
 import { SHOPPERS } from "@/lib/auth/roles";
+import { mapConfig } from "@/lib/maps/config";
 import { loadMyOrder } from "@/lib/orders/data";
 import { LoadFailed } from "../../addresses/AddressPageHeader";
 
@@ -29,5 +30,5 @@ async function Order({ params, searchParams }: Pick<PageProps<"/account/orders/[
   const res = await loadMyOrder(orderId, `/account/orders/${orderId}`);
   if (!res.ok) return <LoadFailed message={res.error.message} />;
   if (!res.data) notFound();
-  return <CustomerOrderView key={res.data.orderId} initial={res.data} justPlaced={placed === "1"} />;
+  return <CustomerOrderView key={res.data.orderId} initial={res.data} justPlaced={placed === "1"} map={mapConfig()} />;
 }

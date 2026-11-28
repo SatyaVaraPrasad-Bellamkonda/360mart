@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ShoppingBag, Store } from "lucide-react";
+import { ArrowLeft, Bike, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
@@ -12,6 +12,8 @@ import {
   type ActionError,
 } from "@/lib/auth/actions";
 import type { AccountType, OtpInfo } from "@/lib/auth/api-types";
+import { VehicleFields } from "@/components/delivery/VehicleFields";
+import { isVehicleType, vehicleNumberError, type VehicleType } from "@/lib/delivery/types";
 import type { Acceptance } from "@/lib/legal/types";
 import { EMAIL_MAX_LENGTH, emailError, formatMobile, mobileError, newPasswordError, normalizeMobile, otpError } from "@/lib/auth/validation";
 import { FormMessage } from "./AuthCard";
@@ -33,7 +35,7 @@ type Code = { otpId: string; expiresAt: number; resendAt: number };
 
 type Alert = { kind: "error" | "notice"; content: ReactNode };
 
-type FieldErrors = { mobile?: string; email?: string; otp?: string; password?: string; agree?: string };
+type FieldErrors = { mobile?: string; email?: string; otp?: string; password?: string; agree?: string; vehicleType?: string; vehicleNumber?: string };
 
 // Shown with every "we emailed you" message: the sender, and where it may have landed.
 const SPAM_HINT = "It comes from no-reply@mail.360mart.in. Not there? Check your spam or promotions folder.";
@@ -51,8 +53,12 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
   const copy = COPY[mode];
   const params = useSearchParams();
   const next = params.get("next") ?? "";
-  // Signup only: shop, or sell (a shopkeeper account, which can shop too). /signup?as=seller starts on sell.
-  const [accountType, setAccountType] = useState<AccountType>(params.get("as") === "seller" ? "STORE_OWNER" : "CUSTOMER");
+  // Signup only: shop, sell (a shopkeeper account) or deliver (a delivery partner); both can shop too.
+  // /signup?as=seller starts on sell, /signup?as=rider on deliver.
+  const as = params.get("as");
+  const [accountType, setAccountType] = useState<AccountType>(as === "seller" ? "STORE_OWNER" : as === "rider" ? "DELIVERY_PARTNER" : "CUSTOMER");
+  const [vehicle, setVehicle] = useState<VehicleType | null>(null);
+  const [vehicleNumber, setVehicleNumber] = useState("");
   const [pending, startTransition] = useTransition();
 
   const [step, setStep] = useState<"mobile" | "verify">("mobile");
@@ -88,6 +94,8 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
     setErrors({
       mobile: error.fieldErrors.mobileNumber,
       email: error.fieldErrors.email ?? emailTaken,
+      vehicleType: error.fieldErrors.vehicleType,
+      vehicleNumber: error.fieldErrors.vehicleNumber,
       otp: error.fieldErrors.otp,
       password: error.fieldErrors.password ?? error.fieldErrors.newPassword,
     });
@@ -100,14 +108,17 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
     const problem = mobileError(mobileInput);
     const emailProblem = mode === "signup" ? emailError(emailInput) : undefined;
     const agree = mode === "signup" && !agreed ? "Tick the box to agree to the Terms and Privacy Policy." : undefined;
-    setErrors({ mobile: problem, email: emailProblem, agree });
-    if (problem || emailProblem || agree) return;
+    const rider = mode === "signup" && accountType === "DELIVERY_PARTNER";
+    const vehicleProblem = rider && !isVehicleType(vehicle) ? "Choose the vehicle you deliver with" : undefined;
+    const numberProblem = rider ? vehicleNumberError(vehicleNumber) : undefined;
+    setErrors({ mobile: problem, email: emailProblem, agree, vehicleType: vehicleProblem, vehicleNumber: numberProblem });
+    if (problem || emailProblem || agree || vehicleProblem || numberProblem) return;
 
     setAlert(null);
     startTransition(async () => {
       const res =
         mode === "signup"
-          ? await startSignupAction({ mobileNumber: mobileInput, email: emailInput, accountType })
+          ? await startSignupAction({ mobileNumber: mobileInput, email: emailInput, accountType, vehicleType: vehicle, vehicleNumber })
           : await sendCodeAction(mobileInput, copy.purpose);
       if (!res.ok) {
         const wait = /(\d+)\s*second/i.exec(res.error.message);
@@ -214,6 +225,19 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
             hint="We email your 6-digit code here, now and whenever you log in with a code or reset your password."
           />
         )}
+        {mode === "signup" && accountType === "DELIVERY_PARTNER" && (
+          <VehicleFields
+            vehicle={vehicle}
+            number={vehicleNumber}
+            onVehicle={(v) => {
+              setVehicle(v);
+              setErrors((e) => ({ ...e, vehicleType: undefined }));
+            }}
+            onNumber={setVehicleNumber}
+            vehicleError={errors.vehicleType}
+            numberError={errors.vehicleNumber}
+          />
+        )}
         {mode === "signup" && <AgreeBox checked={agreed} onChange={setAgreed} error={errors.agree} />}
         <SubmitButton
           pending={pending}
@@ -237,6 +261,7 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
             <span className="block text-xs">
               for {formatMobile(mobile)}
               {accountType === "STORE_OWNER" && <span className="font-semibold text-brand-deep"> · Shopkeeper account</span>}
+              {accountType === "DELIVERY_PARTNER" && <span className="font-semibold text-brand-deep"> · Delivery partner account</span>}
             </span>
           </span>
         ) : (
@@ -301,19 +326,20 @@ export function OtpPasswordForm({ mode, signupPolicies = [] }: { mode: Mode; sig
 const ACCOUNT_TYPES: { value: AccountType; title: string; text: string; icon: typeof Store }[] = [
   { value: "CUSTOMER", title: "Shop", text: "Order from stores near you", icon: ShoppingBag },
   { value: "STORE_OWNER", title: "Sell", text: "Register your store, and shop too", icon: Store },
+  { value: "DELIVERY_PARTNER", title: "Deliver", text: "Earn by delivering, and shop too", icon: Bike },
 ];
 
 function AccountTypePicker({ value, onChange }: { value: AccountType; onChange: (value: AccountType) => void }) {
   return (
     <fieldset>
       <legend className="mb-1.5 text-sm font-semibold text-ink">I want to</legend>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {ACCOUNT_TYPES.map((type) => {
           const selected = value === type.value;
           return (
             <label
               key={type.value}
-              className={`flex min-h-12 cursor-pointer flex-col gap-1 rounded-2xl border p-3 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40 ${selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"}`}
+              className={`flex min-h-12 min-w-0 cursor-pointer flex-col gap-1 rounded-2xl border p-2.5 transition sm:p-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40 ${selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"}`}
             >
               <input type="radio" name="accountType" value={type.value} checked={selected} onChange={() => onChange(type.value)} className="sr-only" />
               <span className="flex items-center gap-2 font-bold">

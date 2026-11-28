@@ -6,6 +6,7 @@ import { readAcceptances } from "@/lib/legal/types";
 import type { ApiFailure } from "@/lib/backend/client";
 import type { AccountType, OtpInfo } from "./api-types";
 import * as api from "./auth-service";
+import { isVehicleType, normalizeVehicleNumber, vehicleNumberError } from "@/lib/delivery/types";
 import { ROLE_FROM_API, safeNextPath, type Role } from "./roles";
 import { toCurrentUser } from "./current-user";
 import { clearSession, getSessionToken, readSessionCookie, saveSession, saveUser } from "./session";
@@ -22,19 +23,25 @@ type CodeAndPassword = { mobileNumber: unknown; otpId: unknown; otp: unknown; pa
 
 // Step 1 of signup: create the account (or resume an unfinished one) and email a code
 // to the address typed in. Sending it again with a corrected email sends the code there.
-// A shopkeeper account (STORE_OWNER) can shop too, and also register a store.
-export async function startSignupAction(input: { mobileNumber: unknown; email: unknown; accountType?: unknown }): Promise<ActionResult<{ mobileNumber: string; email: string; otp: OtpInfo }>> {
+// A shopkeeper account (STORE_OWNER) can shop too, and also register a store;
+// a delivery partner (DELIVERY_PARTNER) can shop too, and names the vehicle here.
+export async function startSignupAction(input: { mobileNumber: unknown; email: unknown; accountType?: unknown; vehicleType?: unknown; vehicleNumber?: unknown }): Promise<ActionResult<{ mobileNumber: string; email: string; otp: OtpInfo }>> {
   const mobile = normalizeMobile(input?.mobileNumber);
   const emailInput = typeof input?.email === "string" ? input.email : "";
   const fieldErrors: Record<string, string> = {};
   if (!mobile) fieldErrors.mobileNumber = "Enter a valid 10-digit Indian mobile number";
   const emailProblem = emailError(emailInput);
   if (emailProblem) fieldErrors.email = emailProblem;
-  if (!mobile || emailProblem) return invalid(fieldErrors);
+  const accountType: AccountType = input.accountType === "STORE_OWNER" || input.accountType === "DELIVERY_PARTNER" ? input.accountType : "CUSTOMER";
+  const rider = accountType === "DELIVERY_PARTNER";
+  if (rider && !isVehicleType(input.vehicleType)) fieldErrors.vehicleType = "Choose the vehicle you deliver with";
+  const numberProblem = rider ? vehicleNumberError(input.vehicleNumber) : undefined;
+  if (numberProblem) fieldErrors.vehicleNumber = numberProblem;
+  if (!mobile || Object.keys(fieldErrors).length) return invalid(fieldErrors);
   const email = normalizeEmail(emailInput);
-  const accountType: AccountType = input.accountType === "STORE_OWNER" ? "STORE_OWNER" : "CUSTOMER";
+  const vehicle = rider && isVehicleType(input.vehicleType) ? { vehicleType: input.vehicleType, vehicleNumber: normalizeVehicleNumber(input.vehicleNumber) } : undefined;
 
-  const res = await api.signup(mobile, email, accountType);
+  const res = await api.signup(mobile, email, accountType, vehicle);
   if (!res.ok) return fail(res.error);
   return { ok: true, data: { mobileNumber: res.data.mobileNumber, email, otp: res.data.otp } };
 }

@@ -6,8 +6,9 @@ import type { AccountType, MessageResponse, OtpInfo, OtpPurpose, SignupResponse,
 // the caller (actions.ts); the backend validates them again.
 
 // The signup code goes to `email`, which becomes the account's verified email once the code is entered.
-export function signup(mobileNumber: string, email: string, accountType: AccountType) {
-  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber, email, accountType } });
+// A delivery partner also sends the vehicle (number optional; required later for licensed vehicles).
+export function signup(mobileNumber: string, email: string, accountType: AccountType, vehicle?: { vehicleType: string; vehicleNumber: string | null }) {
+  return callApi<SignupResponse>("/auth/signup", { method: "POST", body: { mobileNumber, email, accountType, ...vehicle } });
 }
 
 export function sendOtp(mobileNumber: string, purpose: OtpPurpose) {

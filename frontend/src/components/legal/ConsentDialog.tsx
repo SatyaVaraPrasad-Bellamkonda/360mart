@@ -15,6 +15,7 @@ const COPY = {
   updated: { title: "We've updated our terms", text: "Please read what changed and accept to keep using 360mart." },
   checkout: { title: "One step before your order", text: "Please accept the latest terms to place your order. Your cart is kept." },
   store: { title: "Accept the latest terms", text: "Your store application needs the latest versions accepted." },
+  rider: { title: "Accept the latest terms", text: "Your delivery partner application needs the latest versions accepted." },
 } as const;
 
 // The policies the user still has to accept, each with what changed and a

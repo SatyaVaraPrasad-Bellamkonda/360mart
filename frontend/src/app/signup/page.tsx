@@ -14,7 +14,7 @@ export default function SignupPage() {
     <AuthCard
       badge="New account"
       title="Create your 360mart account"
-      subtitle="Shop from neighbourhood stores, or register your own store. We'll email you a 6-digit code to confirm it's you, then you choose a password."
+      subtitle="Shop from neighbourhood stores, register your own store, or deliver orders near you. We'll email you a 6-digit code to confirm it's you, then you choose a password."
       footer={
         <>
           Already have an account?{" "}

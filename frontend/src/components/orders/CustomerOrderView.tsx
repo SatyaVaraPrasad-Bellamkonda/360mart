@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CategoryImage } from "@/components/catalog/CategoryImage";
+import { RiderTracking } from "@/components/delivery/RiderTracking";
 import { Dialog } from "@/components/Dialog";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import { api } from "@/lib/api-client";
+import type { MapConfig } from "@/lib/maps/config";
 import { cancelOrder } from "@/lib/orders/client";
 import { endedReason, STATUS, when } from "@/lib/orders/format";
 import { isOpen, REASON_MAX, REASON_MIN, type CustomerOrder } from "@/lib/orders/types";
@@ -27,7 +29,7 @@ const NEXT_STEP: Partial<Record<CustomerOrder["status"], string>> = {
 
 // The shopper's order page. Status changes aren't pushed yet, so while the
 // order is open it re-reads it every 25 s (only while the tab is visible).
-export function CustomerOrderView({ initial, justPlaced }: { initial: CustomerOrder; justPlaced: boolean }) {
+export function CustomerOrderView({ initial, justPlaced, map }: { initial: CustomerOrder; justPlaced: boolean; map: MapConfig }) {
   const { sessionExpired } = useAuth();
   const [order, setOrder] = useState(initial);
   // The browser's clock (null while rendering on the server): which problems can still be reported.
@@ -112,6 +114,8 @@ export function CustomerOrderView({ initial, justPlaced }: { initial: CustomerOr
           </div>
         )}
       </section>
+
+      <RiderTracking orderId={order.orderId} orderStatus={order.status} map={map} />
 
       {order.deliveryCode && (
         <section className="flex flex-col gap-4 rounded-3xl bg-ink p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">

@@ -22,9 +22,9 @@ export const STATUS: Record<OrderStatus, StatusMeta> = {
 
 export const statusLabel = (s: OrderStatus) => STATUS[s]?.label ?? s;
 
-export const ACTOR: Record<OrderActor, string> = { CUSTOMER: "You", STORE: "Store", ADMIN: "360mart", SYSTEM: "Automatic" };
+export const ACTOR: Record<OrderActor, string> = { CUSTOMER: "You", STORE: "Store", ADMIN: "360mart", SYSTEM: "Automatic", DELIVERY_PARTNER: "Delivery partner" };
 /** For store and admin screens, where "You" would be wrong. */
-export const ACTOR_NEUTRAL: Record<OrderActor, string> = { CUSTOMER: "Customer", STORE: "Store", ADMIN: "360mart", SYSTEM: "Automatic" };
+export const ACTOR_NEUTRAL: Record<OrderActor, string> = { CUSTOMER: "Customer", STORE: "Store", ADMIN: "360mart", SYSTEM: "Automatic", DELIVERY_PARTNER: "Delivery partner" };
 
 export const UNDELIVERED_REASONS: { value: UndeliveredReason; label: string }[] = [
   { value: "CUSTOMER_UNAVAILABLE", label: "Customer not available" },

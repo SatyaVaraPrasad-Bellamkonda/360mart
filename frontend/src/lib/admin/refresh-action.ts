@@ -52,5 +52,9 @@ export async function refreshAfterAdminChange(what: AdminRefresh, categoryId?: n
     case "stores":
       revalidatePath("/admin/stores");
       return;
+    case "riders":
+      revalidatePath("/admin/riders", "layout");
+      revalidatePath("/admin/delivery");
+      return;
   }
 }

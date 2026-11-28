@@ -38,7 +38,7 @@ export function NotificationBell() {
       href={INBOX}
       aria-label={count ? `Notifications, ${count} new` : "Notifications"}
       aria-current={active ? "page" : undefined}
-      className={`relative size-10 shrink-0 items-center justify-center rounded-xl transition md:size-11 md:rounded-[14px] ${user.role === "seller" ? "hidden sm:flex" : "flex"} ${active ? "bg-brand-soft text-brand-deep" : "text-ink hover:bg-[#f4f1ec]"}`}
+      className={`relative size-10 shrink-0 items-center justify-center rounded-xl transition md:size-11 md:rounded-[14px] ${user.role === "seller" || user.role === "rider" ? "hidden sm:flex" : "flex"} ${active ? "bg-brand-soft text-brand-deep" : "text-ink hover:bg-[#f4f1ec]"}`}
     >
       <Bell aria-hidden strokeWidth={1.9} className={`size-5 ${count ? "origin-top motion-safe:animate-bell-ring" : ""}`} />
       {!!count && (

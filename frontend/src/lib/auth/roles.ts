@@ -2,12 +2,13 @@
 
 import type { ApiRole } from "./api-types";
 
-export type Role = "customer" | "seller" | "admin";
+export type Role = "customer" | "seller" | "admin" | "rider";
 
 export const ROLE_LABEL: Record<Role, string> = {
   customer: "Customer",
   seller: "Shopkeeper",
   admin: "Admin",
+  rider: "Delivery partner",
 };
 
 // The backend's role names → ours.
@@ -15,6 +16,7 @@ export const ROLE_FROM_API: Record<ApiRole, Role> = {
   CUSTOMER: "customer",
   STORE_OWNER: "seller",
   ADMIN: "admin",
+  DELIVERY_PARTNER: "rider",
 };
 
 // Where each role logs in, and where they land afterwards. Customers and
@@ -23,23 +25,27 @@ export const ROLE_LOGIN: Record<Role, string> = {
   customer: "/login",
   seller: "/login",
   admin: "/admin/login",
+  rider: "/login",
 };
 
 export const ROLE_HOME: Record<Role, string> = {
   customer: "/account",
   seller: "/seller",
   admin: "/admin",
+  rider: "/rider",
 };
 
-// Shopkeepers shop too: the shopping account (/account, later cart and orders)
-// is open to both. Store pages stay shopkeeper-only, the panel admin-only.
-export const SHOPPERS: Role[] = ["customer", "seller"];
+// Shopkeepers and delivery partners shop too: the shopping account (/account,
+// cart, orders) is open to them. Store pages stay shopkeeper-only, rider pages
+// rider-only, the panel admin-only.
+export const SHOPPERS: Role[] = ["customer", "seller", "rider"];
 
 // Protected areas and the login page for each (who may enter is checked by the page).
 export const PROTECTED_AREAS: { prefix: string; role: Role }[] = [
   { prefix: "/account", role: "customer" },
   { prefix: "/seller", role: "seller" },
   { prefix: "/admin", role: "admin" },
+  { prefix: "/rider", role: "rider" },
 ];
 
 // Same name as the backend's cookie, so it can be forwarded unchanged.
@@ -53,6 +59,8 @@ export function safeNextPath(next: unknown, role: Role): string {
   const inside = (prefix: string) => next === prefix || next.startsWith(`${prefix}/`);
   if (role === "admin") return inside("/admin") ? next : home;
   if (inside("/admin")) return home;
-  // A shopkeeper may go back to any shopping page; a customer never into the store pages.
-  return role === "customer" && inside("/seller") ? home : next;
+  // Anyone may go back to a shopping page; only shopkeepers into the store pages, only riders into the rider pages.
+  if (inside("/seller") && role !== "seller") return home;
+  if (inside("/rider") && role !== "rider") return home;
+  return next;
 }

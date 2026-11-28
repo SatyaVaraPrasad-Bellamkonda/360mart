@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { Bike, Store } from "lucide-react";
 import Link from "next/link";
 import { UnreadDot } from "@/components/notifications/NotificationBell";
 import { Avatar } from "@/components/profile/Avatar";
@@ -31,15 +31,22 @@ function AccountButton({ user }: { user: CurrentUser | null }) {
     );
   }
 
-  // Shopkeepers shop too: their avatar opens the shopping account, and a
-  // separate button opens their store. Customers never see the store link.
-  const account = user.role === "seller" ? "/account" : ROLE_HOME[user.role];
+  // Shopkeepers and delivery partners shop too: their avatar opens the shopping
+  // account, and a separate button opens their store / deliveries. Customers
+  // never see those links.
+  const account = user.role === "seller" || user.role === "rider" ? "/account" : ROLE_HOME[user.role];
   return (
     <div className="flex items-center gap-2">
       {user.role === "seller" && (
         <NavPill href="/seller" area="/seller" label="Your store" shape="tile" className="size-10 justify-center md:size-11 xl:w-auto xl:px-4">
           <Store aria-hidden className="size-4 shrink-0" />
           <span className="hidden xl:inline">Your store</span>
+        </NavPill>
+      )}
+      {user.role === "rider" && (
+        <NavPill href="/rider" area="/rider" label="Deliveries" shape="tile" className="size-10 justify-center md:size-11 xl:w-auto xl:px-4">
+          <Bike aria-hidden className="size-4 shrink-0" />
+          <span className="hidden xl:inline">Deliveries</span>
         </NavPill>
       )}
       <AccountChip user={user} href={account} />
@@ -53,7 +60,7 @@ function AccountChip({ user, href }: { user: CurrentUser; href: string }) {
   return (
     <NavPill href={href} area={href} label={name} shape="circle" className="relative size-10 justify-center md:size-11">
       <Avatar user={user} size="fill" />
-      {user.role === "seller" && <UnreadDot />}
+      {(user.role === "seller" || user.role === "rider") && <UnreadDot />}
     </NavPill>
   );
 }

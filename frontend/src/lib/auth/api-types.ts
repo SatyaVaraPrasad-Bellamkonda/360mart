@@ -24,10 +24,11 @@ export type SignupResponse = {
 
 export type MessageResponse = { message: string };
 
-export type ApiRole = "CUSTOMER" | "STORE_OWNER" | "ADMIN";
+export type ApiRole = "CUSTOMER" | "STORE_OWNER" | "ADMIN" | "DELIVERY_PARTNER";
 
 // Who signs up (POST /auth/signup). Admins are never created by signup.
-export type AccountType = "CUSTOMER" | "STORE_OWNER";
+// DELIVERY_PARTNER also needs a vehicleType (and optionally vehicleNumber).
+export type AccountType = "CUSTOMER" | "STORE_OWNER" | "DELIVERY_PARTNER";
 
 // Returned by login, GET /users/me and PUT /users/{userId}/updateUser.
 export type UserResponse = {

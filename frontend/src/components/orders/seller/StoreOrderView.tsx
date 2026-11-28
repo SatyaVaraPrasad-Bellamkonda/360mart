@@ -2,8 +2,9 @@
 
 import { CircleAlert, FileText, MapPinned, MessageSquareText, Phone, Timer } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
 import { AddressBlock, OrderItems, OrderTotals, Panel, ProgressTracker, StatusPill, Timeline } from "@/components/orders/OrderParts";
 import { toastError, toastSuccess } from "@/components/Toaster";
 import type { ActionError } from "@/lib/auth/actions";
@@ -27,6 +28,13 @@ export function StoreOrderView({ initial }: { initial: StoreOrder }) {
   const [error, setError] = useState<ActionError | null>(null);
   const [pending, start] = useTransition();
   const open = isOpen(order.status);
+
+  // The delivery panel moved on (a rider accepted, the store took it back…): the buttons below may change.
+  const reloadOrder = useCallback(async () => {
+    const res = await loadStoreOrderAction(order.orderId);
+    if (res.ok) setOrder(res.data);
+    else if (res.error.code === "UNAUTHENTICATED") sessionExpired();
+  }, [order.orderId, sessionExpired]);
 
   useEffect(() => {
     if (!open) return;
@@ -61,6 +69,12 @@ export function StoreOrderView({ initial }: { initial: StoreOrder }) {
         setDialog(null);
         toastError(`This order changed: ${res.error.message}`);
         return;
+      }
+      if (res.error.code === "RIDER_ON_ORDER") {
+        // A rider accepted meanwhile: the delivery panel above takes over.
+        setDialog(null);
+        toastError(res.error.message);
+        return void reloadOrder();
       }
       // Field problems are shown inside the open dialog; anything else as a toast too.
       setError(res.error);
@@ -111,6 +125,8 @@ export function StoreOrderView({ initial }: { initial: StoreOrder }) {
           )}
         </div>
       </Panel>
+
+      <DeliveryPanel owner="store" orderId={order.orderId} orderStatus={order.status} onOrderChanged={reloadOrder} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-4">
